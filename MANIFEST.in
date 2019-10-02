@@ -1,0 +1,6 @@
+include LICENSE
+include README.md
+recursive-include jfservice *.py
+recursive-include jfservice/static *
+recursive-include jfservice/templates *
+

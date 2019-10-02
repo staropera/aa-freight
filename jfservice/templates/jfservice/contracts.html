@@ -1,0 +1,67 @@
+{% extends 'jfservice/base.html' %}
+{% load i18n %}
+{% load humanize %}
+{% load static %}
+
+{% load jfservice_filters %}
+
+{% block details %}
+
+    <table class="table" id="tab_contracts">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Reward<br>Mio ISK</th>
+                <th>Collaterial<br>Mio ISK</th>
+                <th>Volume<br>K m3</th>
+                <th>Issued On</th>
+                <th>Expires On</th>
+                <th>Issued By</th>
+                <th>Accepted On</th>
+                <th>Accepted By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contract in contracts %}
+                <tr>                                        
+                    <td>{{ contract.status }}</td>
+                    <td>{{ contract.start_location }}</td>
+                    <td>{{ contract.end_location }}</td>
+                    <td>{{ contract.reward|to_millions|floatformat:"0" }}</td>
+                    <td>{{ contract.collateral|to_millions|floatformat:"0" }}</td>
+                    <td>{{ contract.volume|to_thousands|floatformat:"0" }}</td>
+                    <td>{{ contract.date_issued }}</td>
+                    <td>{{ contract.date_expired }}</td>
+                    <td>{{ contract.issuer }}</td>
+                    <td>{{ contract.date_accepted }}</td>
+                    <td>{{ contract.acceptor }}</td>                    
+                </tr>
+            {% endfor %}
+        </tbody>        
+        
+    </table>
+    
+{% endblock %}
+
+{% block extra_javascript %}
+    {% include 'bundles/datatables-js.html' %}    
+    
+{% endblock %}
+
+{% block extra_css %}
+    {% include 'bundles/datatables-css.html' %}    
+
+    <link 
+        href="{% static 'jfservice/contracts.css' %}" 
+        type="text/css" 
+        rel="stylesheet"
+    >
+{% endblock %}
+
+{% block extra_script %}
+    $(document).ready(function(){
+        $('#tab_contracts').DataTable();       
+    });
+{% endblock %}
