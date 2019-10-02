@@ -1,6 +1,7 @@
 {% extends 'jfservice/base.html' %}
 {% load i18n %}
 {% load humanize %}
+{% load jfservice_filters %}
 
 {% block details %}
     <form class="form" action="{% url 'jfservice:calculator' %}" method="POST">
@@ -9,6 +10,6 @@
         <button type="submit">Calculate</button>
     </form>
     <br>
-    <p id="reward">Price: {{ price }} </p>
+    <p id="reward">Price: {{ price|power10:"6"|formatnumber:"0" }} </p>
     
 {% endblock %}

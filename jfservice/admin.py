@@ -5,5 +5,10 @@ from .models import *
 class JfServiceAdmin(admin.ModelAdmin):
     pass
 
+admin.site.register(Pricing)
+
 admin.site.register(Contract)
+
+admin.site.register(Location)
+
 admin.site.register(Structure)

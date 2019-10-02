@@ -31,14 +31,21 @@ def index(request):
 @login_required
 @permission_required('jfservice.access_jfservice')
 def calculator(request):    
-     # if this is a POST request we need to process the form data
+    
+    alliance_id = request.user.profile.main_character.alliance_id    
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
         form = CalculatorForm(request.POST)
         # check whether it's valid:
         if form.is_valid():
+            service = JfService.objects.get(
+                alliance__alliance_id=alliance_id
+            )            
             # process the data in form.cleaned_data as required
-            price = form.cleaned_data['volume'] * 5 + form.cleaned_data['collateral'] *3
+            price = (service.price_base 
+                + form.cleaned_data['volume'] * service.price_per_volume 
+                + form.cleaned_data['collateral'] * (service.price_per_volume / 100)
+            )
             return render(
                 request, 
                 'jfservice/calculator.html', 
@@ -48,7 +55,7 @@ def calculator(request):
     # if a GET (or any other method) we'll create a blank form
     else:
         form = CalculatorForm()
-        return render(request, 'jfservice/calculator.html', {'form': form})
+        return render(request, 'jfservice/calculator.html', {'form': form, 'price': None})
 
     
 

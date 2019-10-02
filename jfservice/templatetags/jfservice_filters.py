@@ -3,11 +3,17 @@ from django import template
 register = template.Library()
 
 @register.filter
-def to_millions(value):   
-    """converts the value into millions""" 
-    return value / 1000000
+def power10(value, k = 0):   
+    """converts the value to a power of 10 representation""" 
+    if value:            
+        return value / (10 ** int(k))
+    else:
+        return ''
 
 @register.filter
-def to_thousands(value):   
-    """converts the value into thousands""" 
-    return value / 1000
+def formatnumber(value, p = 1):
+    """return a formated number with thousands seperators""" 
+    if value:
+        return '{:,.{}f}'.format(float(value), int(p))
+    else:
+        return ''

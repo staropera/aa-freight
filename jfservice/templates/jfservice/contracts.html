@@ -2,7 +2,6 @@
 {% load i18n %}
 {% load humanize %}
 {% load static %}
-
 {% load jfservice_filters %}
 
 {% block details %}
@@ -29,9 +28,9 @@
                     <td>{{ contract.status }}</td>
                     <td>{{ contract.start_location }}</td>
                     <td>{{ contract.end_location }}</td>
-                    <td>{{ contract.reward|to_millions|floatformat:"0" }}</td>
-                    <td>{{ contract.collateral|to_millions|floatformat:"0" }}</td>
-                    <td>{{ contract.volume|to_thousands|floatformat:"0" }}</td>
+                    <td>{{ contract.reward|power10:"6"|formatnumber:"0" }}</td>
+                    <td>{{ contract.collateral|power10:"6"|formatnumber:"0" }}</td>
+                    <td>{{ contract.volume|power10:"3"|formatnumber:"0" }}</td>
                     <td>{{ contract.date_issued }}</td>
                     <td>{{ contract.date_expired }}</td>
                     <td>{{ contract.issuer }}</td>

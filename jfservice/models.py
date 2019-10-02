@@ -5,41 +5,6 @@ from evesde.models import EveSolarSystem, EveType, EveItem
 from .managers import LocationManager
 
 
-class JfService(models.Model):
-    alliance = models.OneToOneField(
-        EveAllianceInfo, 
-        on_delete=models.CASCADE, 
-        primary_key=True
-    )
-    character = models.ForeignKey(
-        CharacterOwnership,
-        on_delete=models.SET_DEFAULT,
-        default=None,
-        null=True
-    )
-    price_per_volume = models.FloatField(default=None, null=True)
-    price_collateral_percent = models.FloatField(default=None, null=True)    
-    collateral_max = models.BigIntegerField(default=None, null=True)
-    price_minimum = models.FloatField(default=None, null=True)
-
-    version_hash = models.CharField(max_length=32, null=True, default=None)    
-    last_sync = models.DateTimeField(null=True, default=None)
-
-    class Meta:
-        permissions = (
-            ('access_jfservice', 'Can access the JF Service'),
-        )
-
-    @classmethod
-    def get_esi_scopes(cls):
-        return [
-            'esi-contracts.read_corporation_contracts.v1',
-            'esi-universe.read_structures.v1'
-        ]
-
-    def __str__(self):
-        return str(self.alliance)
-
 
 class Structure(models.Model):    
     id = models.BigIntegerField(primary_key=True)
@@ -82,6 +47,67 @@ class Location(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class JfService(models.Model):
+    alliance = models.OneToOneField(
+        EveAllianceInfo, 
+        on_delete=models.CASCADE, 
+        primary_key=True
+    )
+    character = models.ForeignKey(
+        CharacterOwnership,
+        on_delete=models.SET_DEFAULT,
+        default=None,
+        null=True
+    )
+    
+    version_hash = models.CharField(max_length=32, null=True, default=None)    
+    last_sync = models.DateTimeField(null=True, default=None)
+
+    class Meta:
+        permissions = (
+            ('access_jfservice', 'Can access the JF Service'),
+        )
+
+    @classmethod
+    def get_esi_scopes(cls):
+        return [
+            'esi-contracts.read_corporation_contracts.v1',
+            'esi-universe.read_structures.v1'
+        ]
+
+    def __str__(self):
+        return str(self.alliance)
+
+
+class Pricing(models.Model):    
+    start_location = models.ForeignKey(
+        Location, 
+        on_delete=models.CASCADE,
+        related_name='pricing_start_location'
+    )
+    end_location = models.ForeignKey(
+        Location, 
+        on_delete=models.CASCADE,
+        related_name='pricing_end_location'
+    )
+    active = models.BooleanField()
+    price_per_volume = models.FloatField(default=None, null=True)
+    price_collateral_percent = models.FloatField(default=None, null=True)    
+    collateral_max = models.BigIntegerField(default=None, null=True)
+    price_base = models.FloatField(default=None, null=True)
+    volume_max = models.FloatField(default=None, null=True)
+    pricing_comment = models.TextField(default=None, null=True)
+
+    class Meta:
+        unique_together = (('start_location', 'end_location'),)
+    
+    def __str__(self):
+        return '{} -> {}'.format(            
+            self.start_location,
+            self.end_location
+        )
 
 
 class Contract(models.Model):    
