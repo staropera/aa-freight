@@ -6,41 +6,48 @@
 
 {% block details %}
     
-    <table class="table table-striped" id="tab_contracts">
-        <thead>
-            <tr>
-                <th>Status</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Reward<br>Mio ISK</th>
-                <th>Collaterial<br>Mio ISK</th>
-                <th>Volume<br>K m3</th>
-                <th>Issued On</th>
-                <th>Expires On</th>
-                <th>Issued By</th>
-                <th>Accepted On</th>
-                <th>Accepted By</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for contract in contracts %}
-                <tr>                                        
-                    <td>{{ contract.status }}</td>
-                    <td>{{ contract.start_location }}</td>
-                    <td>{{ contract.end_location }}</td>
-                    <td>{{ contract.reward|power10:"6"|formatnumber:"0" }}</td>
-                    <td>{{ contract.collateral|power10:"6"|formatnumber:"0" }}</td>
-                    <td>{{ contract.volume|power10:"3"|formatnumber:"0" }}</td>
-                    <td>{{ contract.date_issued }}</td>
-                    <td>{{ contract.date_expired }}</td>
-                    <td>{{ contract.issuer }}</td>
-                    <td>{{ contract.date_accepted }}</td>
-                    <td>{{ contract.acceptor }}</td>                    
-                </tr>
-            {% endfor %}
-        </tbody>        
-        
-    </table>
+    <div class="panel panel-primary">   
+        <div class="panel-heading">
+            <h3 class="panel-title">Active Contracts</h3>
+        </div>
+        <div class="panel-body">        
+            <table class="table table-striped" id="tab_contracts">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Reward<br>Mio ISK</th>
+                        <th>Collaterial<br>Mio ISK</th>
+                        <th>Volume<br>K m3</th>
+                        <th>Issued On</th>
+                        <th>Expires On</th>
+                        <th>Issued By</th>
+                        <th>Accepted On</th>
+                        <th>Accepted By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contract in contracts %}
+                        <tr>                                        
+                            <td>{{ contract.status }}</td>
+                            <td>{{ contract.start_location }}</td>
+                            <td>{{ contract.end_location }}</td>
+                            <td>{{ contract.reward|power10:"6"|formatnumber:"0" }}</td>
+                            <td>{{ contract.collateral|power10:"6"|formatnumber:"0" }}</td>
+                            <td>{{ contract.volume|power10:"3"|formatnumber:"0" }}</td>
+                            <td>{{ contract.date_issued }}</td>
+                            <td>{{ contract.date_expired }}</td>
+                            <td>{{ contract.issuer }}</td>
+                            <td>{{ contract.date_accepted }}</td>
+                            <td>{{ contract.acceptor }}</td>                    
+                        </tr>
+                    {% endfor %}
+                </tbody>                
+            </table>
+        </div>
+    </div>
+
     
 {% endblock %}
 

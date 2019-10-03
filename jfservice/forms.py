@@ -7,10 +7,10 @@ class CalculatorForm(forms.Form):
         queryset=Pricing.objects.filter(active__exact=True),
         initial=Pricing.objects.filter(active__exact=True).first(),
         label='Route',
-        help_text='Route for this contract'
+        help_text='Pick the route for your courier contract'
     )
     volume = forms.IntegerField(
-        help_text='Est. volume of your cargo in 1,000x m3'
+        help_text='Est. volume of your cargo in K x m3, e.g. "50" = 50.000 m3'
     )
     collateral = forms.IntegerField(
         help_text='Collaterial in M ISK'

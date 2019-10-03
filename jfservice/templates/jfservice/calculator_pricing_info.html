@@ -1,0 +1,26 @@
+{% load jfservice_filters %}
+
+<div class="row">
+    <div class="col-md-2">
+        <strong>
+            <p>Base price:</p>
+            <p>Price add-on per m3:</p>
+            <p>Price add-on for collateral:</p>
+            <p>Max Volume:</p>                
+        </strong>
+    </div>
+    <div class="col-md-2">
+        <p>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</p>
+        <p>{{ pricing.price_per_volume|formatnumber:"0" }} ISK</p>
+        <p>{{ pricing.price_collateral_percent }} %</p>
+        <p>{{ pricing.volume_max|power10:"3"|formatnumber:"0" }} K m3</p>
+    </div>
+    <div class="col-md-2">
+        <strong>
+            <p>Comments:</p>        
+        </strong>
+    </div>
+    <div class="col-md-6">        
+        {{ pricing.pricing_comment|linebreaks }}
+    </div>
+</div>

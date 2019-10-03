@@ -5,13 +5,66 @@
 {% load jfservice_filters %}
 
 {% block details %}
-    <form class="form" action="{% url 'jfservice:calculator' %}" method="POST">
+    <form class="form" action="{% url 'jfservice:calculator' %}" method="POST">        
         {% csrf_token %}
-        {{ form|bootstrap }}
-        <button class="btn btn-success btn-block" type="submit">Calculate Price!</button>
+        <div class="row">
+            <div class="col-md-6">
+
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Your contract</h3>
+                    </div>
+                    <div class="panel-body">
+                        {{ form|bootstrap }}
+                    </div>
+                </div>
+
+            </div>
+            <div class="col-md-6">
+
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Your price</h3>
+                    </div>
+                    <div class="panel-body">
+                        <h2>                
+                            {{ price|power10:"6"|formatnumber:"0" }} M ISK
+                        </h2>
+                        <p>Please enter the calculated price as <strong>Reward</strong> for the courier contract.</p>
+                    </div>
+                </div>
+                <button class="btn btn-success btn-lg" type="submit">Click Me To Calculate Price!</button>
+            </div>
+        </div>        
     </form>
-    <br>    
-    <h2><strong>Your price:</strong> {{ price|power10:"6"|formatnumber:"0" }} M ISK</h2>
-    <p>Please enter the calculated price as <strong>Reward</strong> for the courier contract.</p>
+<br>    
+
+<div class="panel panel-default">   
+    <div class="panel-heading">
+        <h3 class="panel-title">Pricing details for this route</h3>
+    </div>
+    <div class="panel-body">
+        <div id="div_pricing_info"></div>
+    </div>
+</div>
+    
+
         
+{% endblock %}
+
+{% block extra_script %}
+    function pricing_detail_update(){
+        $("#div_pricing_info").load(
+            "{% url 'jfservice:calculator_pricing_info' 0 %}".replace(
+                "0", 
+                $("#id_pricing").val()
+            )
+        );             
+    }
+    $(document).ready(function(){        
+        pricing_detail_update()
+        $("#id_pricing").change(function(){                        
+            pricing_detail_update()
+        });
+    });
 {% endblock %}

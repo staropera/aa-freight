@@ -7,15 +7,16 @@ from . import tasks
 
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'category_id')
-    list_display_links = None
+    list_display = ('id', 'name', 'category_id')    
     list_filter = ('category_id',)
     search_fields = ['name']
-    
-    # This will help you to disbale add functionality
-    def has_add_permission(self, request):
-        return False
-  
+
+
+@admin.register(Pricing)
+class PricingAdmin(admin.ModelAdmin):
+    list_display = ('id', 'start_location', 'end_location', 'active')    
+    list_filter = ('active',)
+          
 
 @admin.register(ContractsHandler)
 class ContractsHandlerAdmin(admin.ModelAdmin):
@@ -40,8 +41,6 @@ class ContractsHandlerAdmin(admin.ModelAdmin):
     
     start_sync.short_description = "Sync contracts"
 
-
-admin.site.register(Pricing)
 
 admin.site.register(Contract)
 

@@ -1,9 +1,10 @@
 import math
 from django.shortcuts import render, redirect
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, JsonResponse
 from django.template import loader
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
+from django.forms.models import model_to_dict
 from allianceauth.authentication.models import CharacterOwnership
 from esi.decorators import token_required
 from esi.clients import esi_client_factory
@@ -62,13 +63,25 @@ def calculator(request):
     return render(
         request, 'jfservice/calculator.html', 
         {
-            'page_title': 'Price Calculator',
+            'page_title': 'Price Calculator',            
             'form': form, 
-            'price': price
+            'price': price,
+            
         }
     )
 
+
+@login_required
+@permission_required('jfservice.access_jfservice')
+def calculator_pricing_info(request, pricing_pk):
+    pricing = Pricing.objects.get(pk=pricing_pk)    
+    return render(
+        request, 
+        'jfservice/calculator_pricing_info.html', 
+        {'pricing': pricing}
+    )
     
+
 @login_required
 @permission_required('jfservice.access_jfservice')
 @token_required(scopes=ContractsHandler.get_esi_scopes())
