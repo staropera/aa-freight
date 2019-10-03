@@ -14,6 +14,7 @@ from . import tasks
 from .forms import CalculatorForm, AddLocationForm
 from .utils import get_swagger_spec_path
 
+ADD_LOCATION_TOKEN_TAG = 'jfservice_add_location_token'
 
 @login_required
 @permission_required('jfservice.access_jfservice')
@@ -132,8 +133,21 @@ def create_or_update_service(request, token):
 
 
 @login_required
+@token_required(scopes=Location.get_esi_scopes())
 @permission_required('jfservice.access_jfservice')
-def add_location(request): 
+def add_location(request, token): 
+    request.session[ADD_LOCATION_TOKEN_TAG] = token.pk
+    return redirect('jfservice:add_location_2')
+
+
+@login_required
+@permission_required('jfservice.access_jfservice')
+def add_location_2(request): 
+    if ADD_LOCATION_TOKEN_TAG not in request.session:
+        raise RuntimeError('Missing token in session')
+    else:
+        token = Token.objects.get(pk=request.session[ADD_LOCATION_TOKEN_TAG])
+    
     if request.method != 'POST':
         form = AddLocationForm()
         
@@ -141,13 +155,7 @@ def add_location(request):
         form = AddLocationForm(request.POST)
         if form.is_valid():
             location_id = form.cleaned_data['location_id']
-            try:            
-                token = Token.objects.filter(
-                    user=request.user
-                ).require_scopes(
-                    Location.get_esi_scopes()
-                ).require_valid().first()
-                
+            try:                
                 client = esi_client_factory(
                     token=token, 
                     spec_file=get_swagger_spec_path()
@@ -166,7 +174,8 @@ def add_location(request):
                         location.name
                     )
                 )
-                return redirect('jfservice:add_location')            
+                return redirect('jfservice:add_location_2')    
+
             except Exception as ex:
                 messages.warning(
                     request,
@@ -179,6 +188,8 @@ def add_location(request):
     return render(
         request, 'jfservice/add_location.html', 
         {            
-            'form': form
+            'page_title': 'Add / Update Location',
+            'form': form,
+            'token_char_name': token.character_name
         }
     )

@@ -2,12 +2,12 @@
 {% load i18n %}
 {% load humanize %}
 {% load bootstrap %}
-{% load jfservice_filters %}
 
 {% block details %}
-    <form class="form" action="{% url 'jfservice:add_location' %}" method="POST">
+    <form class="form" action="{% url 'jfservice:add_location_2' %}" method="POST">
         {% csrf_token %}
-        {{ form|bootstrap }}
+        {{ form|bootstrap }}        
         <button class="btn btn-success btn-block" type="submit">Add / Update Location</button>
-    </form>
+        <p class="text-muted">Accessing structures with token from <strong>{{ token_char_name }}</strong></p>
+    </form>    
 {% endblock %}

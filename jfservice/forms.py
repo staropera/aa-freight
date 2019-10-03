@@ -25,5 +25,8 @@ class CalculatorForm(forms.Form):
     
 
 class AddLocationForm(forms.Form):
-    location_id = forms.IntegerField()    
+    location_id = forms.IntegerField(
+        label='Location ID',
+        help_text='Eve Online ID for a station or an Upwell structure'
+    )    
 
