@@ -11,9 +11,16 @@ from .models import *
 from . import tasks
 from .forms import CalculatorForm
 
+
 @login_required
 @permission_required('jfservice.access_jfservice')
 def index(request):
+    return redirect('jfservice:calculator')
+
+
+@login_required
+@permission_required('jfservice.access_jfservice')
+def contract_list(request):
     
     contracts = Contract.objects.filter(
         handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
@@ -24,16 +31,15 @@ def index(request):
     )
     
     context = {
+        'page_title': 'Contracts',
         'contracts': contracts
     }        
-    return render(request, 'jfservice/contracts.html', context)
+    return render(request, 'jfservice/contract_list.html', context)
 
 
 @login_required
 @permission_required('jfservice.access_jfservice')
 def calculator(request):            
-    
-    
     if request.method != 'POST':
         form = CalculatorForm()
         price = None
@@ -52,13 +58,13 @@ def calculator(request):
     return render(
         request, 'jfservice/calculator.html', 
         {
+            'page_title': 'Price Calculator',
             'form': form, 
             'price': price
         }
     )
 
     
-
 @login_required
 @permission_required('jfservice.access_jfservice')
 @token_required(scopes=ContractsHandler.get_esi_scopes())
@@ -120,19 +126,3 @@ def create_or_update_service(request, token):
             + 'You will receive a report once it is completed.'
         )
     return redirect('jfservice:index')
-
-"""
-def form_handle(request):
-    form = MyForm()
-    if request.method=='POST':
-        form = MyForm(request.POST)
-        if form.is_valid():
-            cd = form.cleaned_data
-            #now in the object cd, you have the form as a dictionary.
-            a = cd.get('a')
-
-    #blah blah encode parameters for a url blah blah 
-    #and make another post request
-    #edit : added ": "  after    if request.method=='POST'
-
-"""

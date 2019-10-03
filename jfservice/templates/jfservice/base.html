@@ -4,7 +4,8 @@
 
 {% block content %}
     <div class="col-lg-12">
-        {% include 'jfservice/menu.html' %}        
+        {% include 'jfservice/menu.html' %}
+        <h2 class="text-center">{{ page_title }}</h2>
         <div class="col-lg-12 container">            
             {% block details %}{% endblock %}
         </div>

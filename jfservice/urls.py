@@ -11,4 +11,5 @@ urlpatterns = [
         name='create_or_update_service'
     ),
     url(r'^calculator/$', views.calculator, name='calculator'),
+    url(r'^contract_list/$', views.contract_list, name='contract_list'),
 ]
