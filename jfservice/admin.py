@@ -14,9 +14,11 @@ class LocationAdmin(admin.ModelAdmin):
 
 @admin.register(Pricing)
 class PricingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'start_location', 'end_location', 'active')    
+    list_display = ('route', 'active')    
     list_filter = ('active',)
           
+    def route(self, obj):
+        return str(obj)
 
 @admin.register(ContractsHandler)
 class ContractsHandlerAdmin(admin.ModelAdmin):
@@ -42,5 +44,20 @@ class ContractsHandlerAdmin(admin.ModelAdmin):
     start_sync.short_description = "Sync contracts"
 
 
-admin.site.register(Contract)
+@admin.register(Contract)
+class ContractAdmin(admin.ModelAdmin):
+    list_display = [        
+        'contract_id',
+        'status',
+        'date_issued',
+        'issuer',        
+    ]
+    list_filter = ('status',)
+    search_fields = ['issuer']
 
+    # This will help you to disbale add functionality
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
