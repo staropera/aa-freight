@@ -70,6 +70,12 @@ class Pricing(models.Model):
             self.end_location
         )
 
+    def get_calculated_price(self, volume: float, collateral: float) -> float:
+        """returns the calculated price for the given parameters"""
+        return (self.price_base
+            + volume * self.price_per_volume 
+            + collateral  * (self.price_collateral_percent / 100))
+
 
 class ContractsHandler(models.Model):
     alliance = models.OneToOneField(

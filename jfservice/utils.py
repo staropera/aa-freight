@@ -1,6 +1,9 @@
 import logging
 import os
 
+# Format for output of datetime for this app
+DATETIME_FORMAT = '%Y-%m-%d %H:%M'
+
 def get_swagger_spec_path() -> str:
     """returns the path to the current swagger spec file"""
     return os.path.join(

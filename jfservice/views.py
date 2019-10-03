@@ -13,7 +13,7 @@ from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, E
 from .models import *
 from . import tasks
 from .forms import CalculatorForm, AddLocationForm
-from .utils import get_swagger_spec_path
+from .utils import get_swagger_spec_path, DATETIME_FORMAT
 
 ADD_LOCATION_TOKEN_TAG = 'jfservice_add_location_token'
 
@@ -26,20 +26,44 @@ def index(request):
 @login_required
 @permission_required('jfservice.access_jfservice')
 def contract_list(request):
-    
+        
+    context = {
+        'page_title': 'Contracts'
+    }        
+    return render(request, 'jfservice/contract_list.html', context)
+
+
+@login_required
+@permission_required('jfservice.access_jfservice')
+def contract_list_data(request):
+
     contracts = Contract.objects.filter(
         handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
         status__in=[
             Contract.STATUS_OUTSTANDING,
             Contract.STATUS_IN_PROGRESS
         ]
-    )
-    
-    context = {
-        'page_title': 'Contracts',
-        'contracts': contracts
-    }        
-    return render(request, 'jfservice/contract_list.html', context)
+    ).select_related()
+
+    contracts_data = list()
+    datetime_format = lambda x: x.strftime(DATETIME_FORMAT) if x else None
+    character_format = lambda x: x.character_name if x else None
+    for contract in contracts:                
+        contracts_data.append({
+            'status': contract.status,
+            'start_location': str(contract.start_location),
+            'end_location': str(contract.end_location),
+            'reward': '{:,.0f}'.format(contract.reward / 1000000),
+            'collateral': '{:,.0f}'.format(contract.collateral / 1000000),
+            'volume': '{:,.0f}'.format(contract.volume / 1000),
+            'date_issued': datetime_format(contract.date_issued),
+            'date_expired': datetime_format(contract.date_expired),
+            'issuer': character_format(contract.issuer),
+            'date_accepted': datetime_format(contract.date_accepted),
+            'acceptor': character_format(contract.acceptor),
+        })
+
+    return JsonResponse(contracts_data, safe=False)
 
 
 @login_required
@@ -53,10 +77,12 @@ def calculator(request):
         form = CalculatorForm(request.POST)
         if form.is_valid():
             pricing = form.cleaned_data['pricing']            
-            price = math.ceil((pricing.price_base 
-                + form.cleaned_data['volume'] * 1000 * pricing.price_per_volume 
-                + form.cleaned_data['collateral'] * 1000000 * (pricing.price_collateral_percent / 100)
-            ) / 1000000) * 1000000
+            
+            price = math.ceil((pricing.get_calculated_price(
+                form.cleaned_data['volume'] * 1000,
+                form.cleaned_data['collateral'] * 1000000) 
+                / 1000000) * 1000000
+            )
         else:
             price = None
         

@@ -27,22 +27,7 @@
                         <th>Accepted By</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for contract in contracts %}
-                        <tr>                                        
-                            <td>{{ contract.status }}</td>
-                            <td>{{ contract.start_location }}</td>
-                            <td>{{ contract.end_location }}</td>
-                            <td>{{ contract.reward|power10:"6"|formatnumber:"0" }}</td>
-                            <td>{{ contract.collateral|power10:"6"|formatnumber:"0" }}</td>
-                            <td>{{ contract.volume|power10:"3"|formatnumber:"0" }}</td>
-                            <td>{{ contract.date_issued }}</td>
-                            <td>{{ contract.date_expired }}</td>
-                            <td>{{ contract.issuer }}</td>
-                            <td>{{ contract.date_accepted }}</td>
-                            <td>{{ contract.acceptor }}</td>                    
-                        </tr>
-                    {% endfor %}
+                <tbody>                   
                 </tbody>                
             </table>
         </div>
@@ -68,6 +53,26 @@
 
 {% block extra_script %}
     $(document).ready(function(){
-        $('#tab_contracts').DataTable();       
+        $('#tab_contracts').DataTable({
+            ajax: {
+                url: '{% url 'jfservice:contract_list_data' %}',
+                dataSrc: '',
+                cache: false
+            },
+
+            columns: [
+                { data: 'status' },
+                { data: 'start_location' },
+                { data: 'end_location' },
+                { data: 'reward' },
+                { data: 'collateral' },
+                { data: 'volume' },
+                { data: 'date_issued' },
+                { data: 'date_expired' },
+                { data: 'issuer' },
+                { data: 'date_accepted' },
+                { data: 'acceptor' }
+            ]
+        });       
     });
 {% endblock %}
