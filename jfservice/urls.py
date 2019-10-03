@@ -10,6 +10,7 @@ urlpatterns = [
         views.create_or_update_service, 
         name='create_or_update_service'
     ),
+    url(r'^add_location/$', views.add_location, name='add_location'),    
     url(r'^calculator/$', views.calculator, name='calculator'),
     url(r'^contract_list/$', views.contract_list, name='contract_list'),
 ]

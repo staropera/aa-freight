@@ -6,10 +6,13 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from allianceauth.authentication.models import CharacterOwnership
 from esi.decorators import token_required
+from esi.clients import esi_client_factory
+from esi.models import Token
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 from .models import *
 from . import tasks
-from .forms import CalculatorForm
+from .forms import CalculatorForm, AddLocationForm
+from .utils import get_swagger_spec_path
 
 
 @login_required
@@ -126,3 +129,56 @@ def create_or_update_service(request, token):
             + 'You will receive a report once it is completed.'
         )
     return redirect('jfservice:index')
+
+
+@login_required
+@permission_required('jfservice.access_jfservice')
+def add_location(request): 
+    if request.method != 'POST':
+        form = AddLocationForm()
+        
+    else:
+        form = AddLocationForm(request.POST)
+        if form.is_valid():
+            location_id = form.cleaned_data['location_id']
+            try:            
+                token = Token.objects.filter(
+                    user=request.user
+                ).require_scopes(
+                    Location.get_esi_scopes()
+                ).require_valid().first()
+                
+                client = esi_client_factory(
+                    token=token, 
+                    spec_file=get_swagger_spec_path()
+                )
+            
+                location, created = Location.objects.update_or_create_esi(
+                    client, 
+                    location_id,
+                    add_unknown=False
+                )
+                action_txt = 'Added' if created else 'Updated'
+                messages.success(
+                    request,
+                    '{} "{}"'.format(
+                        action_txt,                        
+                        location.name
+                    )
+                )
+                return redirect('jfservice:add_location')            
+            except Exception as ex:
+                messages.warning(
+                    request,
+                    'Failed to add location with token from {}'.format(token.character_name)
+                    + ' for location ID {}: '. format(location_id)
+                    + '{}'.format(type(ex).__name__)
+                )
+            
+        
+    return render(
+        request, 'jfservice/add_location.html', 
+        {            
+            'form': form
+        }
+    )

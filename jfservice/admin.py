@@ -1,6 +1,21 @@
 from django.contrib import admin
+from django.utils.html import format_html
+from django import forms
 from .models import *
 from . import tasks
+
+
+@admin.register(Location)
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'category_id')
+    list_display_links = None
+    list_filter = ('category_id',)
+    search_fields = ['name']
+    
+    # This will help you to disbale add functionality
+    def has_add_permission(self, request):
+        return False
+  
 
 @admin.register(ContractsHandler)
 class ContractsHandlerAdmin(admin.ModelAdmin):
@@ -29,6 +44,4 @@ class ContractsHandlerAdmin(admin.ModelAdmin):
 admin.site.register(Pricing)
 
 admin.site.register(Contract)
-
-admin.site.register(Location)
 

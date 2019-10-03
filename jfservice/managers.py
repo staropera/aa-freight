@@ -13,7 +13,12 @@ class LocationManager(models.Manager):
     STATION_ID_START = 60000000
     STATION_ID_END = 69999999
     
-    def get_or_create_esi(self, client: object, location_id: int) -> list:
+    def get_or_create_esi(
+            self, 
+            client: object, 
+            location_id: int,
+            add_unknown: bool = True
+        ) -> list:
         """gets or creates location object with data fetched from ESI"""
         from .models import Location
         try:
@@ -22,13 +27,19 @@ class LocationManager(models.Manager):
         except Location.DoesNotExist:
             location, created = self.update_or_create_esi(
                 client, 
-                location_id
+                location_id,
+                add_unknown
             )
         
         return location, created
 
 
-    def update_or_create_esi(self, client: object, location_id: int)->list:
+    def update_or_create_esi(
+            self, 
+            client: object, 
+            location_id: int, 
+            add_unknown: bool = True
+        ) -> list:
         """updates or creates location object with data fetched from ESI"""
         from .models import Location
 
@@ -47,7 +58,7 @@ class LocationManager(models.Manager):
                         'name': station['name'],                    
                         'solar_system_id': station['system_id'],
                         'type_id': station['type_id'],                    
-                        'category': Location.CATEGORY_STATION_ID
+                        'category_id': Location.CATEGORY_STATION_ID
                     }
                 ) 
             except Exception as ex:
@@ -68,20 +79,23 @@ class LocationManager(models.Manager):
                         'name': structure['name'],                    
                         'solar_system_id': structure['solar_system_id'],
                         'type_id': structure['type_id'],
-                        'category': Location.CATEGORY_STRUCTURE_ID
+                        'category_id': Location.CATEGORY_STRUCTURE_ID
                     }
                 )      
             except (HTTPUnauthorized, HTTPForbidden) as ex:
                 logger.warn(addPrefix(
-                    'No access to this structure: '.format(ex)
+                    'No access to this structure: {}'.format(ex)
                 ))      
-                location, created = Location.objects.get_or_create(
-                    id = location_id,
-                    defaults={
-                        'name': 'Unknown structure {}'.format(location_id),
-                        'category': Location.CATEGORY_STRUCTURE_ID
-                    }
-                )
+                if add_unknown:
+                    location, created = Location.objects.get_or_create(
+                        id = location_id,
+                        defaults={
+                            'name': 'Unknown structure {}'.format(location_id),
+                            'category_id': Location.CATEGORY_STRUCTURE_ID
+                        }
+                    )
+                else:
+                    raise ex
             except Exception as ex:
                 logger.warn(addPrefix(
                     'Failed to load structure: '.format(ex)

@@ -1,6 +1,7 @@
 from django import forms
 from .models import Pricing
 
+
 class CalculatorForm(forms.Form):         
     pricing = forms.ModelChoiceField(
         queryset=Pricing.objects.filter(active__exact=True),
@@ -22,3 +23,7 @@ class CalculatorForm(forms.Form):
         else:
             return volume
     
+
+class AddLocationForm(forms.Form):
+    location_id = forms.IntegerField()    
+

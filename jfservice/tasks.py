@@ -13,15 +13,11 @@ from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, E
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
-from .utils import LoggerAddTag, makeLoggerPrefix
+from .utils import LoggerAddTag, makeLoggerPrefix, get_swagger_spec_path
 from .models import *
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 
-SWAGGER_SPEC_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 
-    'swagger.json'
-)
 """
 Swagger Operations:
 get_universe_structures_structure_id
@@ -81,7 +77,10 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
         
         # fetching data from ESI
         logger.info(addPrefix('Fetching alliance contracts from ESI - page 1'))
-        client = esi_client_factory(token=token, spec_file=SWAGGER_SPEC_PATH)
+        client = esi_client_factory(
+            token=token, 
+            spec_file=get_swagger_spec_path()
+        )
 
         # get contracts from first page
         operation = client.Contracts.get_corporations_corporation_id_contracts(

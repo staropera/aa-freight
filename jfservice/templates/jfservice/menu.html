@@ -17,10 +17,15 @@
             <ul class="nav navbar-nav">
                 <li class="{% navactive request 'jfservice:calculator' %}"><a href="{% url 'jfservice:calculator' %}">Price Calculator</a> </li>
                 <li class="{% navactive request 'jfservice:contract_list' %}"><a href="{% url 'jfservice:contract_list' %}">Contracts</a> </li>                
-            </ul> 
-            {% if perms.jfservice.access_jfservice %}
-                <a class="btn btn-success navbar-btn" style="float: right" href="{% url 'jfservice:create_or_update_service' %}">Create/Update JF Service</a>
-            {% endif %}           
+            </ul>
+            <ul class="nav navbar-nav navbar-right"> 
+                {% if perms.jfservice.access_jfservice %}
+                    <a class="btn btn-default navbar-btn" href="{% url 'jfservice:create_or_update_service' %}">Create/Update JF Service</a>
+                {% endif %}
+                {% if perms.jfservice.access_jfservice %}
+                    <a class="btn btn-default navbar-btn" href="{% url 'jfservice:add_location' %}">Add/Update Location</a>
+                {% endif %}
+            </ul>
         </div>
     </div>
 </nav>

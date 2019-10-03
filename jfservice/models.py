@@ -20,15 +20,26 @@ class Location(models.Model):
     name = models.CharField(max_length=100)        
     solar_system_id = models.IntegerField(default=None, null=True)
     type_id = models.IntegerField(default=None, null=True)
-    category = models.IntegerField(
+    category_id = models.IntegerField(
         choices=CATEGORY_CHOICES, 
         default=CATEGORY_UNKNOWN_ID
     )
     
     objects = LocationManager()
 
+    @classmethod
+    def get_esi_scopes(cls):
+        return [         
+            'esi-universe.read_structures.v1'
+        ]
+
     def __str__(self):
         return self.name
+
+    @property
+    def category(self):
+        return self.category_id
+
 
 
 class Pricing(models.Model):    
