@@ -1,9 +1,9 @@
 from django.db import models
+from django.db.models import Q
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 from allianceauth.authentication.models import CharacterOwnership
 from evesde.models import EveSolarSystem, EveType, EveItem
 from .managers import LocationManager
-
 
 
 class Structure(models.Model):    
@@ -21,6 +21,8 @@ class Structure(models.Model):
 
 
 class Location(models.Model):
+    STATION_GROUP_ID = 15
+
     id = models.BigIntegerField(primary_key=True)
     item = models.OneToOneField(
         EveItem, 
@@ -47,38 +49,6 @@ class Location(models.Model):
 
     def __str__(self):
         return self.name
-
-
-class JfService(models.Model):
-    alliance = models.OneToOneField(
-        EveAllianceInfo, 
-        on_delete=models.CASCADE, 
-        primary_key=True
-    )
-    character = models.ForeignKey(
-        CharacterOwnership,
-        on_delete=models.SET_DEFAULT,
-        default=None,
-        null=True
-    )
-    
-    version_hash = models.CharField(max_length=32, null=True, default=None)    
-    last_sync = models.DateTimeField(null=True, default=None)
-
-    class Meta:
-        permissions = (
-            ('access_jfservice', 'Can access the JF Service'),
-        )
-
-    @classmethod
-    def get_esi_scopes(cls):
-        return [
-            'esi-contracts.read_corporation_contracts.v1',
-            'esi-universe.read_structures.v1'
-        ]
-
-    def __str__(self):
-        return str(self.alliance)
 
 
 class Pricing(models.Model):    
@@ -110,6 +80,38 @@ class Pricing(models.Model):
         )
 
 
+class ContractsHandler(models.Model):
+    alliance = models.OneToOneField(
+        EveAllianceInfo, 
+        on_delete=models.CASCADE, 
+        primary_key=True
+    )
+    character = models.ForeignKey(
+        CharacterOwnership,
+        on_delete=models.SET_DEFAULT,
+        default=None,
+        null=True
+    )
+    
+    version_hash = models.CharField(max_length=32, null=True, default=None)    
+    last_sync = models.DateTimeField(null=True, default=None)
+
+    class Meta:
+        permissions = (
+            ('access_jfservice', 'Can access the JF Service'),
+        )
+
+    @classmethod
+    def get_esi_scopes(cls):
+        return [
+            'esi-contracts.read_corporation_contracts.v1',
+            'esi-universe.read_structures.v1'
+        ]
+
+    def __str__(self):
+        return str(self.alliance)
+
+
 class Contract(models.Model):    
     STATUS_OUTSTANDING = 'outstanding'
     STATUS_IN_PROGRESS = 'in_progress'
@@ -135,8 +137,8 @@ class Contract(models.Model):
         (STATUS_REVERSED, 'reversed'),
     ]
 
-    jfservice = models.ForeignKey(
-        JfService, 
+    handler = models.ForeignKey(
+        ContractsHandler, 
         on_delete=models.CASCADE
     )
     contract_id = models.IntegerField()
@@ -182,7 +184,7 @@ class Contract(models.Model):
     volume = models.FloatField()
 
     class Meta:
-        unique_together = (('jfservice', 'contract_id'),)
+        unique_together = (('handler', 'contract_id'),)
         indexes = [
             models.Index(fields=['status']),
         ]

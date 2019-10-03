@@ -1,3 +1,4 @@
+import math
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, Http404
 from django.template import loader
@@ -15,7 +16,7 @@ from .forms import CalculatorForm
 def index(request):
     
     contracts = Contract.objects.filter(
-        jfservice__alliance__alliance_id=request.user.profile.main_character.alliance_id,
+        handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
         status__in=[
             Contract.STATUS_OUTSTANDING,
             Contract.STATUS_IN_PROGRESS
@@ -30,38 +31,37 @@ def index(request):
 
 @login_required
 @permission_required('jfservice.access_jfservice')
-def calculator(request):    
+def calculator(request):            
     
-    alliance_id = request.user.profile.main_character.alliance_id    
-    if request.method == 'POST':
-        # create a form instance and populate it with data from the request:
-        form = CalculatorForm(request.POST)
-        # check whether it's valid:
-        if form.is_valid():
-            service = JfService.objects.get(
-                alliance__alliance_id=alliance_id
-            )            
-            # process the data in form.cleaned_data as required
-            price = (service.price_base 
-                + form.cleaned_data['volume'] * service.price_per_volume 
-                + form.cleaned_data['collateral'] * (service.price_per_volume / 100)
-            )
-            return render(
-                request, 
-                'jfservice/calculator.html', 
-                {'form': form, 'price': price}
-            )
-
-    # if a GET (or any other method) we'll create a blank form
-    else:
+    
+    if request.method != 'POST':
         form = CalculatorForm()
-        return render(request, 'jfservice/calculator.html', {'form': form, 'price': None})
+        price = None
+
+    else:
+        form = CalculatorForm(request.POST)
+        if form.is_valid():
+            pricing = form.cleaned_data['pricing']            
+            price = math.ceil((pricing.price_base 
+                + form.cleaned_data['volume'] * 1000 * pricing.price_per_volume 
+                + form.cleaned_data['collateral'] * 1000000 * (pricing.price_collateral_percent / 100)
+            ) / 1000000) * 1000000
+        else:
+            price = None
+        
+    return render(
+        request, 'jfservice/calculator.html', 
+        {
+            'form': form, 
+            'price': price
+        }
+    )
 
     
 
 @login_required
 @permission_required('jfservice.access_jfservice')
-@token_required(scopes=JfService.get_esi_scopes())
+@token_required(scopes=ContractsHandler.get_esi_scopes())
 def create_or_update_service(request, token):
     success = True
     token_char = EveCharacter.objects.get(character_id=token.character_id)
@@ -99,14 +99,14 @@ def create_or_update_service(request, token):
             alliance.save()
 
     if success:
-        jfservice, created = JfService.objects.update_or_create(    
+        contracts_handler, created = ContractsHandler.objects.update_or_create(    
             alliance=alliance,
             defaults={
                 'character': owned_char
             }
         )          
         tasks.sync_contracts.delay(
-            jfservice_pk=jfservice.pk,
+            contracts_handler_pk=contracts_handler.pk,
             force_sync=True,
             user_pk=request.user.pk
         )        
@@ -114,7 +114,7 @@ def create_or_update_service(request, token):
             request, 
             'JF service created for {} alliance with {} as sync character. '.format(                    
                     alliance.alliance_name,
-                    jfservice.character.character.character_name, 
+                    contracts_handler.character.character.character_name, 
                 )
             + 'Started syncing of courier contracts. '
             + 'You will receive a report once it is completed.'

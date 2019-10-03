@@ -46,27 +46,27 @@ def makeLoggerTag(tag: str):
 
 
 @shared_task
-def sync_contracts(jfservice_pk, force_sync = False, user_pk = None):
+def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
     try:
-        jfservice = JfService.objects.get(pk=jfservice_pk)
-    except JfService.DoesNotExist:        
-        raise JfService.DoesNotExist(
-            'task called for non jf service with pk {}'.format(jfservice_pk)
+        handler = ContractsHandler.objects.get(pk=contracts_handler_pk)
+    except ContractsHandler.DoesNotExist:        
+        raise ContractsHandler.DoesNotExist(
+            'task called for non jf service with pk {}'.format(contracts_handler_pk)
         )
         return False
     
     try:
-        addTag = makeLoggerTag(jfservice)
-        alliance_name = jfservice.alliance.alliance_name
+        addTag = makeLoggerTag(handler)
+        alliance_name = handler.alliance.alliance_name
         
-        if jfservice.character is None:
+        if handler.character is None:
             logger.error(addTag(
                 'No character configured to sync the alliance'
             ))           
             raise ValueError()
 
         # abort if character does not have sufficient permissions
-        if not jfservice.character.user.has_perm(
+        if not handler.character.user.has_perm(
                 'jfservice.add_syncmanager'
             ):
             logger.error(addTag(
@@ -78,10 +78,10 @@ def sync_contracts(jfservice_pk, force_sync = False, user_pk = None):
         try:            
             # get token    
             token = Token.objects.filter(
-                user=jfservice.character.user, 
-                character_id=jfservice.character.character.character_id
+                user=handler.character.user, 
+                character_id=handler.character.character.character_id
             ).require_scopes(
-                JfService.get_esi_scopes()
+                ContractsHandler.get_esi_scopes()
             ).require_valid().first()
         except TokenInvalidError:        
             logger.error(addTag(
@@ -101,7 +101,7 @@ def sync_contracts(jfservice_pk, force_sync = False, user_pk = None):
 
         # get contracts from first page
         operation = client.Contracts.get_corporations_corporation_id_contracts(
-            corporation_id=jfservice.character.character.corporation_id
+            corporation_id=handler.character.character.corporation_id
         )
         operation.also_return_response = True
         contracts_all, response = operation.result()
@@ -113,7 +113,7 @@ def sync_contracts(jfservice_pk, force_sync = False, user_pk = None):
                 'Fetching alliance contracts from ESI - page {}'.format(page)
             ))
             contracts_all += client.Contracts.get_corporations_corporation_id_contracts(
-                corporation_id=jfservice.character.character.corporation_id,
+                corporation_id=handler.character.character.corporation_id,
                 page=page
             ).result()
 
@@ -121,14 +121,14 @@ def sync_contracts(jfservice_pk, force_sync = False, user_pk = None):
         contracts = [
             x for x in contracts_all 
             if x['type'] == 'courier' 
-            and int(x['assignee_id']) == int(jfservice.alliance.alliance_id)
+            and int(x['assignee_id']) == int(handler.alliance.alliance_id)
         ]
 
         # determine if contracts have changed by comparing their hashes
         new_version_hash = hashlib.md5(
             json.dumps(contracts, cls=DjangoJSONEncoder).encode('utf-8')
         ).hexdigest()
-        if force_sync or new_version_hash != jfservice.version_hash:
+        if force_sync or new_version_hash != handler.version_hash:
             logger.info(addTag(
                 'Storing alliance update with {:,} contracts'.format(
                     len(contracts)
@@ -181,7 +181,7 @@ def sync_contracts(jfservice_pk, force_sync = False, user_pk = None):
                     )
                     
                     Contract.objects.update_or_create(
-                        jfservice=jfservice,
+                        handler=handler,
                         contract_id=contract['contract_id'],
                         defaults={
                             'acceptor': acceptor,
@@ -203,11 +203,11 @@ def sync_contracts(jfservice_pk, force_sync = False, user_pk = None):
                             'volume': contract['volume'],
                         }                        
                     )
-                jfservice.version_hash = new_version_hash
-                jfservice.last_sync = datetime.datetime.now(
+                handler.version_hash = new_version_hash
+                handler.last_sync = datetime.datetime.now(
                     datetime.timezone.utc
                 )
-                jfservice.save()
+                handler.save()
             
         else:
             logger.info(addTag('Alliance contracts are unchanged.'))
