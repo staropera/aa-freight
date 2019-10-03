@@ -1,49 +1,91 @@
+import logging
+from bravado.exception import *
 from django.db import models
 from esi.clients import esi_client_factory
 from allianceauth.eveonline.models import EveCorporationInfo
+from .utils import LoggerAddTag, makeLoggerPrefix
+
+
+logger = LoggerAddTag(logging.getLogger(__name__), __package__)
+
 
 class LocationManager(models.Manager):
-
-    EVE_STRUCTURE_ID_START = 1000000000000
+    STATION_ID_START = 60000000
+    STATION_ID_END = 69999999
     
-    def update_or_create_smart(self, client, location_id):
-        from .models import Structure, Location
+    def get_or_create_esi(self, client: object, location_id: int) -> list:
+        """gets or creates location object with data fetched from ESI"""
+        from .models import Location
+        try:
+            location = Location.objects.get(id=location_id)
+            created = False
+        except Location.DoesNotExist:
+            location, created = self.update_or_create_esi(
+                client, 
+                location_id
+            )
+        
+        return location, created
 
-        if location_id >= self.EVE_STRUCTURE_ID_START:
-            structure_info = client.Universe.get_universe_structures_structure_id(
-                structure_id=location_id
-            ).result()
+
+    def update_or_create_esi(self, client: object, location_id: int)->list:
+        """updates or creates location object with data fetched from ESI"""
+        from .models import Location
+
+        addPrefix = makeLoggerPrefix(location_id)
+
+        if (location_id >= self.STATION_ID_START 
+                and location_id <= self.STATION_ID_END):
+            logger.info(addPrefix('Fetching station from ESI'))
             try:
-                owner = EveCorporationInfo.objects.get(
-                    corporation_id=structure_info['owner_id']
-                )
-            except EveCorporationInfo.DoesNotExist:
-                owner = EveCorporationInfo.objects.create_corporation(
-                    corp_id=structure_info['owner_id']
-                )
-            structure, _ = Structure.objects.update_or_create(
-                id=location_id,
-                defaults={
-                    'name': structure_info['name'],
-                    'owner': owner,
-                    'position_x': structure_info['position']['x'],
-                    'position_y': structure_info['position']['y'],
-                    'position_z': structure_info['position']['z'],
-                    'solar_system_id': structure_info['solar_system_id'],
-                    'type_id': structure_info['type_id'],
-                }
-            )
-            location, created = Location.objects.update_or_create(
-                id = location_id,
-                defaults={
-                    'structure': structure
-                }
-            )
+                station = client.Universe.get_universe_stations_station_id(
+                    station_id=location_id
+                ).result()
+                location, created = Location.objects.update_or_create(
+                    id=location_id,
+                    defaults={
+                        'name': station['name'],                    
+                        'solar_system_id': station['system_id'],
+                        'type_id': station['type_id'],                    
+                        'category': Location.CATEGORY_STATION_ID
+                    }
+                ) 
+            except Exception as ex:
+                logger.warn(addPrefix(
+                    'Failed to load station: '.format(ex)
+                ))
+                raise ex
+            
         else:
-            location, created = Location.objects.update_or_create(
-                id = location_id,
-                defaults={
-                    'item_id': location_id
-                }
-            )
+            logger.info(addPrefix('Fetching structure from ESI'))
+            try:
+                structure = client.Universe.get_universe_structures_structure_id(
+                    structure_id=location_id
+                ).result()            
+                location, created = Location.objects.update_or_create(
+                    id=location_id,
+                    defaults={
+                        'name': structure['name'],                    
+                        'solar_system_id': structure['solar_system_id'],
+                        'type_id': structure['type_id'],
+                        'category': Location.CATEGORY_STRUCTURE_ID
+                    }
+                )      
+            except (HTTPUnauthorized, HTTPForbidden) as ex:
+                logger.warn(addPrefix(
+                    'No access to this structure: '.format(ex)
+                ))      
+                location, created = Location.objects.get_or_create(
+                    id = location_id,
+                    defaults={
+                        'name': 'Unknown structure {}'.format(location_id),
+                        'category': Location.CATEGORY_STRUCTURE_ID
+                    }
+                )
+            except Exception as ex:
+                logger.warn(addPrefix(
+                    'Failed to load structure: '.format(ex)
+                ))      
+                raise ex
+       
         return location, created

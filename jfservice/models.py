@@ -2,50 +2,30 @@ from django.db import models
 from django.db.models import Q
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 from allianceauth.authentication.models import CharacterOwnership
-from evesde.models import EveSolarSystem, EveType, EveItem
 from .managers import LocationManager
+from evesde.models import EveSolarSystem, EveType
 
 
-class Structure(models.Model):    
-    id = models.BigIntegerField(primary_key=True)
-    name = models.CharField(max_length=100)
-    owner = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
-    position_x = models.FloatField()
-    position_y = models.FloatField()
-    position_z = models.FloatField()
-    solar_system = models.ForeignKey(EveSolarSystem, on_delete=models.CASCADE)
-    type = models.ForeignKey(EveType, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.name
-
-
-class Location(models.Model):
-    STATION_GROUP_ID = 15
+class Location(models.Model):    
+    CATEGORY_UNKNOWN_ID = 0
+    CATEGORY_STATION_ID = 3
+    CATEGORY_STRUCTURE_ID = 65
+    CATEGORY_CHOICES = [
+        (CATEGORY_STATION_ID, 'station'),
+        (CATEGORY_STRUCTURE_ID, 'structure'),
+        (CATEGORY_UNKNOWN_ID, '(unknown)'),
+    ]
 
     id = models.BigIntegerField(primary_key=True)
-    item = models.OneToOneField(
-        EveItem, 
-        on_delete=models.SET_DEFAULT, 
-        default=None, 
-        null=True
+    name = models.CharField(max_length=100)        
+    solar_system_id = models.IntegerField(default=None, null=True)
+    type_id = models.IntegerField(default=None, null=True)
+    category = models.IntegerField(
+        choices=CATEGORY_CHOICES, 
+        default=CATEGORY_UNKNOWN_ID
     )
-    structure = models.OneToOneField(
-        Structure, 
-        on_delete=models.SET_DEFAULT, 
-        default=None, 
-        null=True
-    )
+    
     objects = LocationManager()
-
-    @property
-    def name(self):
-        if self.item:
-            return self.item.eveitemdenormalized.item_name
-        elif self.structure:
-            return self.structure.name
-        else:
-            return 'Unknown location:{}'.format(self.id)
 
     def __str__(self):
         return self.name

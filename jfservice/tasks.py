@@ -13,22 +13,10 @@ from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, E
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
-from evesde.models import EveSolarSystem, EveType, EveItem
-
+from .utils import LoggerAddTag, makeLoggerPrefix
 from .models import *
 
-
-# add custom tag to logger with name of this app
-class LoggerAdapter(logging.LoggerAdapter):
-    def __init__(self, logger, prefix):
-        super(LoggerAdapter, self).__init__(logger, {})
-        self.prefix = prefix
-
-    def process(self, msg, kwargs):
-        return '[%s] %s' % (self.prefix, msg), kwargs
-
-logger = logging.getLogger(__name__)
-logger = LoggerAdapter(logger, __package__)
+logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 
 SWAGGER_SPEC_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 
@@ -39,10 +27,6 @@ Swagger Operations:
 get_universe_structures_structure_id
 get_corporation_corporation_id
 """
-
-def makeLoggerTag(tag: str):
-    """creates a function to add logger tags"""
-    return lambda text : '{}: {}'.format(tag, text)
 
 
 @shared_task
@@ -56,11 +40,11 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
         return False
     
     try:
-        addTag = makeLoggerTag(handler)
+        addPrefix = makeLoggerPrefix(handler)
         alliance_name = handler.alliance.alliance_name
         
         if handler.character is None:
-            logger.error(addTag(
+            logger.error(addPrefix(
                 'No character configured to sync the alliance'
             ))           
             raise ValueError()
@@ -69,7 +53,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
         if not handler.character.user.has_perm(
                 'jfservice.add_syncmanager'
             ):
-            logger.error(addTag(
+            logger.error(addPrefix(
                 'Character does not have sufficient permission '
                 + 'to sync contracts'
             ))            
@@ -84,19 +68,19 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
                 ContractsHandler.get_esi_scopes()
             ).require_valid().first()
         except TokenInvalidError:        
-            logger.error(addTag(
+            logger.error(addPrefix(
                 'Invalid token'
             ))            
             raise TokenInvalidError()
             
         except TokenExpiredError:            
-            logger.error(addTag(
+            logger.error(addPrefix(
                 'Token expired'
             ))
             raise TokenExpiredError()
         
         # fetching data from ESI
-        logger.info(addTag('Fetching alliance contracts from ESI - page 1'))
+        logger.info(addPrefix('Fetching alliance contracts from ESI - page 1'))
         client = esi_client_factory(token=token, spec_file=SWAGGER_SPEC_PATH)
 
         # get contracts from first page
@@ -109,7 +93,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
         
         # add contracts from additional pages if any            
         for page in range(2, pages + 1):
-            logger.info(addTag(
+            logger.info(addPrefix(
                 'Fetching alliance contracts from ESI - page {}'.format(page)
             ))
             contracts_all += client.Contracts.get_corporations_corporation_id_contracts(
@@ -129,7 +113,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
             json.dumps(contracts, cls=DjangoJSONEncoder).encode('utf-8')
         ).hexdigest()
         if force_sync or new_version_hash != handler.version_hash:
-            logger.info(addTag(
+            logger.info(addPrefix(
                 'Storing alliance update with {:,} contracts'.format(
                     len(contracts)
                 ))
@@ -171,11 +155,11 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
                     date_completed = getattr(contract, 'date_completed', None)
                     title = getattr(contract, 'title', None)
 
-                    start_location, _ = Location.objects.update_or_create_smart(
+                    start_location, _ = Location.objects.get_or_create_esi(
                         client,
                         contract['start_location_id']
                     )
-                    end_location, _ = Location.objects.update_or_create_smart(
+                    end_location, _ = Location.objects.get_or_create_esi(
                         client,
                         contract['end_location_id']
                     )
@@ -210,11 +194,11 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
                 handler.save()
             
         else:
-            logger.info(addTag('Alliance contracts are unchanged.'))
+            logger.info(addPrefix('Alliance contracts are unchanged.'))
         
     
     except Exception as ex:
-            logger.error(addTag(
+            logger.error(addPrefix(
                 'An unexpected error ocurred'. format(ex)
             ))
             raise ex

@@ -32,4 +32,3 @@ admin.site.register(Contract)
 
 admin.site.register(Location)
 
-admin.site.register(Structure)
