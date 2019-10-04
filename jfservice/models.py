@@ -5,6 +5,20 @@ from allianceauth.authentication.models import CharacterOwnership
 from .managers import LocationManager
 from evesde.models import EveSolarSystem, EveType
 
+class FreightService(models.Model):
+
+    class Meta:
+        managed = False                         
+        default_permissions = ()
+        permissions = ( 
+            ('basic_access', 'Can access this app'),  
+            ('create_service', 'Can create / update a freight service'), 
+            ('use_calculator', 'Can use the calculator'), 
+            ('view_contracts', 'Can view the contracts list'), 
+            ('add_location', 'Can add / update locations'), 
+            ('view_statistics', 'Can view freight statistics'), 
+        )
+
 
 class Location(models.Model):    
     CATEGORY_UNKNOWN_ID = 0
@@ -130,10 +144,6 @@ class ContractsHandler(models.Model):
     version_hash = models.CharField(max_length=32, null=True, default=None, blank=True)    
     last_sync = models.DateTimeField(null=True, default=None, blank=True)
 
-    class Meta:
-        permissions = (
-            ('access_jfservice', 'Can access the JF Service'),
-        )
 
     @classmethod
     def get_esi_scopes(cls):
