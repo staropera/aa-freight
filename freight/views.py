@@ -21,23 +21,23 @@ from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 ADD_LOCATION_TOKEN_TAG = 'jfservice_add_location_token'
 
 @login_required
-@permission_required('jfservice.access_jfservice')
+@permission_required('freight.access_jfservice')
 def index(request):
-    return redirect('jfservice:calculator')
+    return redirect('freight:calculator')
 
 
 @login_required
-@permission_required('jfservice.access_jfservice')
+@permission_required('freight.access_jfservice')
 def contract_list(request):
         
     context = {
         'page_title': 'Contracts'
     }        
-    return render(request, 'jfservice/contract_list.html', context)
+    return render(request, 'freight/contract_list.html', context)
 
 
 @login_required
-@permission_required('jfservice.access_jfservice')
+@permission_required('freight.access_jfservice')
 def contract_list_data(request):
 
     def make_route_key(location_id_1: int, location_id_2: int) -> str:
@@ -108,7 +108,7 @@ def contract_list_data(request):
 
 
 @login_required
-@permission_required('jfservice.access_jfservice')
+@permission_required('freight.access_jfservice')
 def calculator(request):            
     if request.method != 'POST':
         form = CalculatorForm()
@@ -145,7 +145,7 @@ def calculator(request):
             price = None
         
     return render(
-        request, 'jfservice/calculator.html', 
+        request, 'freight/calculator.html', 
         {
             'page_title': 'Price Calculator',            
             'form': form, 
@@ -155,18 +155,18 @@ def calculator(request):
 
 
 @login_required
-@permission_required('jfservice.access_jfservice')
+@permission_required('freight.access_jfservice')
 def calculator_pricing_info(request, pricing_pk):
     pricing = Pricing.objects.get(pk=pricing_pk)    
     return render(
         request, 
-        'jfservice/calculator_pricing_info.html', 
+        'freight/calculator_pricing_info.html', 
         {'pricing': pricing}
     )
     
 
 @login_required
-@permission_required('jfservice.access_jfservice')
+@permission_required('freight.access_jfservice')
 @token_required(scopes=ContractsHandler.get_esi_scopes())
 def create_or_update_service(request, token):
     success = True
@@ -238,19 +238,19 @@ def create_or_update_service(request, token):
             + 'Started syncing of courier contracts. '
             + 'You will receive a report once it is completed.'
         )
-    return redirect('jfservice:index')
+    return redirect('freight:index')
 
 
 @login_required
 @token_required(scopes=Location.get_esi_scopes())
-@permission_required('jfservice.access_jfservice')
+@permission_required('freight.access_jfservice')
 def add_location(request, token): 
     request.session[ADD_LOCATION_TOKEN_TAG] = token.pk
-    return redirect('jfservice:add_location_2')
+    return redirect('freight:add_location_2')
 
 
 @login_required
-@permission_required('jfservice.access_jfservice')
+@permission_required('freight.access_jfservice')
 def add_location_2(request): 
     if ADD_LOCATION_TOKEN_TAG not in request.session:
         raise RuntimeError('Missing token in session')
@@ -283,7 +283,7 @@ def add_location_2(request):
                         location.name
                     )
                 )
-                return redirect('jfservice:add_location_2')    
+                return redirect('freight:add_location_2')    
 
             except Exception as ex:
                 messages_plus.warning(
@@ -295,7 +295,7 @@ def add_location_2(request):
             
         
     return render(
-        request, 'jfservice/add_location.html', 
+        request, 'freight/add_location.html', 
         {            
             'page_title': 'Add / Update Location',
             'form': form,

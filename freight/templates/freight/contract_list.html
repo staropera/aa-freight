@@ -1,4 +1,4 @@
-{% extends 'jfservice/base.html' %}
+{% extends 'freight/base.html' %}
 {% load i18n %}
 {% load humanize %}
 {% load static %}
@@ -51,7 +51,7 @@
     {% include 'bundles/datatables-css.html' %}    
 
     <link 
-        href="{% static 'jfservice/contracts.css' %}" 
+        href="{% static 'freight/contracts.css' %}" 
         type="text/css" 
         rel="stylesheet"
     >
@@ -61,7 +61,7 @@
     $(document).ready(function(){
         $('#tab_contracts').DataTable({
             ajax: {
-                url: '{% url 'jfservice:contract_list_data' %}',
+                url: '{% url 'freight:contract_list_data' %}',
                 dataSrc: '',
                 cache: false
             },

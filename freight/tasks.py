@@ -47,7 +47,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
 
         # abort if character does not have sufficient permissions
         if not handler.character.user.has_perm(
-                'jfservice.add_syncmanager'
+                'freight.add_syncmanager'
             ):
             logger.error(add_prefix(
                 'Character does not have sufficient permission '

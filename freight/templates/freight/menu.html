@@ -11,19 +11,19 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="{% url 'jfservice:index' %}">{% trans "Alliance Freight" %}</a>
+            <a class="navbar-brand" href="{% url 'freight:index' %}">{% trans "Alliance Freight" %}</a>
         </div>
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
-                <li class="{% navactive request 'jfservice:calculator' %}"><a href="{% url 'jfservice:calculator' %}">Price Calculator</a> </li>
-                <li class="{% navactive request 'jfservice:contract_list' %}"><a href="{% url 'jfservice:contract_list' %}">Contracts</a> </li>                
+                <li class="{% navactive request 'freight:calculator' %}"><a href="{% url 'freight:calculator' %}">Price Calculator</a> </li>
+                <li class="{% navactive request 'freight:contract_list' %}"><a href="{% url 'freight:contract_list' %}">Contracts</a> </li>                
             </ul>
             <ul class="nav navbar-nav navbar-right"> 
-                {% if perms.jfservice.access_jfservice %}
-                    <a class="btn btn-warning navbar-btn" href="{% url 'jfservice:create_or_update_service' %}">Setup Contract Handler</a>
+                {% if perms.freight.access_jfservice %}
+                    <a class="btn btn-warning navbar-btn" href="{% url 'freight:create_or_update_service' %}">Setup Contract Handler</a>
                 {% endif %}
-                {% if perms.jfservice.access_jfservice %}
-                    <a class="btn btn-default navbar-btn" href="{% url 'jfservice:add_location' %}">Add Location</a>
+                {% if perms.freight.access_jfservice %}
+                    <a class="btn btn-default navbar-btn" href="{% url 'freight:add_location' %}">Add Location</a>
                 {% endif %}
             </ul>
         </div>

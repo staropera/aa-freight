@@ -5,7 +5,7 @@ from allianceauth.authentication.models import CharacterOwnership
 from .managers import LocationManager
 from evesde.models import EveSolarSystem, EveType
 
-class FreightService(models.Model):
+class Freight(models.Model):
 
     class Meta:
         managed = False                         

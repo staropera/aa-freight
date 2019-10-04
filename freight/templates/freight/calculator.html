@@ -1,11 +1,11 @@
-{% extends 'jfservice/base.html' %}
+{% extends 'freight/base.html' %}
 {% load i18n %}
 {% load humanize %}
 {% load bootstrap %}
 {% load jfservice_filters %}
 
 {% block details %}
-    <form class="form" action="{% url 'jfservice:calculator' %}" method="POST">        
+    <form class="form" action="{% url 'freight:calculator' %}" method="POST">        
         {% csrf_token %}
         <div class="row">
             <div class="col-md-6">
@@ -49,7 +49,7 @@
 {% block extra_script %}
     function pricing_detail_update(){
         $("#div_pricing_info").load(
-            "{% url 'jfservice:calculator_pricing_info' 0 %}".replace(
+            "{% url 'freight:calculator_pricing_info' 0 %}".replace(
                 "0", 
                 $("#id_pricing").val()
             )

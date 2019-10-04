@@ -1,6 +1,6 @@
 include LICENSE
 include README.md
-recursive-include jfservice *.py
-recursive-include jfservice/static *
-recursive-include jfservice/templates *
+recursive-include freight *.py
+recursive-include freight/static *
+recursive-include freight/templates *
 

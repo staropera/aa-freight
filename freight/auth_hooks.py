@@ -12,12 +12,12 @@ class ExampleMenuItem(MenuItemHook):
             self,
             _('Alliance Freight'),
             'fa fa-truck fa-fw',
-            'jfservice:index',
-            navactive=['jfservice:index']
+            'freight:index',
+            navactive=['freight:index']
         )
 
     def render(self, request):
-        if request.user.has_perm('jfservice.access_jfservice'):
+        if request.user.has_perm('freight.access_jfservice'):
             return MenuItemHook.render(self, request)
         return ''
 
@@ -29,4 +29,4 @@ def register_menu():
 
 @hooks.register('url_hook')
 def register_urls():
-    return UrlHook(urls, 'jfservice', r'^jfservice/')
+    return UrlHook(urls, 'freight', r'^freight/')
