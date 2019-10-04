@@ -77,7 +77,13 @@ def contract_list_data(request):
                 glyph = 'warning-sign'
                 color = 'red'                
                 tooltip_text = '{}\n{}'.format(pricing.name, '\n'.join(errors))
-            pricing_check = '<span class="glyphicon glyphicon-{}" aria-hidden="true" style="color: {};" data-toggle="tooltip" data-placement="top" title="{}"></span>'.format(glyph, color, tooltip_text)
+            pricing_check = ('<span class="glyphicon '
+                + 'glyphicon-'+ glyph + '" ' 
+                + 'aria-hidden="true" '
+                + 'style="color:' + color + ' ;" ' 
+                + 'data-toggle="tooltip" data-placement="top" '
+                + 'title="' + tooltip_text + '">'
+                + '</span>')
         else:
             pricing_check = 'N/A'
 

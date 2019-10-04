@@ -17,19 +17,18 @@
                     <div class="panel-body">
                         {{ form|bootstrap }}
                         <br>
-                        <p><strong>Price</strong></p>
+                        <p><strong>Your Price</strong></p>
                         <h2>                
                             {{ price|power10:"6"|formatnumber:"0"|default_if_none:"-" }} M ISK
                         </h2>
-                        <p>Please enter the calculated price as <strong>Reward</strong> for the courier contract.</p>
+                        <p>Please enter your price as <strong>Reward</strong> in the courier contract.</p>
 
-                        <button class="btn btn-success btn-lg" type="submit">Click Me To Calculate Price!</button>
+                        <button class="btn btn-success btn-lg" type="submit">Click To Calculate Price!</button>
                     </div>
                 </div>
 
             </div>
             <div class="col-md-6">
-
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title">Pricing details for selected route</h3>
