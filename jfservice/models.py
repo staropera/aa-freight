@@ -42,7 +42,7 @@ class Location(models.Model):
 
 
 
-class Pricing(models.Model):    
+class Pricing(models.Model):        
     start_location = models.ForeignKey(
         Location, 
         on_delete=models.CASCADE,
@@ -52,14 +52,14 @@ class Pricing(models.Model):
         Location, 
         on_delete=models.CASCADE,
         related_name='pricing_end_location'
-    )
+    )    
     active = models.BooleanField(default=True)
     price_base = models.FloatField(default=0, blank=True)
     price_per_volume = models.FloatField(default=0, blank=True)
-    price_per_collateral_percent = models.FloatField(default=0, blank=True)    
+    price_per_collateral_percent = models.FloatField(default=0, blank=True)
     collateral_min = models.BigIntegerField(default=0, blank=True)
     collateral_max = models.BigIntegerField(default=None, null=True, blank=True)
-    volume_max = models.FloatField(default=None, null=True, blank=True)    
+    volume_max = models.FloatField(default=None, null=True, blank=True)
     days_to_expire = models.IntegerField(default=None, null=True, blank=True)
     days_to_complete = models.IntegerField(default=None, null=True, blank=True)
     details = models.TextField(default=None, null=True, blank=True)
@@ -67,11 +67,15 @@ class Pricing(models.Model):
     class Meta:
         unique_together = (('start_location', 'end_location'),)
     
-    def __str__(self):
-        return '{} -> {}'.format(            
-            self.start_location,
-            self.end_location
+    @property
+    def name(self):
+        return '{} - {}'.format(
+            self.start_location.name.split(' ', 1)[0],
+            self.end_location.name.split(' ', 1)[0]
         )
+
+    def __str__(self):
+        return self.name
 
     def get_calculated_price(self, volume: float, collateral: float) -> float:
         """returns the calculated price for the given parameters"""
@@ -226,3 +230,9 @@ class Contract(models.Model):
             self.end_location
         )
 
+    def get_pricing_errors(self, pricing: Pricing) ->list:
+        return pricing.get_contract_pricing_errors(
+            self.volume,
+            self.collateral,
+            self.reward
+        )

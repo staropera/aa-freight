@@ -16,10 +16,11 @@
                     <tr>
                         <th>Status</th>
                         <th>Start</th>
-                        <th>End</th>
+                        <th>End</th>                        
                         <th>Reward<br>Mio ISK</th>
                         <th>Collaterial<br>Mio ISK</th>
                         <th>Volume<br>K m3</th>
+                        <th>Price Check</th>
                         <th>Issued On</th>
                         <th>Expires On</th>
                         <th>Issued By</th>
@@ -32,7 +33,12 @@
             </table>
         </div>
     </div>
-
+    <p class="text-muted">
+        Price check: 
+        <span class="glyphicon glyphicon-ok" aria-hidden="true"></span> = OK &nbsp;&nbsp; 
+        <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span> = Errors &nbsp;&nbsp;
+        If they are errors you find them in the tooltip of the shown symbol
+    </p>
     
 {% endblock %}
 
@@ -63,10 +69,11 @@
             columns: [
                 { data: 'status' },
                 { data: 'start_location' },
-                { data: 'end_location' },
+                { data: 'end_location' },                
                 { data: 'reward' },
                 { data: 'collateral' },
                 { data: 'volume' },
+                { data: 'pricing_check' },
                 { data: 'date_issued' },
                 { data: 'date_expired' },
                 { data: 'issuer' },

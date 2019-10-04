@@ -40,6 +40,9 @@ def contract_list(request):
 @permission_required('jfservice.access_jfservice')
 def contract_list_data(request):
 
+    def make_route_key(location_id_1: int, location_id_2: int) -> str:
+        return "x".join([str(x) for x in sorted([location_id_1, location_id_2])])
+
     contracts = Contract.objects.filter(
         handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
         status__in=[
@@ -48,10 +51,36 @@ def contract_list_data(request):
         ]
     ).select_related()
 
+    pricings = {
+        make_route_key(x.start_location_id, x.end_location_id): x 
+        for x in Pricing.objects.filter(active__exact=True) 
+    }
+    
     contracts_data = list()
     datetime_format = lambda x: x.strftime(DATETIME_FORMAT) if x else None
     character_format = lambda x: x.character_name if x else None
     for contract in contracts:                
+        route_key = make_route_key(
+            contract.start_location_id, 
+            contract.end_location_id
+        )        
+        pricing = pricings[route_key] if route_key in pricings else None        
+        has_pricing = pricing is not None
+        errors = contract.get_pricing_errors(pricing) if has_pricing else None
+        has_pricing_errors = errors is not None
+        if has_pricing:            
+            if not has_pricing_errors:
+                glyph = 'ok'
+                color = 'green'
+                tooltip_text = pricing.name
+            else:
+                glyph = 'warning-sign'
+                color = 'red'                
+                tooltip_text = '{}\n{}'.format(pricing.name, '\n'.join(errors))
+            pricing_check = '<span class="glyphicon glyphicon-{}" aria-hidden="true" style="color: {};" data-toggle="tooltip" data-placement="top" title="{}"></span>'.format(glyph, color, tooltip_text)
+        else:
+            pricing_check = 'N/A'
+
         contracts_data.append({
             'status': contract.status,
             'start_location': str(contract.start_location),
@@ -64,6 +93,9 @@ def contract_list_data(request):
             'issuer': character_format(contract.issuer),
             'date_accepted': datetime_format(contract.date_accepted),
             'acceptor': character_format(contract.acceptor),
+            'has_pricing': has_pricing,
+            'has_pricing_errors': has_pricing_errors,
+            'pricing_check': pricing_check
         })
 
     return JsonResponse(contracts_data, safe=False)

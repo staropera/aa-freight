@@ -20,22 +20,24 @@
     </div>
     <div class="col-md-2">
         <strong>            
+            <p>Start:</p>
+            <p>Destination:</p>
             <p>Max Volume:</p>
             <p>Expiration</p>
             <p>Completion</p>      
         </strong>
     </div>
-    <div class="col-md-2">        
+    <div class="col-md-3">        
+        <p>{{ pricing.start_location }}</p>
+        <p>{{ pricing.end_location }}</p>
         <p>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</p>
         <p>{{ pricing.days_to_expire|default_if_none:"-" }} days</p>
         <p>{{ pricing.days_to_complete|default_if_none:"-" }} days</p>
     </div>
-    <div class="col-md-1">
+    <div class="col-md-3">
         <strong>
-            <p>Details:</p>        
+            <p>Details:</p>
         </strong>
-    </div>
-    <div class="col-md-3">        
-        {{ pricing.details|linebreaks }}
-    </div>
+            <p>{{ pricing.details|linebreaks }}</p>        
+    </div>    
 </div>

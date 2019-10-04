@@ -14,11 +14,9 @@ class LocationAdmin(admin.ModelAdmin):
 
 @admin.register(Pricing)
 class PricingAdmin(admin.ModelAdmin):
-    list_display = ('route', 'active')    
+    list_display = ('name', 'start_location', 'end_location', 'active')    
     list_filter = ('active',)
-          
-    def route(self, obj):
-        return str(obj)
+    
 
 @admin.register(ContractsHandler)
 class ContractsHandlerAdmin(admin.ModelAdmin):
