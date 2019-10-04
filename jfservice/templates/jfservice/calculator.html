@@ -16,37 +16,32 @@
                     </div>
                     <div class="panel-body">
                         {{ form|bootstrap }}
+                        <br>
+                        <p><strong>Price</strong></p>
+                        <h2>                
+                            {{ price|power10:"6"|formatnumber:"0"|default_if_none:"-" }} M ISK
+                        </h2>
+                        <p>Please enter the calculated price as <strong>Reward</strong> for the courier contract.</p>
+
+                        <button class="btn btn-success btn-lg" type="submit">Click Me To Calculate Price!</button>
                     </div>
                 </div>
 
             </div>
             <div class="col-md-6">
 
-                <div class="panel panel-primary">
+                <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Your price</h3>
+                        <h3 class="panel-title">Pricing details for selected route</h3>
                     </div>
-                    <div class="panel-body">
-                        <h2>                
-                            {{ price|power10:"6"|formatnumber:"0"|default_if_none:"-" }} M ISK
-                        </h2>
-                        <p>Please enter the calculated price as <strong>Reward</strong> for the courier contract.</p>
+                    <div class="panel-body">    
+                        <div id="div_pricing_info"></div>                   
                     </div>
-                </div>
-                <button class="btn btn-success btn-lg" type="submit">Click Me To Calculate Price!</button>
+                </div>                
             </div>
         </div>        
     </form>
 <br>    
-
-<div class="panel panel-default">   
-    <div class="panel-heading">
-        <h3 class="panel-title">Pricing details for this route</h3>
-    </div>
-    <div class="panel-body">
-        <div id="div_pricing_info"></div>
-    </div>
-</div>
     
 
         
