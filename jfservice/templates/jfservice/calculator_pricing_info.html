@@ -11,7 +11,7 @@
     <dt>Price add-on per m3:</dt>
     <dd>{{ pricing.price_per_volume|formatnumber:"0"|default_if_none:"0" }} ISK</dd>
 
-    <dt>Price add-on for collateral:</dt>
+    <dt>Price add-on collateral:</dt>
     <dd>{{ pricing.price_per_collateral_percent|default_if_none:"0" }} %</dd>
 
     <dt>Min. Collateral:</dt>
@@ -37,18 +37,9 @@
 
     <dt>Additional Instructions:</dt>
     <dd>{{ pricing.details|linebreaks }}</dd>
-        
-   
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
 </dl>
+
+<style>
+    .dl-horizontal dt { text-align: left; }
+</style>

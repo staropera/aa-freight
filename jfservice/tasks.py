@@ -36,11 +36,11 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
         return False
     
     try:
-        addPrefix = make_logger_prefix(handler)
+        add_prefix = make_logger_prefix(handler)
         alliance_name = handler.alliance.alliance_name
         
         if handler.character is None:
-            logger.error(addPrefix(
+            logger.error(add_prefix(
                 'No character configured to sync the alliance'
             ))           
             raise ValueError()
@@ -49,7 +49,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
         if not handler.character.user.has_perm(
                 'jfservice.add_syncmanager'
             ):
-            logger.error(addPrefix(
+            logger.error(add_prefix(
                 'Character does not have sufficient permission '
                 + 'to sync contracts'
             ))            
@@ -64,19 +64,19 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
                 ContractsHandler.get_esi_scopes()
             ).require_valid().first()
         except TokenInvalidError:        
-            logger.error(addPrefix(
+            logger.error(add_prefix(
                 'Invalid token'
             ))            
             raise TokenInvalidError()
             
         except TokenExpiredError:            
-            logger.error(addPrefix(
+            logger.error(add_prefix(
                 'Token expired'
             ))
             raise TokenExpiredError()
         
         # fetching data from ESI
-        logger.info(addPrefix('Fetching alliance contracts from ESI - page 1'))
+        logger.info(add_prefix('Fetching alliance contracts from ESI - page 1'))
         client = esi_client_factory(
             token=token, 
             spec_file=get_swagger_spec_path()
@@ -92,7 +92,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
         
         # add contracts from additional pages if any            
         for page in range(2, pages + 1):
-            logger.info(addPrefix(
+            logger.info(add_prefix(
                 'Fetching alliance contracts from ESI - page {}'.format(page)
             ))
             contracts_all += client.Contracts.get_corporations_corporation_id_contracts(
@@ -112,7 +112,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
             json.dumps(contracts, cls=DjangoJSONEncoder).encode('utf-8')
         ).hexdigest()
         if force_sync or new_version_hash != handler.version_hash:
-            logger.info(addPrefix(
+            logger.info(add_prefix(
                 'Storing alliance update with {:,} contracts'.format(
                     len(contracts)
                 ))
@@ -191,13 +191,46 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
                     datetime.timezone.utc
                 )
                 handler.save()
+                success = True
             
         else:
-            logger.info(addPrefix('Alliance contracts are unchanged.'))
+            logger.info(add_prefix('Alliance contracts are unchanged.'))
+            success = True
         
     
     except Exception as ex:
-            logger.error(addPrefix(
+            logger.error(add_prefix(
                 'An unexpected error ocurred'. format(ex)
             ))
-            raise ex
+            error_code = type(ex).__name__
+            success = False
+
+    if user_pk:
+        try:
+            message = 'Syncing of alliance contracts for "{}" {}.\n'.format(
+                handler.alliance,
+                'completed successfully' if success else 'has failed'
+            )
+            if success:
+                message += '{:,} contracts synced.'.format(
+                    handler.contract_set.count()
+                )
+            else:
+                message += 'Error code: {}'.format(error_code)
+            
+            notify(
+                user=User.objects.get(pk=user_pk),
+                title='Freight: Contracts sync for {}: {}'.format(
+                    handler.alliance,
+                    'OK' if success else 'FAILED'
+                ),
+                message=message,
+                level='success' if success else 'danger'
+            )
+        except Exception as ex:
+            logger.error(add_prefix(
+                'An unexpected error ocurred while trying to '
+                + 'report to user: {}'. format(ex)
+            ))
+    
+    return success

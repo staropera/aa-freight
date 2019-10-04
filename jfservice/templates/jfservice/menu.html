@@ -11,7 +11,7 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="{% url 'jfservice:index' %}">{% trans "Freight Shipping" %}</a>
+            <a class="navbar-brand" href="{% url 'jfservice:index' %}">{% trans "Alliance Freight" %}</a>
         </div>
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
@@ -20,7 +20,7 @@
             </ul>
             <ul class="nav navbar-nav navbar-right"> 
                 {% if perms.jfservice.access_jfservice %}
-                    <a class="btn btn-warning navbar-btn" href="{% url 'jfservice:create_or_update_service' %}">Setup Alliance Character</a>
+                    <a class="btn btn-warning navbar-btn" href="{% url 'jfservice:create_or_update_service' %}">Setup Contract Handler</a>
                 {% endif %}
                 {% if perms.jfservice.access_jfservice %}
                     <a class="btn btn-default navbar-btn" href="{% url 'jfservice:add_location' %}">Add Location</a>

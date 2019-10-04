@@ -32,8 +32,11 @@ class LoggerAddTag(logging.LoggerAdapter):
 
 
 
-class messages_nice():
-    """wrapper class to Django messages for adding nice Bootstrap icons"""
+class messages_plus():
+    """Pendant to Django messages adding level icons and HTML support
+    
+    Careful: Use with safe strings only
+    """
 
     @classmethod
     def add_messages_icon(cls,level, message):

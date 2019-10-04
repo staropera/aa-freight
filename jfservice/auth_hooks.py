@@ -10,7 +10,7 @@ class ExampleMenuItem(MenuItemHook):
         # setup menu entry for sidebar
         MenuItemHook.__init__(
             self,
-            _('Freight Shipping'),
+            _('Alliance Freight'),
             'fa fa-truck fa-fw',
             'jfservice:index',
             navactive=['jfservice:index']

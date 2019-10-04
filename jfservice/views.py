@@ -16,7 +16,7 @@ from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, E
 from .models import *
 from . import tasks
 from .forms import CalculatorForm, AddLocationForm
-from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_nice
+from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
 ADD_LOCATION_TOKEN_TAG = 'jfservice_add_location_token'
 
@@ -128,7 +128,7 @@ def calculator(request):
                 collateral * 1000000                
             )
             for error in errors:            
-                messages_nice.error(
+                messages_plus.error(
                     request,                     
                     'Invalid input: {}'.format(error)                    
                 )
@@ -173,7 +173,7 @@ def create_or_update_service(request, token):
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
     if token_char.alliance_id is None:
-        messages_nice.warning(
+        messages_plus.warning(
             request, 
             'Can not create JF service, because {} is not a member of any '
                 + 'alliance. '.format(token_char)            
@@ -187,7 +187,7 @@ def create_or_update_service(request, token):
                 character=token_char
             )            
         except CharacterOwnership.DoesNotExist:
-            messages_nice.warning(
+            messages_plus.warning(
                 request,
                 'Could not find character {}'.format(token_char.character_name)    
             )
@@ -205,7 +205,19 @@ def create_or_update_service(request, token):
             alliance.save()
 
     if success:
-        contracts_handler, created = ContractsHandler.objects.update_or_create(    
+        contracts_handler = ContractsHandler.objects.first()
+        if contracts_handler and contracts_handler.alliance != alliance:
+            messages_plus.danger(
+                request,
+                'There already is a contract handler installed for a '
+                + 'different alliance. You need to first delete the '
+                + 'existing contract handler in the admin section '
+                + 'before you can run set it up for a different alliance.'
+            )
+            success = False
+    
+    if success:
+        contracts_handler, created = ContractsHandler.objects.update_or_create(
             alliance=alliance,
             defaults={
                 'character': owned_char
@@ -216,10 +228,11 @@ def create_or_update_service(request, token):
             force_sync=True,
             user_pk=request.user.pk
         )        
-        messages_nice.success(
+        messages_plus.success(
             request, 
-            'JF service created for {} alliance with {} as sync character. '.format(                    
-                    alliance.alliance_name,
+            'Contract Handler setup completed for '
+            + '<strong>{}</strong> alliance '.format(alliance.alliance_name)
+            + 'with <strong>{}</strong> as sync character. '.format(
                     contracts_handler.character.character.character_name, 
                 )
             + 'Started syncing of courier contracts. '
@@ -263,7 +276,7 @@ def add_location_2(request):
                     add_unknown=False
                 )
                 action_txt = 'Added' if created else 'Updated'
-                messages_nice.success(
+                messages_plus.success(
                     request,
                     '{} "{}"'.format(
                         action_txt,                        
@@ -273,7 +286,7 @@ def add_location_2(request):
                 return redirect('jfservice:add_location_2')    
 
             except Exception as ex:
-                messages_nice.warning(
+                messages_plus.warning(
                     request,
                     'Failed to add location with token from {}'.format(token.character_name)
                     + ' for location ID {}: '. format(location_id)

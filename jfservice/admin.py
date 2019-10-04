@@ -20,7 +20,7 @@ class PricingAdmin(admin.ModelAdmin):
 
 @admin.register(ContractsHandler)
 class ContractsHandlerAdmin(admin.ModelAdmin):
-    
+    list_display = ('alliance', 'character', 'last_sync')
     actions = ['start_sync']
 
     def start_sync(self, request, queryset):
@@ -40,6 +40,13 @@ class ContractsHandlerAdmin(admin.ModelAdmin):
             )
     
     start_sync.short_description = "Sync contracts"
+
+    # This will help you to disbale add functionality
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Contract)
