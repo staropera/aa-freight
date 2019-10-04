@@ -21,13 +21,13 @@ from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 ADD_LOCATION_TOKEN_TAG = 'jfservice_add_location_token'
 
 @login_required
-@permission_required('freight.access_jfservice')
+@permission_required('freight.basic_access')
 def index(request):
     return redirect('freight:calculator')
 
 
 @login_required
-@permission_required('freight.access_jfservice')
+@permission_required('freight.view_contracts')
 def contract_list(request):
         
     context = {
@@ -37,7 +37,7 @@ def contract_list(request):
 
 
 @login_required
-@permission_required('freight.access_jfservice')
+@permission_required('freight.view_contracts')
 def contract_list_data(request):
 
     def make_route_key(location_id_1: int, location_id_2: int) -> str:
@@ -108,7 +108,7 @@ def contract_list_data(request):
 
 
 @login_required
-@permission_required('freight.access_jfservice')
+@permission_required('freight.use_calculator')
 def calculator(request):            
     if request.method != 'POST':
         form = CalculatorForm()
@@ -155,18 +155,23 @@ def calculator(request):
 
 
 @login_required
-@permission_required('freight.access_jfservice')
+@permission_required('freight.use_calculator')
 def calculator_pricing_info(request, pricing_pk):
-    pricing = Pricing.objects.get(pk=pricing_pk)    
+    try:
+        pricing = Pricing.objects.get(pk=pricing_pk)
+    except:
+        pricing = None
     return render(
         request, 
         'freight/calculator_pricing_info.html', 
-        {'pricing': pricing}
+        {            
+            'pricing': pricing
+        }
     )
     
 
 @login_required
-@permission_required('freight.access_jfservice')
+@permission_required('freight.setup_contracts_handler')
 @token_required(scopes=ContractsHandler.get_esi_scopes())
 def create_or_update_service(request, token):
     success = True
@@ -175,8 +180,8 @@ def create_or_update_service(request, token):
     if token_char.alliance_id is None:
         messages_plus.warning(
             request, 
-            'Can not create JF service, because {} is not a member of any '
-                + 'alliance. '.format(token_char)            
+            'Can not setup contract handler, '
+            'because {} is not a member of any alliance'.format(token_char)
         )
         success = False
     
@@ -243,14 +248,14 @@ def create_or_update_service(request, token):
 
 @login_required
 @token_required(scopes=Location.get_esi_scopes())
-@permission_required('freight.access_jfservice')
+@permission_required('freight.add_location')
 def add_location(request, token): 
     request.session[ADD_LOCATION_TOKEN_TAG] = token.pk
     return redirect('freight:add_location_2')
 
 
 @login_required
-@permission_required('freight.access_jfservice')
+@permission_required('freight.add_location')
 def add_location_2(request): 
     if ADD_LOCATION_TOKEN_TAG not in request.session:
         raise RuntimeError('Missing token in session')

@@ -33,7 +33,7 @@
                     <div class="panel-heading">
                         <h3 class="panel-title">Pricing details for selected route</h3>
                     </div>
-                    <div class="panel-body">    
+                    <div class="panel-body" style="min-height: 350px;">    
                         <div id="div_pricing_info"></div>                   
                     </div>
                 </div>                
@@ -47,13 +47,17 @@
 {% endblock %}
 
 {% block extra_script %}
-    function pricing_detail_update(){
+    function pricing_detail_update(){        
+        var value = $("#id_pricing").val();        
+        if (value == null) { 
+            value = 0;
+        }        
         $("#div_pricing_info").load(
             "{% url 'freight:calculator_pricing_info' 0 %}".replace(
-                "0", 
-                $("#id_pricing").val()
-            )
-        );             
+                "0",
+                value                 
+            )            
+        );        
     }
     $(document).ready(function(){        
         pricing_detail_update()

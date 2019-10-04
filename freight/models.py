@@ -12,7 +12,7 @@ class Freight(models.Model):
         default_permissions = ()
         permissions = ( 
             ('basic_access', 'Can access this app'),  
-            ('create_service', 'Can create / update a freight service'), 
+            ('setup_contracts_handler', 'Can setup contracts handler'), 
             ('use_calculator', 'Can use the calculator'), 
             ('view_contracts', 'Can view the contracts list'), 
             ('add_location', 'Can add / update locations'), 

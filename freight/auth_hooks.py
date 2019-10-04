@@ -17,7 +17,7 @@ class ExampleMenuItem(MenuItemHook):
         )
 
     def render(self, request):
-        if request.user.has_perm('freight.access_jfservice'):
+        if request.user.has_perm('freight.basic_access'):
             return MenuItemHook.render(self, request)
         return ''
 

@@ -1,44 +1,80 @@
 {% load jfservice_filters %}
 
-<dl class="dl-horizontal">
+{% if pricing %}
 
-    <dt>Route</dt>
-    <dd>{{ pricing.name }}</dd>
-    
-    <dt>Base price:</dt>
-    <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0"|default_if_none:"0" }} M ISK</dd>
-    
-    <dt>Price add-on per m3:</dt>
-    <dd>{{ pricing.price_per_volume|formatnumber:"0"|default_if_none:"0" }} ISK</dd>
+    <dl class="dl-horizontal">
 
-    <dt>Price add-on collateral:</dt>
-    <dd>{{ pricing.price_per_collateral_percent|default_if_none:"0" }} %</dd>
+        <dt>Route</dt>
+        <dd>{{ pricing.name }}</dd>
 
-    <dt>Min. Collateral:</dt>
-    <dd>{{ pricing.collateral_min|power10:"6"|formatnumber:"0"|default_if_none:"0" }} M ISK</dd>
+        <br>
 
-    <dt>Max. Collateral:</dt>        
-    <dd>{{ pricing.collateral_max|power10:"6"|formatnumber:"0"|default_if_none:"0" }} M ISK</dd>
-    
-    <dt>Start:</dt>
-    <dd>{{ pricing.start_location }}</dd>
+        <dt>From:</dt>
+        <dd>{{ pricing.start_location }}</dd>
 
-    <dt>Destination:</dt>
-    <dd>{{ pricing.end_location }}</dd>
+        <dt>To:</dt>
+        <dd>{{ pricing.end_location }}</dd>
+        
+        <br>
 
-    <dt>Max Volume:</dt>
-    <dd>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
+        {% if pricing.price_base %}
+            <dt>Base price:</dt>
+            <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>
+        {% endif %}
+        
+        {% if pricing.price_per_volume %}
+            <dt>Price add-on per m3:</dt>
+            <dd>{{ pricing.price_per_volume|formatnumber:"0" }} ISK</dd>
+        {% endif %}
 
-    <dt>Expiration</dt>
-    <dd>{{ pricing.days_to_expire|default_if_none:"-" }} days</dd>
+        {% if pricing.price_per_collateral_percen %}
+            <dt>Price add-on collateral:</dt>
+            <dd>{{ pricing.price_per_collateral_percent }} %</dd>
+        {% endif %}
 
-    <dt>Completion</dt>           
-    <dd>{{ pricing.days_to_complete|default_if_none:"-" }} days</dd>
+        <br>
 
-    <dt>Additional Instructions:</dt>
-    <dd>{{ pricing.details|linebreaks }}</dd>
+        {% if pricing.volume_max %}
+            <dt>Max Volume:</dt>
+            <dd>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
+        {% endif %}
 
-</dl>
+        {% if pricing.collateral_min %}
+            <dt>Min. Collateral:</dt>
+            <dd>{{ pricing.collateral_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
+        {% endif %}
+
+        {% if pricing.collateral_max %}
+            <dt>Max. Collateral:</dt>        
+            <dd>{{ pricing.collateral_max|power10:"6"|formatnumber:"0" }} M ISK</dd>
+        {% endif %}
+        
+        <br>
+
+        {% if pricing.days_to_expire %}
+            <dt>Expiration</dt>
+            <dd>{{ pricing.days_to_expire|default_if_none:"-" }} days</dd>
+        {% endif %}
+
+        {% if pricing.days_to_complete %}
+            <dt>Completion</dt>           
+            <dd>{{ pricing.days_to_complete|default_if_none:"-" }} days</dd>
+        {% endif %}
+
+        <br>
+
+        {% if pricing.details %}
+            <dt>Additional Instructions:</dt>
+            <dd>{{ pricing.details|linebreaks }}</dd>
+        {% endif %}
+
+    </dl>
+
+{% else %}
+
+    <p class="text-warning">No pricing defined yet</p>
+
+{% endif %}
 
 <style>
     .dl-horizontal dt { text-align: left; }
