@@ -8,7 +8,7 @@ def power10(value, k = 0):
     if value:            
         return value / (10 ** int(k))
     else:
-        return ''
+        return None
 
 @register.filter
 def formatnumber(value, p = 1):
@@ -16,4 +16,4 @@ def formatnumber(value, p = 1):
     if value:
         return '{:,.{}f}'.format(float(value), int(p))
     else:
-        return ''
+        return None

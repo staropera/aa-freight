@@ -18,8 +18,8 @@ class Location(models.Model):
 
     id = models.BigIntegerField(primary_key=True)
     name = models.CharField(max_length=100)        
-    solar_system_id = models.IntegerField(default=None, null=True)
-    type_id = models.IntegerField(default=None, null=True)
+    solar_system_id = models.IntegerField(default=None, null=True, blank=True)
+    type_id = models.IntegerField(default=None, null=True, blank=True)
     category_id = models.IntegerField(
         choices=CATEGORY_CHOICES, 
         default=CATEGORY_UNKNOWN_ID
@@ -53,13 +53,16 @@ class Pricing(models.Model):
         on_delete=models.CASCADE,
         related_name='pricing_end_location'
     )
-    active = models.BooleanField()
-    price_per_volume = models.FloatField(default=None, null=True)
-    price_collateral_percent = models.FloatField(default=None, null=True)    
-    collateral_max = models.BigIntegerField(default=None, null=True)
-    price_base = models.FloatField(default=None, null=True)
-    volume_max = models.FloatField(default=None, null=True)
-    pricing_comment = models.TextField(default=None, null=True)
+    active = models.BooleanField(default=True)
+    price_base = models.FloatField(default=0, blank=True)
+    price_per_volume = models.FloatField(default=0, blank=True)
+    price_per_collateral_percent = models.FloatField(default=0, blank=True)    
+    collateral_min = models.BigIntegerField(default=0, blank=True)
+    collateral_max = models.BigIntegerField(default=None, null=True, blank=True)
+    volume_max = models.FloatField(default=None, null=True, blank=True)    
+    days_to_expire = models.IntegerField(default=None, null=True, blank=True)
+    days_to_complete = models.IntegerField(default=None, null=True, blank=True)
+    details = models.TextField(default=None, null=True, blank=True)
 
     class Meta:
         unique_together = (('start_location', 'end_location'),)
@@ -74,7 +77,7 @@ class Pricing(models.Model):
         """returns the calculated price for the given parameters"""
         return (self.price_base
             + volume * self.price_per_volume 
-            + collateral  * (self.price_collateral_percent / 100))
+            + collateral  * (self.price_per_collateral_percent / 100))
 
 
 class ContractsHandler(models.Model):
@@ -90,8 +93,8 @@ class ContractsHandler(models.Model):
         null=True
     )
     
-    version_hash = models.CharField(max_length=32, null=True, default=None)    
-    last_sync = models.DateTimeField(null=True, default=None)
+    version_hash = models.CharField(max_length=32, null=True, default=None, blank=True)    
+    last_sync = models.DateTimeField(null=True, default=None, blank=True)
 
     class Meta:
         permissions = (

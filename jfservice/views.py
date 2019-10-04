@@ -1,15 +1,19 @@
 import math
+
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, Http404, JsonResponse
 from django.template import loader
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.forms.models import model_to_dict
+from django.core.exceptions import ValidationError
+
 from allianceauth.authentication.models import CharacterOwnership
 from esi.decorators import token_required
 from esi.clients import esi_client_factory
 from esi.models import Token
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
+
 from .models import *
 from . import tasks
 from .forms import CalculatorForm, AddLocationForm
@@ -75,14 +79,51 @@ def calculator(request):
 
     else:
         form = CalculatorForm(request.POST)
-        if form.is_valid():
-            pricing = form.cleaned_data['pricing']            
+        request.POST._mutable = True
+        
+        if form.is_valid():                                    
+            pricing = form.cleaned_data['pricing']
+            volume = int(form.cleaned_data['volume'])
+            collateral = int(form.cleaned_data['collateral'])
             
-            price = math.ceil((pricing.get_calculated_price(
-                form.cleaned_data['volume'] * 1000,
-                form.cleaned_data['collateral'] * 1000000) 
-                / 1000000) * 1000000
-            )
+            error = False
+            if volume > pricing.volume_max / 1000:
+                error = True
+                messages.warning(
+                    request, 
+                    'You exceeded the maximum allowed volume of '
+                    + '{:,.0f} K m3!'.format(
+                        pricing.volume_max / 1000
+                    )
+                )
+            if collateral > pricing.collateral_max / 1000000:
+                error = True
+                messages.warning(
+                    request, 
+                    'You exceeded the maximum allowed collateral of '
+                    + '{:,.0f} M ISK!'.format(
+                        pricing.collateral_max / 1000000
+                    )
+                )
+            
+            if collateral < pricing.collateral_min / 1000000:
+                error = True
+                messages.warning(
+                    request, 
+                    'You are below the minimum required collateral of '
+                    + '{:,.0f} M ISK!'.format(
+                        pricing.collateral_min / 1000000
+                    )
+                )
+
+            if not error:
+                price = math.ceil((pricing.get_calculated_price(
+                    volume * 1000,
+                    collateral * 1000000) 
+                    / 1000000) * 1000000
+                )
+            else:
+                price = None
         else:
             price = None
         

@@ -1,4 +1,6 @@
 from django import forms
+from django.core.validators import MaxValueValidator, MinValueValidator
+
 from .models import Pricing
 
 
@@ -10,18 +12,19 @@ class CalculatorForm(forms.Form):
         help_text='Pick the route for your courier contract'
     )
     volume = forms.IntegerField(
-        help_text='Est. volume of your cargo in K x m3, e.g. "50" = 50.000 m3'
+        help_text='Est. volume of your cargo in K x m3, e.g. "50" = 50.000 m3',
+        validators=[            
+            MinValueValidator(1),
+            MaxValueValidator(2000),
+        ]
     )
     collateral = forms.IntegerField(
-        help_text='Collaterial in M ISK'
+        help_text='Collaterial in M ISK',
+        validators=[            
+            MinValueValidator(0),
+            MaxValueValidator(1000000),
+        ]
     )
-
-    def clean_volume(self):
-        volume = self.cleaned_data['volume']
-        if volume <0:
-            raise forms.ValidationError('Volume can not be negative')
-        else:
-            return volume
     
 
 class AddLocationForm(forms.Form):

@@ -6,21 +6,36 @@
             <p>Base price:</p>
             <p>Price add-on per m3:</p>
             <p>Price add-on for collateral:</p>
-            <p>Max Volume:</p>                
+            <p>Min. Collateral:</p>
+            <p>Max. Collateral:</p>            
         </strong>
     </div>
-    <div class="col-md-2">
-        <p>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</p>
-        <p>{{ pricing.price_per_volume|formatnumber:"0" }} ISK</p>
-        <p>{{ pricing.price_collateral_percent }} %</p>
-        <p>{{ pricing.volume_max|power10:"3"|formatnumber:"0" }} K m3</p>
+    <div class="col-md-2">        
+        <p>{{ pricing.price_base|power10:"6"|formatnumber:"0"|default_if_none:"0" }} M ISK</p>
+        <p>{{ pricing.price_per_volume|formatnumber:"0"|default_if_none:"0" }} ISK</p>
+        <p>{{ pricing.price_per_collateral_percent|default_if_none:"0" }} %</p>
+        <p>{{ pricing.collateral_min|power10:"6"|formatnumber:"0"|default_if_none:"0" }} M ISK</p>
+        <p>{{ pricing.collateral_max|power10:"6"|formatnumber:"0"|default_if_none:"0" }} M ISK</p>
+        
     </div>
     <div class="col-md-2">
+        <strong>            
+            <p>Max Volume:</p>
+            <p>Expiration</p>
+            <p>Completion</p>      
+        </strong>
+    </div>
+    <div class="col-md-2">        
+        <p>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</p>
+        <p>{{ pricing.days_to_expire|default_if_none:"-" }} days</p>
+        <p>{{ pricing.days_to_complete|default_if_none:"-" }} days</p>
+    </div>
+    <div class="col-md-1">
         <strong>
-            <p>Comments:</p>        
+            <p>Details:</p>        
         </strong>
     </div>
-    <div class="col-md-6">        
-        {{ pricing.pricing_comment|linebreaks }}
+    <div class="col-md-3">        
+        {{ pricing.details|linebreaks }}
     </div>
 </div>
