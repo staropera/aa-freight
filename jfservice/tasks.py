@@ -13,7 +13,7 @@ from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, E
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
-from .utils import LoggerAddTag, makeLoggerPrefix, get_swagger_spec_path
+from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 from .models import *
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -36,7 +36,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
         return False
     
     try:
-        addPrefix = makeLoggerPrefix(handler)
+        addPrefix = make_logger_prefix(handler)
         alliance_name = handler.alliance.alliance_name
         
         if handler.character is None:

@@ -3,7 +3,7 @@ from bravado.exception import *
 from django.db import models
 from esi.clients import esi_client_factory
 from allianceauth.eveonline.models import EveCorporationInfo
-from .utils import LoggerAddTag, makeLoggerPrefix
+from .utils import LoggerAddTag, make_logger_prefix
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -43,7 +43,7 @@ class LocationManager(models.Manager):
         """updates or creates location object with data fetched from ESI"""
         from .models import Location
 
-        addPrefix = makeLoggerPrefix(location_id)
+        addPrefix = make_logger_prefix(location_id)
 
         if (location_id >= self.STATION_ID_START 
                 and location_id <= self.STATION_ID_END):

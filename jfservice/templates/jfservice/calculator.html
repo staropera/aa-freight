@@ -28,7 +28,7 @@
                     </div>
                     <div class="panel-body">
                         <h2>                
-                            {{ price|power10:"6"|formatnumber:"0" }} M ISK
+                            {{ price|power10:"6"|formatnumber:"0"|default_if_none:"-" }} M ISK
                         </h2>
                         <p>Please enter the calculated price as <strong>Reward</strong> for the courier contract.</p>
                     </div>

@@ -4,9 +4,8 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse, Http404, JsonResponse
 from django.template import loader
 from django.contrib.auth.decorators import login_required, permission_required
-from django.contrib import messages
-from django.forms.models import model_to_dict
 from django.core.exceptions import ValidationError
+from django.utils.html import mark_safe
 
 from allianceauth.authentication.models import CharacterOwnership
 from esi.decorators import token_required
@@ -17,7 +16,7 @@ from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, E
 from .models import *
 from . import tasks
 from .forms import CalculatorForm, AddLocationForm
-from .utils import get_swagger_spec_path, DATETIME_FORMAT
+from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_nice
 
 ADD_LOCATION_TOKEN_TAG = 'jfservice_add_location_token'
 
@@ -86,37 +85,17 @@ def calculator(request):
             volume = int(form.cleaned_data['volume'])
             collateral = int(form.cleaned_data['collateral'])
             
-            error = False
-            if volume > pricing.volume_max / 1000:
-                error = True
-                messages.warning(
-                    request, 
-                    'You exceeded the maximum allowed volume of '
-                    + '{:,.0f} K m3!'.format(
-                        pricing.volume_max / 1000
-                    )
-                )
-            if collateral > pricing.collateral_max / 1000000:
-                error = True
-                messages.warning(
-                    request, 
-                    'You exceeded the maximum allowed collateral of '
-                    + '{:,.0f} M ISK!'.format(
-                        pricing.collateral_max / 1000000
-                    )
-                )
-            
-            if collateral < pricing.collateral_min / 1000000:
-                error = True
-                messages.warning(
-                    request, 
-                    'You are below the minimum required collateral of '
-                    + '{:,.0f} M ISK!'.format(
-                        pricing.collateral_min / 1000000
-                    )
+            errors = pricing.get_contract_pricing_errors(
+                volume * 1000,
+                collateral * 1000000                
+            )
+            for error in errors:            
+                messages_nice.error(
+                    request,                     
+                    'Invalid input: {}'.format(error)                    
                 )
 
-            if not error:
+            if not errors:
                 price = math.ceil((pricing.get_calculated_price(
                     volume * 1000,
                     collateral * 1000000) 
@@ -132,8 +111,7 @@ def calculator(request):
         {
             'page_title': 'Price Calculator',            
             'form': form, 
-            'price': price,
-            
+            'price': price,            
         }
     )
 
@@ -157,7 +135,7 @@ def create_or_update_service(request, token):
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
     if token_char.alliance_id is None:
-        messages.warning(
+        messages_nice.warning(
             request, 
             'Can not create JF service, because {} is not a member of any '
                 + 'alliance. '.format(token_char)            
@@ -171,7 +149,7 @@ def create_or_update_service(request, token):
                 character=token_char
             )            
         except CharacterOwnership.DoesNotExist:
-            messages.warning(
+            messages_nice.warning(
                 request,
                 'Could not find character {}'.format(token_char.character_name)    
             )
@@ -200,7 +178,7 @@ def create_or_update_service(request, token):
             force_sync=True,
             user_pk=request.user.pk
         )        
-        messages.success(
+        messages_nice.success(
             request, 
             'JF service created for {} alliance with {} as sync character. '.format(                    
                     alliance.alliance_name,
@@ -247,7 +225,7 @@ def add_location_2(request):
                     add_unknown=False
                 )
                 action_txt = 'Added' if created else 'Updated'
-                messages.success(
+                messages_nice.success(
                     request,
                     '{} "{}"'.format(
                         action_txt,                        
@@ -257,7 +235,7 @@ def add_location_2(request):
                 return redirect('jfservice:add_location_2')    
 
             except Exception as ex:
-                messages.warning(
+                messages_nice.warning(
                     request,
                     'Failed to add location with token from {}'.format(token.character_name)
                     + ' for location ID {}: '. format(location_id)

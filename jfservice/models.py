@@ -79,6 +79,36 @@ class Pricing(models.Model):
             + volume * self.price_per_volume 
             + collateral  * (self.price_per_collateral_percent / 100))
 
+    def get_contract_pricing_errors(            
+            self,
+            volume: float,
+            collateral: float,
+            reward: float = None
+        ) -> list:
+        """returns list of validation error messages or empty list if ok"""
+        errors = list()
+        if volume > self.volume_max:            
+            errors.append('Exceeds the maximum allowed volume of '
+                + '{:,.0f} K m3'.format(self.volume_max / 1000))
+        
+        if collateral > self.collateral_max:        
+            errors.append('Exceeded the maximum allowed collateral of '
+                + '{:,.0f} M ISK'.format(self.collateral_max / 1000000))
+        
+        if collateral < self.collateral_min:
+            errors.append('Below the minimum required collateral of '
+                + '{:,.0f} M ISK'.format(self.collateral_min / 1000000))
+
+        if reward:
+            calculated_price = self.get_calculated_price(
+                volume, collateral
+            )
+            if calculated_price < reward:
+                errors.append('Reward is below the calculated price of '
+                    + '{:,.0f} M ISK'.format(calculated_price / 1000000))
+
+        return errors
+    
 
 class ContractsHandler(models.Model):
     alliance = models.OneToOneField(
@@ -195,3 +225,4 @@ class Contract(models.Model):
             self.start_location,
             self.end_location
         )
+
