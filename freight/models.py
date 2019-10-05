@@ -10,7 +10,7 @@ from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, E
 from allianceauth.authentication.models import CharacterOwnership
 from evesde.models import EveSolarSystem, EveType
 
-from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL
+from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_AVATAR_URL
 from .utils import LoggerAddTag, DATETIME_FORMAT
 from .managers import LocationManager, ContractManager
 
@@ -337,8 +337,11 @@ class Contract(models.Model):
     def send_notification(self):
         """sends notification about this contract to the DISCORD webhook"""
         if FREIGHT_DISCORD_WEBHOOK_URL:
-            avatar_url = ('https://imageserver.eveonline.com/Alliance/'
-                + '{}_128.png'.format(self.handler.alliance.alliance_id))
+            if FREIGHT_DISCORD_AVATAR_URL:
+                avatar_url = FREIGHT_DISCORD_AVATAR_URL
+            else:    
+                avatar_url = ('https://imageserver.eveonline.com/Alliance/'
+                    + '{}_128.png'.format(self.handler.alliance.alliance_id))
             hook = Webhook(
                 FREIGHT_DISCORD_WEBHOOK_URL, 
                 username='Alliance Freight',
@@ -346,9 +349,10 @@ class Contract(models.Model):
             )            
             # reverse('freight:contract_list')
             with transaction.atomic():
-                logger.info('Trying to sent notification to {}'.format(
-                    FREIGHT_DISCORD_WEBHOOK_URL
-                ))
+                logger.info(
+                    'Trying to sent notification about contract {}'.format(
+                        self.contract_id
+                    ) + ' to {}'.format(FREIGHT_DISCORD_WEBHOOK_URL))
                 contents = ('There is a new courier contract from {} '.format(
                         self.issuer) + 'looking to be picked up:')
                
