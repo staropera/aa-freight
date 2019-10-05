@@ -3,6 +3,7 @@ import os
 import datetime
 import hashlib
 import json
+from time import sleep
 
 from celery import shared_task
 from dhooks import Webhook
@@ -38,7 +39,7 @@ def sync_contracts(handler_pk, force_sync = False, user_pk = None):
         handler = ContractHandler.objects.get(pk=handler_pk)
     except ContractHandler.DoesNotExist:        
         raise ContractHandler.DoesNotExist(
-            'task called for non jf service with pk {}'.format(handler_pk)
+            'task called for unknown contract handler with pk {}'.format(handler_pk)
         )
         return False
     
@@ -192,6 +193,7 @@ def sync_contracts(handler_pk, force_sync = False, user_pk = None):
                             'status': contract['status'],
                             'title': title,
                             'volume': contract['volume'],
+                            'pricing': None
                         }                        
                     )
                 handler.version_hash = new_version_hash
@@ -200,6 +202,8 @@ def sync_contracts(handler_pk, force_sync = False, user_pk = None):
                 )
                 handler.save()
                 success = True
+
+            Contract.objects.update_pricing()
 
         else:
             logger.info(add_prefix('Alliance contracts are unchanged.'))
@@ -247,11 +251,12 @@ def sync_contracts(handler_pk, force_sync = False, user_pk = None):
 
 @shared_task
 def send_contract_notifications(handler_pk, force_sent=False):
+    """Send notification about outstanding contracts"""
     try:
         handler = ContractHandler.objects.get(pk=handler_pk)
     except ContractHandler.DoesNotExist:        
         raise ContractHandler.DoesNotExist(
-            'task called for non jf service with pk {}'.format(handler_pk)
+            'task called for unknown contract handler with pk {}'.format(handler_pk)
         )
         return False
     
@@ -259,8 +264,9 @@ def send_contract_notifications(handler_pk, force_sent=False):
         if FREIGHT_DISCORD_WEBHOOK_URL:
             q = Contract.objects.filter(
                 handler__exact=handler,                 
-                status__exact=Contract.STATUS_OUTSTANDING
+                status__exact=Contract.STATUS_OUTSTANDING                
             )
+
             if not force_sent:
                 q = q.filter(date_notified__exact=None)
             
@@ -273,9 +279,24 @@ def send_contract_notifications(handler_pk, force_sent=False):
                 
                 for contract in q:
                     contract.send_notification()
+                    sleep(1)
             else:
                 logger.info('No new contracts to notify about')
         
+        success = True
+
+    except Exception as ex:
+        logger.error('An unexpected error ocurred'.format(ex))        
+        success = False        
+
+    return success
+
+
+@shared_task
+def update_contracts_pricing_relations():
+        
+    try:    
+        Contract.objects.update_pricing()        
         success = True
 
     except Exception as ex:

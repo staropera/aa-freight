@@ -8,17 +8,18 @@ from django.urls import reverse
 
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 from allianceauth.authentication.models import CharacterOwnership
-
-from .managers import LocationManager
 from evesde.models import EveSolarSystem, EveType
+
 from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL
 from .utils import LoggerAddTag, DATETIME_FORMAT
+from .managers import LocationManager, ContractManager
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 
 
 class Freight(models.Model):
+    """Meta model for global app permissions"""
 
     class Meta:
         managed = False                         
@@ -33,7 +34,8 @@ class Freight(models.Model):
         )
 
 
-class Location(models.Model):    
+class Location(models.Model):
+    """An Eve Online courier contract location: station or Upwell structure""" 
     CATEGORY_UNKNOWN_ID = 0
     CATEGORY_STATION_ID = 3
     CATEGORY_STRUCTURE_ID = 65
@@ -72,7 +74,8 @@ class Location(models.Model):
         return self.name.split(' ', 1)[0]
 
 
-class Pricing(models.Model):        
+class Pricing(models.Model):
+    """Pricing for a courier route"""
     start_location = models.ForeignKey(
         Location, 
         on_delete=models.CASCADE,
@@ -145,6 +148,7 @@ class Pricing(models.Model):
     
 
 class ContractHandler(models.Model):
+    """Handler for syncing of contracts belonging to an alliance"""
     alliance = models.OneToOneField(
         EveAllianceInfo, 
         on_delete=models.CASCADE, 
@@ -157,8 +161,17 @@ class ContractHandler(models.Model):
         null=True
     )
     
-    version_hash = models.CharField(max_length=32, null=True, default=None, blank=True)    
-    last_sync = models.DateTimeField(null=True, default=None, blank=True)
+    version_hash = models.CharField(
+        max_length=32, 
+        null=True, 
+        default=None, 
+        blank=True
+    )
+    last_sync = models.DateTimeField(
+        null=True, 
+        default=None, 
+        blank=True
+    )
 
 
     @classmethod
@@ -172,7 +185,8 @@ class ContractHandler(models.Model):
         return str(self.alliance)
 
 
-class Contract(models.Model):    
+class Contract(models.Model): 
+    """An Eve Online courier contract with additional meta data"""
     STATUS_OUTSTANDING = 'outstanding'
     STATUS_IN_PROGRESS = 'in_progress'
     STATUS_FINISHED_ISSUER = 'finished_issuer'
@@ -242,11 +256,14 @@ class Contract(models.Model):
     status = models.CharField(max_length=32, choices=STATUS_CHOICES)
     title = models.CharField(max_length=100, default=None, null=True)    
     volume = models.FloatField()
+    pricing = models.ForeignKey(Pricing, on_delete=models.SET_DEFAULT, default=None, null=True)
     date_notified = models.DateTimeField(
         default=None, 
         null=True,
         help_text='datetime of latest notification, None = none has been sent'
     )
+
+    objects = ContractManager()
 
     class Meta:
         unique_together = (('handler', 'contract_id'),)
@@ -285,11 +302,7 @@ class Contract(models.Model):
                 ))
                 contents = ('There is a new courier contract from {} '.format(
                         self.issuer) + 'looking to be picked up:')
-
-                embed = Embed(
-                    timestamp=self.date_issued.isoformat()
-                )
-                embed.set_thumbnail(self.issuer.portrait_url())
+               
                 desc = ''
                 desc += '**Route**: {} → {}\n'.format(
                     self.start_location.solar_system_name,
@@ -304,15 +317,28 @@ class Contract(models.Model):
                 desc += '**Volume**: {:,.0f} K m3\n'.format(
                     self.volume / 1000
                 )
-                """
-                desc += '**Price Check**: {}\n'.format(
-                    'tbd'
-                )
-                """
+                if self.pricing:
+                    errors = self.get_pricing_errors(self.pricing)
+                    if not errors:                        
+                        check_text = 'passed'
+                        color = 0x008000
+                    else:
+                        check_text = 'FAILED'
+                        color = 0xFF0000
+                else:
+                    check_text = 'N/A'
+                    color = None
+                desc += '**Price Check**: {}\n'.format(check_text)
                 desc += '**Expires on**: {}\n'.format(
                     self.date_expired.strftime(DATETIME_FORMAT)
                 )
                 desc += '**Issued by**: {}\n'.format(self.issuer)
+                
+                embed = Embed(
+                    timestamp=self.date_issued.isoformat(),
+                    color=color
+                )
+                embed.set_thumbnail(self.issuer.portrait_url())
                 embed.description = desc
                                 
                 hook.send(content=contents, embed=embed) 

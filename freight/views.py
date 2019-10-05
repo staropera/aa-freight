@@ -42,10 +42,7 @@ def contract_list(request):
 @login_required
 @permission_required('freight.view_contracts')
 def contract_list_data(request):
-
-    def make_route_key(location_id_1: int, location_id_2: int) -> str:
-        return "x".join([str(x) for x in sorted([location_id_1, location_id_2])])
-
+    """returns list of outstanding contracts for contract_list AJAX call"""
     contracts = Contract.objects.filter(
         handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
         status__in=[
@@ -54,32 +51,28 @@ def contract_list_data(request):
         ]
     ).select_related()
 
-    pricings = {
-        make_route_key(x.start_location_id, x.end_location_id): x 
-        for x in Pricing.objects.filter(active__exact=True) 
-    }
-    
     contracts_data = list()
     datetime_format = lambda x: x.strftime(DATETIME_FORMAT) if x else None
     character_format = lambda x: x.character_name if x else None
-    for contract in contracts:                
-        route_key = make_route_key(
-            contract.start_location_id, 
-            contract.end_location_id
-        )        
-        pricing = pricings[route_key] if route_key in pricings else None        
-        has_pricing = pricing is not None
-        errors = contract.get_pricing_errors(pricing) if has_pricing else None
+    for contract in contracts:                                
+        has_pricing = contract.pricing is not None
+        if has_pricing:
+            errors = contract.get_pricing_errors(contract.pricing)            
+        else:
+            errors = None
         has_pricing_errors = errors is not None
         if has_pricing:            
             if not has_pricing_errors:
                 glyph = 'ok'
                 color = 'green'
-                tooltip_text = pricing.name
+                tooltip_text = contract.pricing.name
             else:
                 glyph = 'warning-sign'
                 color = 'red'                
-                tooltip_text = '{}\n{}'.format(pricing.name, '\n'.join(errors))
+                tooltip_text = '{}\n{}'.format(
+                    contract.pricing.name, 
+                    '\n'.join(errors)
+                )
             pricing_check = ('<span class="glyphicon '
                 + 'glyphicon-'+ glyph + '" ' 
                 + 'aria-hidden="true" '

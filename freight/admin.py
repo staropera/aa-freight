@@ -21,7 +21,7 @@ class PricingAdmin(admin.ModelAdmin):
 @admin.register(ContractHandler)
 class ContractHandlerAdmin(admin.ModelAdmin):
     list_display = ('alliance', 'character', 'last_sync')
-    actions = ['send_notifications', 'start_sync']
+    actions = ['send_notifications', 'start_sync', 'update_pricing']
 
     def start_sync(self, request, queryset):
                         
@@ -39,7 +39,7 @@ class ContractHandlerAdmin(admin.ModelAdmin):
                 text
             )
     
-    start_sync.short_description = "Sync contracts"
+    start_sync.short_description = "Sync contracts with Eve Online server"
 
     def send_notifications(self, request, queryset):
                         
@@ -56,6 +56,17 @@ class ContractHandlerAdmin(admin.ModelAdmin):
             )
     
     send_notifications.short_description = "Send notifications for outstanding contracts"
+
+    def update_pricing(self, request, queryset):
+                        
+        for obj in queryset:            
+            tasks.update_contracts_pricing_relations.delay()            
+            self.message_user(
+                request, 
+                'Started updating pricing releation for all contracts'
+            )
+    
+    update_pricing.short_description = "Update pricing info for all contracts"
 
     # This will help you to disbale add functionality
     def has_add_permission(self, request):
