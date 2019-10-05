@@ -28,9 +28,9 @@ get_corporation_corporation_id
 @shared_task
 def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
     try:
-        handler = ContractsHandler.objects.get(pk=contracts_handler_pk)
-    except ContractsHandler.DoesNotExist:        
-        raise ContractsHandler.DoesNotExist(
+        handler = ContractHandler.objects.get(pk=contracts_handler_pk)
+    except ContractHandler.DoesNotExist:        
+        raise ContractHandler.DoesNotExist(
             'task called for non jf service with pk {}'.format(contracts_handler_pk)
         )
         return False
@@ -61,7 +61,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
                 user=handler.character.user, 
                 character_id=handler.character.character.character_id
             ).require_scopes(
-                ContractsHandler.get_esi_scopes()
+                ContractHandler.get_esi_scopes()
             ).require_valid().first()
         except TokenInvalidError:        
             logger.error(add_prefix(

@@ -1,4 +1,5 @@
 import math
+import datetime
 
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, Http404, JsonResponse
@@ -18,7 +19,9 @@ from . import tasks
 from .forms import CalculatorForm, AddLocationForm
 from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
-ADD_LOCATION_TOKEN_TAG = 'jfservice_add_location_token'
+
+ADD_LOCATION_TOKEN_TAG = 'freight_add_location_token'
+CALCULATOR_DATA = 'freight_calculator_data'
 
 @login_required
 @permission_required('freight.basic_access')
@@ -112,7 +115,7 @@ def contract_list_data(request):
 def calculator(request):            
     if request.method != 'POST':
         form = CalculatorForm()
-        price = None
+        price = None        
 
     else:
         form = CalculatorForm(request.POST)
@@ -144,10 +147,19 @@ def calculator(request):
         else:
             price = None
         
+    if price:
+        request.session[CALCULATOR_DATA] = {
+            'volume': volume * 1000,
+            'collateral': collateral * 1000000,
+            'reward': price
+        }
+    else:
+        request.session[CALCULATOR_DATA] = None
+
     return render(
         request, 'freight/calculator.html', 
         {
-            'page_title': 'Price Calculator',            
+            'page_title': 'Reward Calculator',            
             'form': form, 
             'price': price,            
         }
@@ -168,11 +180,35 @@ def calculator_pricing_info(request, pricing_pk):
             'pricing': pricing
         }
     )
-    
+
 
 @login_required
-@permission_required('freight.setup_contracts_handler')
-@token_required(scopes=ContractsHandler.get_esi_scopes())
+@permission_required('freight.use_calculator')
+def calculator_contract_info(request, pricing_pk):
+    try:
+        pricing = Pricing.objects.get(pk=pricing_pk)
+        contract = request.session[CALCULATOR_DATA]
+        expires_on = datetime.datetime.now(
+            datetime.timezone.utc
+        )  + datetime.timedelta(days=pricing.days_to_expire)
+    except:
+        pricing = None
+        contract = None
+        expires_on = None
+    return render(
+        request, 
+        'freight/calculator_contract_info.html', 
+        {            
+            'contract': contract,
+            'pricing': pricing,
+            'expires_on': expires_on,
+        }
+    )
+
+
+@login_required
+@permission_required('freight.setup_contract_handler')
+@token_required(scopes=ContractHandler.get_esi_scopes())
 def create_or_update_service(request, token):
     success = True
     token_char = EveCharacter.objects.get(character_id=token.character_id)
@@ -210,8 +246,8 @@ def create_or_update_service(request, token):
             alliance.save()
 
     if success:
-        contracts_handler = ContractsHandler.objects.first()
-        if contracts_handler and contracts_handler.alliance != alliance:
+        contract_handler = ContractHandler.objects.first()
+        if contract_handler and contract_handler.alliance != alliance:
             messages_plus.danger(
                 request,
                 'There already is a contract handler installed for a '
@@ -222,14 +258,14 @@ def create_or_update_service(request, token):
             success = False
     
     if success:
-        contracts_handler, created = ContractsHandler.objects.update_or_create(
+        contract_handler, created = ContractHandler.objects.update_or_create(
             alliance=alliance,
             defaults={
                 'character': owned_char
             }
         )          
         tasks.sync_contracts.delay(
-            contracts_handler_pk=contracts_handler.pk,
+            contracts_handler_pk=contract_handler.pk,
             force_sync=True,
             user_pk=request.user.pk
         )        
@@ -238,7 +274,7 @@ def create_or_update_service(request, token):
             'Contract Handler setup completed for '
             + '<strong>{}</strong> alliance '.format(alliance.alliance_name)
             + 'with <strong>{}</strong> as sync character. '.format(
-                    contracts_handler.character.character.character_name, 
+                    contract_handler.character.character.character_name, 
                 )
             + 'Started syncing of courier contracts. '
             + 'You will receive a report once it is completed.'

@@ -17,7 +17,7 @@
             <ul class="nav navbar-nav">
                 {% if perms.freight.use_calculator %}
                     <li class="{% navactive request 'freight:calculator' %}">
-                        <a href="{% url 'freight:calculator' %}">Price Calculator</a>
+                        <a href="{% url 'freight:calculator' %}">Reward Calculator</a>
                     </li>
                 {% endif %}
                 {% if perms.freight.view_contracts %}
@@ -35,9 +35,9 @@
                     </a>
                 {% endif %}
 
-                {% if perms.freight.setup_contracts_handler %}
+                {% if perms.freight.setup_contract_handler %}
                     <a class="btn btn-warning navbar-btn" href="{% url 'freight:create_or_update_service' %}">
-                        Setup Contracts Handler
+                        Setup Contract Handler
                     </a>
                 {% endif %}                
             </ul>

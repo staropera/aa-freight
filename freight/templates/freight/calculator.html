@@ -12,31 +12,40 @@
 
                 <div class="panel panel-primary">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Your contract</h3>
+                        <h3 class="panel-title">Calculator</h3>
                     </div>
                     <div class="panel-body">
                         {{ form|bootstrap }}
                         <br>
-                        <p><strong>Your Price</strong></p>
+                        <p><strong>Your Reward</strong></p>
                         <h2>                
                             {{ price|power10:"6"|formatnumber:"0"|default_if_none:"-" }} M ISK
                         </h2>
-                        <p>Please enter your price as <strong>Reward</strong> in the courier contract.</p>
-
-                        <button class="btn btn-success btn-lg" type="submit">Click To Calculate Price!</button>
+                        
+                        <button class="btn btn-success btn-lg" type="submit">Click To Calculate Reward!</button>
                     </div>
                 </div>
 
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6">                
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Your contract</h3>
+                    </div>
+                    <div class="panel-body" style="min-height: 100px;">    
+                        <div id="div_contract_info"></div>                   
+                    </div>
+                </div>
+
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title">Pricing details for selected route</h3>
                     </div>
-                    <div class="panel-body" style="min-height: 350px;">    
+                    <div class="panel-body" style="min-height: 100px;">    
                         <div id="div_pricing_info"></div>                   
                     </div>
-                </div>                
+                </div> 
+
             </div>
         </div>        
     </form>
@@ -57,7 +66,13 @@
                 "0",
                 value                 
             )            
-        );        
+        );
+        $("#div_contract_info").load(
+            "{% url 'freight:calculator_contract_info' 0 %}".replace(
+                "0",
+                value                 
+            )            
+        );
     }
     $(document).ready(function(){        
         pricing_detail_update()

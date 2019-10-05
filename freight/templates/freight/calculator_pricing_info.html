@@ -9,14 +9,6 @@
 
         <br>
 
-        <dt>From:</dt>
-        <dd>{{ pricing.start_location }}</dd>
-
-        <dt>To:</dt>
-        <dd>{{ pricing.end_location }}</dd>
-        
-        <br>
-
         {% if pricing.price_base %}
             <dt>Base price:</dt>
             <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>
@@ -48,18 +40,7 @@
             <dt>Max. Collateral:</dt>        
             <dd>{{ pricing.collateral_max|power10:"6"|formatnumber:"0" }} M ISK</dd>
         {% endif %}
-        
-        <br>
 
-        {% if pricing.days_to_expire %}
-            <dt>Expiration</dt>
-            <dd>{{ pricing.days_to_expire|default_if_none:"-" }} days</dd>
-        {% endif %}
-
-        {% if pricing.days_to_complete %}
-            <dt>Completion</dt>           
-            <dd>{{ pricing.days_to_complete|default_if_none:"-" }} days</dd>
-        {% endif %}
 
         <br>
 

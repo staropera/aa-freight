@@ -12,7 +12,7 @@ class Freight(models.Model):
         default_permissions = ()
         permissions = ( 
             ('basic_access', 'Can access this app'),  
-            ('setup_contracts_handler', 'Can setup contracts handler'), 
+            ('setup_contract_handler', 'Can setup contract handler'), 
             ('use_calculator', 'Can use the calculator'), 
             ('view_contracts', 'Can view the contracts list'), 
             ('add_location', 'Can add / update locations'), 
@@ -128,7 +128,7 @@ class Pricing(models.Model):
         return errors
     
 
-class ContractsHandler(models.Model):
+class ContractHandler(models.Model):
     alliance = models.OneToOneField(
         EveAllianceInfo, 
         on_delete=models.CASCADE, 
@@ -182,7 +182,7 @@ class Contract(models.Model):
     ]
 
     handler = models.ForeignKey(
-        ContractsHandler, 
+        ContractHandler, 
         on_delete=models.CASCADE
     )
     contract_id = models.IntegerField()

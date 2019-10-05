@@ -9,7 +9,7 @@ class CalculatorForm(forms.Form):
         queryset=Pricing.objects.filter(active__exact=True),
         initial=Pricing.objects.filter(active__exact=True).first(),
         label='Route',
-        help_text='Pick an route fitting for your courier contract',
+        help_text='Pick a route for your courier contract',
         empty_label=None
     )    
     volume = forms.IntegerField(
@@ -20,7 +20,7 @@ class CalculatorForm(forms.Form):
         ]
     )
     collateral = forms.IntegerField(
-        help_text='Collaterial in M ISK',
+        help_text='Collaterial in M ISK, must be roughly equal to the est. value of your cargo',
         validators=[            
             MinValueValidator(0),
             MaxValueValidator(1000000),

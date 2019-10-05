@@ -18,8 +18,8 @@ class PricingAdmin(admin.ModelAdmin):
     list_filter = ('active',)
     
 
-@admin.register(ContractsHandler)
-class ContractsHandlerAdmin(admin.ModelAdmin):
+@admin.register(ContractHandler)
+class ContractHandlerAdmin(admin.ModelAdmin):
     list_display = ('alliance', 'character', 'last_sync')
     actions = ['start_sync']
 
