@@ -103,3 +103,4 @@ class LocationManager(models.Manager):
                 raise ex
        
         return location, created
+

@@ -1,9 +1,22 @@
-from django.db import models
+import logging
+import datetime
+from dhooks import Webhook, Embed
+
+from django.db import models, transaction
 from django.db.models import Q
+from django.urls import reverse
+
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 from allianceauth.authentication.models import CharacterOwnership
+
 from .managers import LocationManager
 from evesde.models import EveSolarSystem, EveType
+from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL
+from .utils import LoggerAddTag, DATETIME_FORMAT
+
+
+logger = LoggerAddTag(logging.getLogger(__name__), __package__)
+
 
 class Freight(models.Model):
 
@@ -54,6 +67,9 @@ class Location(models.Model):
     def category(self):
         return self.category_id
 
+    @property
+    def solar_system_name(self):        
+        return self.name.split(' ', 1)[0]
 
 
 class Pricing(models.Model):        
@@ -84,8 +100,8 @@ class Pricing(models.Model):
     @property
     def name(self):
         return '{} - {}'.format(
-            self.start_location.name.split(' ', 1)[0],
-            self.end_location.name.split(' ', 1)[0]
+            self.start_location.solar_system_name,
+            self.end_location.solar_system_name
         )
 
     def __str__(self):
@@ -226,6 +242,11 @@ class Contract(models.Model):
     status = models.CharField(max_length=32, choices=STATUS_CHOICES)
     title = models.CharField(max_length=100, default=None, null=True)    
     volume = models.FloatField()
+    date_notified = models.DateTimeField(
+        default=None, 
+        null=True,
+        help_text='datetime of latest notification, None = none has been sent'
+    )
 
     class Meta:
         unique_together = (('handler', 'contract_id'),)
@@ -246,3 +267,56 @@ class Contract(models.Model):
             self.collateral,
             self.reward
         )
+
+    def send_notification(self):
+        """sends notification about this contract to the DISCORD webhook"""
+        if FREIGHT_DISCORD_WEBHOOK_URL:
+            avatar_url = 'https://imageserver.eveonline.com/Alliance/{}_128.png'.format(self.handler.alliance.alliance_id)
+            logger.info('avatar_url: ' + avatar_url)
+            hook = Webhook(
+                FREIGHT_DISCORD_WEBHOOK_URL, 
+                username='Alliance Freight',
+                avatar_url=avatar_url
+            )            
+            # reverse('freight:contract_list')
+            with transaction.atomic():
+                logger.info('Trying to sent notification to {}'.format(
+                    FREIGHT_DISCORD_WEBHOOK_URL
+                ))
+                contents = ('There is a new courier contract from {} '.format(
+                        self.issuer) + 'looking to be picked up:')
+
+                embed = Embed(
+                    timestamp=self.date_issued.isoformat()
+                )
+                embed.set_thumbnail(self.issuer.portrait_url())
+                desc = ''
+                desc += '**Route**: {} → {}\n'.format(
+                    self.start_location.solar_system_name,
+                    self.end_location.solar_system_name
+                )                
+                desc += '**Reward**: {:,.0f} M ISK\n'.format(
+                    self.reward / 1000000
+                )
+                desc += '**Collateral**: {:,.0f} M ISK\n'.format(
+                    self.collateral / 1000000
+                )
+                desc += '**Volume**: {:,.0f} K m3\n'.format(
+                    self.volume / 1000
+                )
+                """
+                desc += '**Price Check**: {}\n'.format(
+                    'tbd'
+                )
+                """
+                desc += '**Expires on**: {}\n'.format(
+                    self.date_expired.strftime(DATETIME_FORMAT)
+                )
+                desc += '**Issued by**: {}\n'.format(self.issuer)
+                embed.description = desc
+                                
+                hook.send(content=contents, embed=embed) 
+                self.date_notified = datetime.datetime.now(
+                    datetime.timezone.utc
+                )
+                self.save()

@@ -265,7 +265,7 @@ def create_or_update_service(request, token):
             }
         )          
         tasks.sync_contracts.delay(
-            contracts_handler_pk=contract_handler.pk,
+            handler_pk=contract_handler.pk,
             force_sync=True,
             user_pk=request.user.pk
         )        

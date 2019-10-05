@@ -21,13 +21,13 @@ class PricingAdmin(admin.ModelAdmin):
 @admin.register(ContractHandler)
 class ContractHandlerAdmin(admin.ModelAdmin):
     list_display = ('alliance', 'character', 'last_sync')
-    actions = ['start_sync']
+    actions = ['send_notifications', 'start_sync']
 
     def start_sync(self, request, queryset):
                         
         for obj in queryset:            
             tasks.sync_contracts.delay(
-                contracts_handler_pk=obj.pk, 
+                handler_pk=obj.pk, 
                 force_sync=True,
                 user_pk=request.user.pk
             )            
@@ -40,6 +40,22 @@ class ContractHandlerAdmin(admin.ModelAdmin):
             )
     
     start_sync.short_description = "Sync contracts"
+
+    def send_notifications(self, request, queryset):
+                        
+        for obj in queryset:            
+            tasks.send_contract_notifications.delay(
+                handler_pk=obj.pk, 
+                force_sent=True
+            )            
+            text = 'Started sending notifications for: {} '.format(obj)
+            
+            self.message_user(
+                request, 
+                text
+            )
+    
+    send_notifications.short_description = "Send notifications for outstanding contracts"
 
     # This will help you to disbale add functionality
     def has_add_permission(self, request):

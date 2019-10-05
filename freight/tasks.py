@@ -3,35 +3,42 @@ import os
 import datetime
 import hashlib
 import json
+
 from celery import shared_task
+from dhooks import Webhook
+
 from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
+
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.notifications import notify
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
+
 from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 from .models import *
+from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL
+
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 
+
 """
 Swagger Operations:
-get_universe_structures_structure_id
-get_corporation_corporation_id
+get_corporations_corporation_id_contracts
 """
 
 
 @shared_task
-def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
+def sync_contracts(handler_pk, force_sync = False, user_pk = None):
     try:
-        handler = ContractHandler.objects.get(pk=contracts_handler_pk)
+        handler = ContractHandler.objects.get(pk=handler_pk)
     except ContractHandler.DoesNotExist:        
         raise ContractHandler.DoesNotExist(
-            'task called for non jf service with pk {}'.format(contracts_handler_pk)
+            'task called for non jf service with pk {}'.format(handler_pk)
         )
         return False
     
@@ -118,6 +125,7 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
                 ))
             )                
             
+            # update contracts in local DB
             with transaction.atomic():                
                 for contract in contracts:                    
                     if int(contract['acceptor_id']) != 0:
@@ -192,18 +200,19 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
                 )
                 handler.save()
                 success = True
-            
+
         else:
             logger.info(add_prefix('Alliance contracts are unchanged.'))
             success = True
+
+        send_contract_notifications.delay(handler.pk)
         
-    
     except Exception as ex:
             logger.error(add_prefix(
                 'An unexpected error ocurred'. format(ex)
             ))
             error_code = type(ex).__name__
-            success = False
+            success = False            
 
     if user_pk:
         try:
@@ -231,6 +240,46 @@ def sync_contracts(contracts_handler_pk, force_sync = False, user_pk = None):
             logger.error(add_prefix(
                 'An unexpected error ocurred while trying to '
                 + 'report to user: {}'. format(ex)
-            ))
+            ))        
     
+    return success
+
+
+@shared_task
+def send_contract_notifications(handler_pk, force_sent=False):
+    try:
+        handler = ContractHandler.objects.get(pk=handler_pk)
+    except ContractHandler.DoesNotExist:        
+        raise ContractHandler.DoesNotExist(
+            'task called for non jf service with pk {}'.format(handler_pk)
+        )
+        return False
+    
+    try:
+        if FREIGHT_DISCORD_WEBHOOK_URL:
+            q = Contract.objects.filter(
+                handler__exact=handler,                 
+                status__exact=Contract.STATUS_OUTSTANDING
+            )
+            if not force_sent:
+                q = q.filter(date_notified__exact=None)
+            
+            q = q.select_related()
+
+            if q.count() > 0:
+                logger.info('Trying to send notifications for {} contracts'.format(
+                    q.count()
+                ))
+                
+                for contract in q:
+                    contract.send_notification()
+            else:
+                logger.info('No new contracts to notify about')
+        
+        success = True
+
+    except Exception as ex:
+        logger.error('An unexpected error ocurred'.format(ex))        
+        success = False        
+
     return success
