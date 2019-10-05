@@ -213,7 +213,7 @@ def sync_contracts(handler_pk, force_sync = False, user_pk = None):
         
     except Exception as ex:
             logger.error(add_prefix(
-                'An unexpected error ocurred'. format(ex)
+                'An unexpected error ocurred {}'. format(ex)
             ))
             error_code = type(ex).__name__
             success = False            
@@ -251,7 +251,7 @@ def sync_contracts(handler_pk, force_sync = False, user_pk = None):
 
 @shared_task
 def send_contract_notifications(handler_pk, force_sent=False):
-    """Send notification about outstanding contracts"""
+    """Send notification about outstanding contracts that have pricing"""
     try:
         handler = ContractHandler.objects.get(pk=handler_pk)
     except ContractHandler.DoesNotExist:        
@@ -264,8 +264,8 @@ def send_contract_notifications(handler_pk, force_sent=False):
         if FREIGHT_DISCORD_WEBHOOK_URL:
             q = Contract.objects.filter(
                 handler__exact=handler,                 
-                status__exact=Contract.STATUS_OUTSTANDING                
-            )
+                status__exact=Contract.STATUS_OUTSTANDING,                
+            ).exclude(pricing__exact=None)
 
             if not force_sent:
                 q = q.filter(date_notified__exact=None)
@@ -286,7 +286,7 @@ def send_contract_notifications(handler_pk, force_sent=False):
         success = True
 
     except Exception as ex:
-        logger.error('An unexpected error ocurred'.format(ex))        
+        logger.error('An unexpected error ocurred: {}'.format(ex))        
         success = False        
 
     return success

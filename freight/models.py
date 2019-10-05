@@ -337,8 +337,8 @@ class Contract(models.Model):
     def send_notification(self):
         """sends notification about this contract to the DISCORD webhook"""
         if FREIGHT_DISCORD_WEBHOOK_URL:
-            avatar_url = 'https://imageserver.eveonline.com/Alliance/{}_128.png'.format(self.handler.alliance.alliance_id)
-            logger.info('avatar_url: ' + avatar_url)
+            avatar_url = ('https://imageserver.eveonline.com/Alliance/'
+                + '{}_128.png'.format(self.handler.alliance.alliance_id))
             hook = Webhook(
                 FREIGHT_DISCORD_WEBHOOK_URL, 
                 username='Alliance Freight',
