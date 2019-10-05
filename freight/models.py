@@ -79,23 +79,69 @@ class Pricing(models.Model):
     start_location = models.ForeignKey(
         Location, 
         on_delete=models.CASCADE,
-        related_name='pricing_start_location'
+        related_name='pricing_start_location', 
+        help_text='Starting station or structure for courier route'
     )
     end_location = models.ForeignKey(
         Location, 
         on_delete=models.CASCADE,
-        related_name='pricing_end_location'
+        related_name='pricing_end_location', 
+        help_text='Destination station or structure for courier route'
     )    
-    active = models.BooleanField(default=True)
-    price_base = models.FloatField(default=0, blank=True)
-    price_per_volume = models.FloatField(default=0, blank=True)
-    price_per_collateral_percent = models.FloatField(default=0, blank=True)
-    collateral_min = models.BigIntegerField(default=0, blank=True)
-    collateral_max = models.BigIntegerField(default=None, null=True, blank=True)
-    volume_max = models.FloatField(default=None, null=True, blank=True)
-    days_to_expire = models.IntegerField(default=None, null=True, blank=True)
-    days_to_complete = models.IntegerField(default=None, null=True, blank=True)
-    details = models.TextField(default=None, null=True, blank=True)
+    active = models.BooleanField(
+        default=True, 
+        help_text='Non active pricings will not be used or shown'
+    )
+    price_base = models.FloatField(
+        default=0, 
+        blank=True, 
+        help_text='Base price in ISK'
+    )
+    price_per_volume = models.FloatField(
+        default=0, 
+        blank=True, 
+        help_text='Add-on price per m3 volume in ISK'
+    )
+    price_per_collateral_percent = models.FloatField(
+        default=0, 
+        blank=True, 
+        help_text='Add-on price in % of collaterial'
+    )
+    collateral_min = models.BigIntegerField(
+        default=0, 
+        blank=True, 
+        help_text='Minimum required collateral in ISK'
+    )
+    collateral_max = models.BigIntegerField(
+        default=None, 
+        null=True, 
+        blank=True, 
+        help_text='Maximum allowed collateral in ISK'
+    )
+    volume_max = models.FloatField(
+        default=None, 
+        null=True, 
+        blank=True, 
+        help_text='Maximum allowed volume in m3'
+    )
+    days_to_expire = models.IntegerField(
+        default=None, 
+        null=True, 
+        blank=True, 
+        help_text='Recommended days for contracts to expire'
+    )
+    days_to_complete = models.IntegerField(
+        default=None, 
+        null=True, 
+        blank=True, 
+        help_text='Recommended days for contract completion'
+    )
+    details = models.TextField(
+        default=None, 
+        null=True, 
+        blank=True, 
+        help_text='Text with additional instructions for using this pricing'
+    )
 
     class Meta:
         unique_together = (('start_location', 'end_location'),)
@@ -122,17 +168,17 @@ class Pricing(models.Model):
             collateral: float,
             reward: float = None
         ) -> list:
-        """returns list of validation error messages or empty list if ok"""
+        """returns list of validation error messages or none if ok"""
         errors = list()
-        if volume > self.volume_max:            
+        if self.volume_max and volume > self.volume_max:
             errors.append('Exceeds the maximum allowed volume of '
                 + '{:,.0f} K m3'.format(self.volume_max / 1000))
         
-        if collateral > self.collateral_max:        
+        if self.collateral_max and collateral > self.collateral_max:
             errors.append('Exceeded the maximum allowed collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_max / 1000000))
         
-        if collateral < self.collateral_min:
+        if self.collateral_min and collateral < self.collateral_min:
             errors.append('Below the minimum required collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_min / 1000000))
 
@@ -140,11 +186,14 @@ class Pricing(models.Model):
             calculated_price = self.get_calculated_price(
                 volume, collateral
             )
-            if calculated_price < reward:
+            if reward < calculated_price:
                 errors.append('Reward is below the calculated price of '
                     + '{:,.0f} M ISK'.format(calculated_price / 1000000))
 
-        return errors
+        if len(errors) == 0:
+            return None
+        else:
+            return errors
     
 
 class ContractHandler(models.Model):

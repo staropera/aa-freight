@@ -60,7 +60,7 @@ class ContractHandlerAdmin(admin.ModelAdmin):
     def update_pricing(self, request, queryset):
                         
         for obj in queryset:            
-            tasks.update_contracts_pricing_relations.delay()            
+            tasks.update_contracts_pricing.delay()            
             self.message_user(
                 request, 
                 'Started updating pricing releation for all contracts'

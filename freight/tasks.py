@@ -293,8 +293,10 @@ def send_contract_notifications(handler_pk, force_sent=False):
 
 
 @shared_task
-def update_contracts_pricing_relations():
-        
+def update_contracts_pricing():
+    
+    logger.info('Started updating contracts pricing')
+    
     try:    
         Contract.objects.update_pricing()        
         success = True

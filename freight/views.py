@@ -123,20 +123,20 @@ def calculator(request):
                 volume * 1000,
                 collateral * 1000000                
             )
-            for error in errors:            
-                messages_plus.error(
-                    request,                     
-                    'Invalid input: {}'.format(error)                    
-                )
-
-            if not errors:
+            if errors:
+                price = None
+                for error in errors:            
+                    messages_plus.error(
+                        request,                     
+                        'Invalid input: {}'.format(error)                    
+                    )                
+            else:            
                 price = math.ceil((pricing.get_calculated_price(
                     volume * 1000,
                     collateral * 1000000) 
                     / 1000000) * 1000000
-                )
-            else:
-                price = None
+                )            
+                
         else:
             price = None
         
@@ -179,11 +179,14 @@ def calculator_pricing_info(request, pricing_pk):
 @permission_required('freight.use_calculator')
 def calculator_contract_info(request, pricing_pk):
     try:
-        pricing = Pricing.objects.get(pk=pricing_pk)
+        pricing = Pricing.objects.get(pk=pricing_pk)        
         contract = request.session[CALCULATOR_DATA]
-        expires_on = datetime.datetime.now(
-            datetime.timezone.utc
-        )  + datetime.timedelta(days=pricing.days_to_expire)
+        if pricing.days_to_expire:
+            expires_on = datetime.datetime.now(
+                datetime.timezone.utc
+            )  + datetime.timedelta(days=pricing.days_to_expire)
+        else:
+            expires_on = None
     except:
         pricing = None
         contract = None
