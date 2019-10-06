@@ -16,17 +16,31 @@ This app support running a central freight service for an alliance. The main con
 
 - Every interested alliance member can pick up and deliver existing courier contracts
 
-## Features
+## Key Features
 
 To support this concept Alliance Freight offers the following main features:
 
-- A calculator, so alliance members can easily calculate the reward for their current courier contract
+- A reward calculator, so alliance members can easily calculate the reward for their current courier contract
 
-- A current list of all outstanding courier contracts incl. an indicator showing if the contract is compliant to the pricing for that route
+- A list of outstanding courier contracts incl. an indicator showing if the contract is compliant to the pricing for that route
 
 - Multiple routes can be defined, each with its own pricing
 
 - Automatic notification to a Discord channel about new courier contracts
+
+## Screenshots
+
+### Reward Calculator
+
+![calculator](https://i.imgur.com/4tGcKUd.png)
+
+### Contract List
+
+![contract list](https://i.imgur.com/E5ZEGuM.png)
+
+### Discord Notification
+
+![notification](https://i.imgur.com/ynWnW0o.png)
 
 ## Installation
 
