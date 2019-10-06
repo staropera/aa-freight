@@ -8,7 +8,7 @@ This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianc
 
 ## Overview
 
-This app support running a central freight service for an alliance. The main concept of such a freight service is as follows:
+This app helps running a central freight service for an alliance. The main concept of such a freight service is as follows:
 
 - Every alliance member can create courier contracts to the alliance for defined routes
 
