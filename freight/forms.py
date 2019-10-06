@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from .models import Pricing
@@ -26,6 +27,18 @@ class CalculatorForm(forms.Form):
             MaxValueValidator(1000000),
         ]
     )
+
+    def clean(self):
+        pricing = self.cleaned_data['pricing']
+        errors = pricing.get_contract_pricing_errors(
+            self.cleaned_data['volume'] * 1000,
+            self.cleaned_data['collateral'] * 1000000                
+        )
+        
+        if errors:
+            raise ValidationError(
+                'Input errors: ' + ", ".join(errors)
+            )
     
 
 class AddLocationForm(forms.Form):

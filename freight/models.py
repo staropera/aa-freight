@@ -1,18 +1,20 @@
-import logging
 import datetime
+import logging
+
 from dhooks import Webhook, Embed
 
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import Q
 from django.urls import reverse
 
-from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 from evesde.models import EveSolarSystem, EveType
 
 from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_AVATAR_URL
-from .utils import LoggerAddTag, DATETIME_FORMAT
 from .managers import LocationManager, ContractManager
+from .utils import LoggerAddTag, DATETIME_FORMAT
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -97,6 +99,11 @@ class Pricing(models.Model):
         blank=True, 
         help_text='Base price in ISK'
     )
+    price_min = models.FloatField(
+        default=0, 
+        blank=True, 
+        help_text='Minimum total price in ISK'
+    )
     price_per_volume = models.FloatField(
         default=0, 
         blank=True, 
@@ -156,11 +163,20 @@ class Pricing(models.Model):
     def __str__(self):
         return self.name
 
+    def clean(self):
+        if not (self.price_base 
+                or self.price_min 
+                or self.price_per_volume 
+                or self.price_per_collateral_percent):
+            raise ValidationError(
+                'You must specify at least one price component'
+            )
+
     def get_calculated_price(self, volume: float, collateral: float) -> float:
         """returns the calculated price for the given parameters"""
-        return (self.price_base
+        return max(self.price_min, (self.price_base
             + volume * self.price_per_volume 
-            + collateral  * (self.price_per_collateral_percent / 100))
+            + collateral  * (self.price_per_collateral_percent / 100)))
 
     def get_contract_pricing_errors(            
             self,
@@ -171,15 +187,15 @@ class Pricing(models.Model):
         """returns list of validation error messages or none if ok"""
         errors = list()
         if self.volume_max and volume > self.volume_max:
-            errors.append('Exceeds the maximum allowed volume of '
+            errors.append('exceeds the maximum allowed volume of '
                 + '{:,.0f} K m3'.format(self.volume_max / 1000))
         
         if self.collateral_max and collateral > self.collateral_max:
-            errors.append('Exceeded the maximum allowed collateral of '
+            errors.append('exceeds the maximum allowed collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_max / 1000000))
         
         if self.collateral_min and collateral < self.collateral_min:
-            errors.append('Below the minimum required collateral of '
+            errors.append('below the minimum required collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_min / 1000000))
 
         if reward:
@@ -187,7 +203,7 @@ class Pricing(models.Model):
                 volume, collateral
             )
             if reward < calculated_price:
-                errors.append('Reward is below the calculated price of '
+                errors.append('reward is below the calculated price of '
                     + '{:,.0f} M ISK'.format(calculated_price / 1000000))
 
         if len(errors) == 0:

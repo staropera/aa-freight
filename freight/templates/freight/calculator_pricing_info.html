@@ -9,6 +9,11 @@
 
         <br>
 
+        {% if pricing.price_min %}
+            <dt>Minimum price:</dt>
+            <dd>{{ pricing.price_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
+        {% endif %}
+
         {% if pricing.price_base %}
             <dt>Base price:</dt>
             <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>

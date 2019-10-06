@@ -16,7 +16,6 @@ from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, E
 
 from .models import *
 from . import tasks
-from .forms import CalculatorForm, AddLocationForm
 from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
 
@@ -106,6 +105,7 @@ def contract_list_data(request):
 @login_required
 @permission_required('freight.use_calculator')
 def calculator(request):            
+    from .forms import CalculatorForm
     if request.method != 'POST':
         form = CalculatorForm()
         price = None        
@@ -117,25 +117,12 @@ def calculator(request):
         if form.is_valid():                                    
             pricing = form.cleaned_data['pricing']
             volume = int(form.cleaned_data['volume'])
-            collateral = int(form.cleaned_data['collateral'])
-            
-            errors = pricing.get_contract_pricing_errors(
+            collateral = int(form.cleaned_data['collateral'])        
+            price = math.ceil((pricing.get_calculated_price(
                 volume * 1000,
-                collateral * 1000000                
-            )
-            if errors:
-                price = None
-                for error in errors:            
-                    messages_plus.error(
-                        request,                     
-                        'Invalid input: {}'.format(error)                    
-                    )                
-            else:            
-                price = math.ceil((pricing.get_calculated_price(
-                    volume * 1000,
-                    collateral * 1000000) 
-                    / 1000000) * 1000000
-                )            
+                collateral * 1000000) 
+                / 1000000) * 1000000
+            )            
                 
         else:
             price = None
@@ -289,6 +276,8 @@ def add_location(request, token):
 @login_required
 @permission_required('freight.add_location')
 def add_location_2(request): 
+    from .forms import AddLocationForm
+    
     if ADD_LOCATION_TOKEN_TAG not in request.session:
         raise RuntimeError('Missing token in session')
     else:

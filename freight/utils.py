@@ -5,8 +5,10 @@ from django.utils.html import mark_safe
 from django.contrib.messages.constants import *
 from django.contrib import messages
 
+
 # Format for output of datetime for this app
 DATETIME_FORMAT = '%Y-%m-%d %H:%M'
+
 
 def get_swagger_spec_path() -> str:
     """returns the path to the current swagger spec file"""
