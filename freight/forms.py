@@ -16,21 +16,19 @@ class CalculatorForm(forms.Form):
     volume = forms.IntegerField(
         help_text='Est. volume of your cargo in K x m3, e.g. "50" = 50.000 m3',
         validators=[            
-            MinValueValidator(1),
-            MaxValueValidator(2000),
+            MinValueValidator(1)
         ]
     )
     collateral = forms.IntegerField(
-        help_text='Collaterial in M ISK, must be roughly equal to the est. value of your cargo',
+        help_text='Collaterial in M ISK, must be roughly equal to the est. '\
+            + 'value of your cargo',
         validators=[            
-            MinValueValidator(0),
-            MaxValueValidator(1000000),
+            MinValueValidator(0)
         ]
     )
 
-    def clean(self):
-        pricing = self.cleaned_data['pricing']
-        errors = pricing.get_contract_pricing_errors(
+    def clean(self):        
+        errors = self.cleaned_data['pricing'].get_contract_pricing_errors(
             self.cleaned_data['volume'] * 1000,
             self.cleaned_data['collateral'] * 1000000                
         )

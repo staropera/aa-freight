@@ -4,12 +4,14 @@ import logging
 from dhooks import Webhook, Embed
 
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import Q
 from django.urls import reverse
 
 from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
+from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo
+from allianceauth.eveonline.models import EveCharacter
 from evesde.models import EveSolarSystem, EveType
 
 from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_AVATAR_URL
@@ -47,7 +49,10 @@ class Location(models.Model):
         (CATEGORY_UNKNOWN_ID, '(unknown)'),
     ]
 
-    id = models.BigIntegerField(primary_key=True)
+    id = models.BigIntegerField(
+        primary_key=True,
+        validators=[MinValueValidator(0)]
+    )
     name = models.CharField(max_length=100)        
     solar_system_id = models.IntegerField(default=None, null=True, blank=True)
     type_id = models.IntegerField(default=None, null=True, blank=True)
@@ -95,52 +100,66 @@ class Pricing(models.Model):
         help_text='Non active pricings will not be used or shown'
     )
     price_base = models.FloatField(
-        default=0, 
-        blank=True, 
+        default=None, 
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
         help_text='Base price in ISK'
     )
     price_min = models.FloatField(
-        default=0, 
-        blank=True, 
+        default=None, 
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
         help_text='Minimum total price in ISK'
     )
     price_per_volume = models.FloatField(
-        default=0, 
-        blank=True, 
+        default=None, 
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
         help_text='Add-on price per m3 volume in ISK'
     )
     price_per_collateral_percent = models.FloatField(
-        default=0, 
-        blank=True, 
+        default=None, 
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
         help_text='Add-on price in % of collaterial'
     )
     collateral_min = models.BigIntegerField(
-        default=0, 
-        blank=True, 
+        default=None, 
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
         help_text='Minimum required collateral in ISK'
     )
     collateral_max = models.BigIntegerField(
         default=None, 
         null=True, 
         blank=True, 
+        validators=[MinValueValidator(0)],
         help_text='Maximum allowed collateral in ISK'
     )
     volume_max = models.FloatField(
         default=None, 
         null=True, 
         blank=True, 
+        validators=[MinValueValidator(0)],
         help_text='Maximum allowed volume in m3'
     )
     days_to_expire = models.IntegerField(
         default=None, 
         null=True, 
         blank=True, 
+        validators=[MinValueValidator(1)],
         help_text='Recommended days for contracts to expire'
     )
     days_to_complete = models.IntegerField(
         default=None, 
         null=True, 
         blank=True, 
+        validators=[MinValueValidator(1)],
         help_text='Recommended days for contract completion'
     )
     details = models.TextField(
@@ -174,9 +193,25 @@ class Pricing(models.Model):
 
     def get_calculated_price(self, volume: float, collateral: float) -> float:
         """returns the calculated price for the given parameters"""
-        return max(self.price_min, (self.price_base
-            + volume * self.price_per_volume 
-            + collateral  * (self.price_per_collateral_percent / 100)))
+
+        if volume < 0:
+            raise ValueError('volume can not be negative')
+        if collateral < 0:
+            raise ValueError('collateral can not be negative')
+        
+        self.clean()
+
+        price_base = 0 if not self.price_base else self.price_base
+        price_min = 0 if not self.price_min else self.price_min
+        price_per_volume = 0 \
+            if not self.price_per_volume else self.price_per_volume
+        price_per_collateral_percent = 0 \
+            if not self.price_per_collateral_percent \
+            else self.price_per_collateral_percent
+
+        return max(price_min, (price_base
+            + volume * price_per_volume
+            + collateral  * (price_per_collateral_percent / 100)))
 
     def get_contract_pricing_errors(            
             self,
@@ -185,6 +220,16 @@ class Pricing(models.Model):
             reward: float = None
         ) -> list:
         """returns list of validation error messages or none if ok"""
+        
+        if volume < 0:
+            raise ValueError('volume can not be negative')
+        if collateral < 0:
+            raise ValueError('collateral can not be negative')
+        if reward and reward < 0:
+            raise ValueError('reward can not be negative')
+        
+        self.clean()
+        
         errors = list()
         if self.volume_max and volume > self.volume_max:
             errors.append('exceeds the maximum allowed volume of '
@@ -321,7 +366,12 @@ class Contract(models.Model):
     status = models.CharField(max_length=32, choices=STATUS_CHOICES)
     title = models.CharField(max_length=100, default=None, null=True)    
     volume = models.FloatField()
-    pricing = models.ForeignKey(Pricing, on_delete=models.SET_DEFAULT, default=None, null=True)
+    pricing = models.ForeignKey(
+        Pricing, 
+        on_delete=models.SET_DEFAULT, 
+        default=None, 
+        null=True
+    )
     date_notified = models.DateTimeField(
         default=None, 
         null=True,
