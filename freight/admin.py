@@ -43,8 +43,7 @@ class ContractHandlerAdmin(admin.ModelAdmin):
     def send_notifications(self, request, queryset):
                         
         for obj in queryset:            
-            tasks.send_contract_notifications.delay(
-                handler_pk=obj.pk, 
+            tasks.send_contract_notifications.delay(                
                 force_sent=True
             )            
             text = 'Started sending notifications for: {} '.format(obj)

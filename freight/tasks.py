@@ -3,10 +3,8 @@ import os
 import datetime
 import hashlib
 import json
-from time import sleep
 
 from celery import shared_task
-from dhooks import Webhook
 
 from django.db import transaction
 from django.contrib.auth.models import User
@@ -21,7 +19,6 @@ from esi.models import Token
 
 from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 from .models import *
-from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -216,7 +213,8 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                                 'status': contract['status'],
                                 'title': title,
                                 'volume': contract['volume'],
-                                'pricing': None
+                                'pricing': None,
+                                'issues': None
                             }                        
                         )
                     handler.version_hash = new_version_hash                
@@ -232,7 +230,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 logger.info(add_prefix('Alliance contracts are unchanged.'))
                 success = True
 
-            send_contract_notifications.delay(handler.pk)
+            send_contract_notifications.delay()
             
         except Exception as ex:
                 logger.error(add_prefix(
@@ -281,44 +279,17 @@ def run_contracts_sync(force_sync = False, user_pk = None):
 
 
 @shared_task
-def send_contract_notifications(handler_pk, force_sent=False):
+def send_contract_notifications(force_sent = False):
     """Send notification about outstanding contracts that have pricing"""
+      
     try:
-        handler = ContractHandler.objects.get(pk=handler_pk)
-    except ContractHandler.DoesNotExist:        
-        raise ContractHandler.DoesNotExist(
-            'task called for unknown contract handler with pk {}'.format(handler_pk)
-        )
-        return False
-    
-    try:
-        if FREIGHT_DISCORD_WEBHOOK_URL:
-            q = Contract.objects.filter(
-                handler__exact=handler,                 
-                status__exact=Contract.STATUS_OUTSTANDING,                
-            ).exclude(pricing__exact=None)
-
-            if not force_sent:
-                q = q.filter(date_notified__exact=None)
-            
-            q = q.select_related()
-
-            if q.count() > 0:
-                logger.info('Trying to send notifications for {} contracts'.format(
-                    q.count()
-                ))
-                
-                for contract in q:
-                    contract.send_notification()
-                    sleep(1)
-            else:
-                logger.info('No new contracts to notify about')
-        
+        Contract.objects.send_notifications()        
         success = True
 
     except Exception as ex:
         logger.error('An unexpected error ocurred: {}'.format(ex))        
-        success = False        
+        success = False
+        raise ex
 
     return success
 
@@ -333,7 +304,7 @@ def update_contracts_pricing():
         success = True
 
     except Exception as ex:
-        logger.error('An unexpected error ocurred'.format(ex))        
+        logger.error('An unexpected error ocurred: {}'.format(ex))        
         success = False        
 
     return success

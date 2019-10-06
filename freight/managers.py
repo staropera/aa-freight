@@ -1,4 +1,6 @@
 import logging
+import json
+from time import sleep
 
 from bravado.exception import *
 
@@ -6,6 +8,7 @@ from django.db import models, transaction
 from esi.clients import esi_client_factory
 from allianceauth.eveonline.models import EveCorporationInfo
 
+from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL
 from .utils import LoggerAddTag, make_logger_prefix
 
 
@@ -125,6 +128,7 @@ class ContractManager(models.Manager):
         for contract in self.all():
             with transaction.atomic():
                 pricing = None
+                issues = None
                 if contract.status==Contract.STATUS_OUTSTANDING:
                     route_key = _make_route_key(
                         contract.start_location_id, 
@@ -132,6 +136,36 @@ class ContractManager(models.Manager):
                     )        
                     if route_key in pricings:
                         pricing = pricings[route_key]
+                        issues = contract.get_price_check_issues(pricing)
+                        if issues:
+                            contract.issues = json.dumps(issues)
                     
                 contract.pricing = pricing
+
                 contract.save()
+
+    def send_notifications(self, force_sent = False):
+        """Send notification about outstanding contracts that have pricing"""
+        from .models import Contract
+
+        if FREIGHT_DISCORD_WEBHOOK_URL:
+            q = Contract.objects.filter(                
+                status__exact=Contract.STATUS_OUTSTANDING,                
+            ).exclude(pricing__exact=None)
+
+            if not force_sent:
+                q = q.filter(date_notified__exact=None)
+            
+            q = q.select_related()
+
+            if q.count() > 0:
+                logger.info('Trying to send notifications for {} contracts'.format(
+                    q.count()
+                ))
+                
+                for contract in q:
+                    contract.send_notification()
+                    sleep(1)
+            else:
+                logger.info('No new contracts to notify about')
+

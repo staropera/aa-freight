@@ -105,37 +105,37 @@ class TestPricing(TestCase):
     def test_get_contract_pricing_errors(self):
         p = Pricing()
         p.price_base = 500        
-        self.assertIsNone(p.get_contract_pricing_errors(5, 10))
+        self.assertIsNone(p.get_contract_price_check_issues(5, 10))
         
         p = Pricing()
         p.price_base = 500
         p.volume_max = 300        
-        self.assertIsNotNone(p.get_contract_pricing_errors(350, 1000))
+        self.assertIsNotNone(p.get_contract_price_check_issues(350, 1000))
 
         p = Pricing()
         p.price_base = 500
         p.collateral_max = 300        
-        self.assertIsNotNone(p.get_contract_pricing_errors(350, 1000))
+        self.assertIsNotNone(p.get_contract_price_check_issues(350, 1000))
 
         p = Pricing()
         p.price_base = 500
         p.collateral_min = 300        
-        self.assertIsNotNone(p.get_contract_pricing_errors(350, 200))
+        self.assertIsNotNone(p.get_contract_price_check_issues(350, 200))
 
         p = Pricing()
         p.price_base = 500        
-        self.assertIsNotNone(p.get_contract_pricing_errors(350, 200, 400))
+        self.assertIsNotNone(p.get_contract_price_check_issues(350, 200, 400))
         
         p = Pricing()
         p.price_base = 500
         with self.assertRaises(ValueError):            
-            p.get_contract_pricing_errors(-5, 0)
+            p.get_contract_price_check_issues(-5, 0)
 
         with self.assertRaises(ValueError):            
-            p.get_contract_pricing_errors(50, -5)
+            p.get_contract_price_check_issues(50, -5)
 
         with self.assertRaises(ValueError):            
-            p.get_contract_pricing_errors(50, 5, -5)
+            p.get_contract_price_check_issues(50, 5, -5)
         
         p = Pricing()
         with self.assertRaises(ValidationError):

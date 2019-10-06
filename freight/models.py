@@ -239,7 +239,7 @@ class Pricing(models.Model):
             + volume * price_per_volume
             + collateral  * (price_per_collateral_percent / 100)))
 
-    def get_contract_pricing_errors(            
+    def get_contract_price_check_issues(            
             self,
             volume: float,
             collateral: float,
@@ -256,21 +256,21 @@ class Pricing(models.Model):
         
         self.clean()
         
-        errors = list()
+        issues = list()
         if self.volume_min and volume < self.volume_min:
-            errors.append('below the minimum required volume of '
+            issues.append('below the minimum required volume of '
                 + '{:,.0f} K m3'.format(self.volume_min / 1000))
                 
         if self.volume_max and volume > self.volume_max:
-            errors.append('exceeds the maximum allowed volume of '
+            issues.append('exceeds the maximum allowed volume of '
                 + '{:,.0f} K m3'.format(self.volume_max / 1000))
         
         if self.collateral_max and collateral > self.collateral_max:
-            errors.append('exceeds the maximum allowed collateral of '
+            issues.append('exceeds the maximum allowed collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_max / 1000000))
         
         if self.collateral_min and collateral < self.collateral_min:
-            errors.append('below the minimum required collateral of '
+            issues.append('below the minimum required collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_min / 1000000))
 
         if reward:
@@ -278,13 +278,13 @@ class Pricing(models.Model):
                 volume, collateral
             )
             if reward < calculated_price:
-                errors.append('reward is below the calculated price of '
+                issues.append('reward is below the calculated price of '
                     + '{:,.0f} M ISK'.format(calculated_price / 1000000))
 
-        if len(errors) == 0:
+        if len(issues) == 0:
             return None
         else:
-            return errors
+            return issues
     
 
 class ContractHandler(models.Model):
@@ -318,20 +318,25 @@ class ContractHandler(models.Model):
         on_delete=models.SET_DEFAULT,
         default=None,
         null=True
-    )
-    
+    )    
     version_hash = models.CharField(
         max_length=32, 
         null=True, 
         default=None, 
-        blank=True
+        blank=True,
+        help_text='hash to identify changes to contracts'
     )
     last_sync = models.DateTimeField(
         null=True, 
         default=None, 
-        blank=True
+        blank=True,
+        help_text='when the last sync happened'
     )
-    last_error = models.IntegerField(choices=ERRORS_LIST, default=ERROR_NONE)
+    last_error = models.IntegerField(
+        choices=ERRORS_LIST, 
+        default=ERROR_NONE,
+        help_text='error that occurred at the last sync atttempt (if any)'
+    )
 
     @classmethod
     def get_esi_scopes(cls):
@@ -430,6 +435,11 @@ class Contract(models.Model):
         null=True,
         help_text='datetime of latest notification, None = none has been sent'
     )
+    issues = models.TextField(
+        default=None,
+        null=True,
+        help_text='List or price check issues as JSON array of strings or None'
+    )
 
     objects = ContractManager()
 
@@ -446,8 +456,8 @@ class Contract(models.Model):
             self.end_location
         )
 
-    def get_pricing_errors(self, pricing: Pricing) ->list:
-        return pricing.get_contract_pricing_errors(
+    def get_price_check_issues(self, pricing: Pricing) -> list:
+        return pricing.get_contract_price_check_issues(
             self.volume,
             self.collateral,
             self.reward
@@ -455,7 +465,7 @@ class Contract(models.Model):
 
     def send_notification(self):
         """sends notification about this contract to the DISCORD webhook"""
-        if FREIGHT_DISCORD_WEBHOOK_URL:
+        if FREIGHT_DISCORD_WEBHOOK_URL:                        
             if FREIGHT_DISCORD_AVATAR_URL:
                 avatar_url = FREIGHT_DISCORD_AVATAR_URL
             else:    
@@ -490,8 +500,8 @@ class Contract(models.Model):
                     self.volume / 1000
                 )
                 if self.pricing:
-                    errors = self.get_pricing_errors(self.pricing)
-                    if not errors:                        
+                    issues = self.get_price_check_issues(self.pricing)
+                    if not issues:                        
                         check_text = 'passed'
                         color = 0x008000
                     else:

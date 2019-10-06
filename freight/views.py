@@ -1,5 +1,6 @@
 import math
 import datetime
+import json
 
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, Http404, JsonResponse
@@ -55,11 +56,7 @@ def contract_list_data(request):
     character_format = lambda x: x.character_name if x else None
     for contract in contracts:                                
         has_pricing = contract.pricing is not None
-        if has_pricing:
-            errors = contract.get_pricing_errors(contract.pricing)            
-        else:
-            errors = None
-        has_pricing_errors = errors is not None
+        has_pricing_errors = contract.issues is not None            
         if has_pricing:            
             if not has_pricing_errors:
                 glyph = 'ok'
@@ -70,7 +67,7 @@ def contract_list_data(request):
                 color = 'red'                
                 tooltip_text = '{}\n{}'.format(
                     contract.pricing.name, 
-                    '\n'.join(errors)
+                    '\n'.join(json.loads(contract.issues))
                 )
             pricing_check = ('<span class="glyphicon '
                 + 'glyphicon-'+ glyph + '" ' 

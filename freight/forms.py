@@ -28,14 +28,14 @@ class CalculatorForm(forms.Form):
     )
 
     def clean(self):        
-        errors = self.cleaned_data['pricing'].get_contract_pricing_errors(
+        issues = self.cleaned_data['pricing'].get_contract_price_check_issues(
             self.cleaned_data['volume'] * 1000,
             self.cleaned_data['collateral'] * 1000000                
         )
         
-        if errors:
+        if issues:
             raise ValidationError(
-                'Issues: ' + ", ".join(errors)
+                'Issues: ' + ", ".join(issues)
             )
     
 
