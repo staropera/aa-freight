@@ -144,7 +144,7 @@ class Pricing(models.Model):
         null=True,
         blank=True,
         validators=[MinValueValidator(0)],
-        help_text='Add-on price in % of collaterial'
+        help_text='Add-on price in % of collateral'
     )
     collateral_min = models.BigIntegerField(
         default=None, 

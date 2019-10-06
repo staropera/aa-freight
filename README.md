@@ -4,6 +4,8 @@ This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianc
 
 ![License](https://img.shields.io/badge/license-MIT-green) ![python](https://img.shields.io/badge/python-3.5-informational) ![django](https://img.shields.io/badge/django-2.2-informational)
 
+**Status**: In Development
+
 ## Overview
 
 This app support running a central freight service for an alliance. The main concept of such a freight service is as follows:
@@ -118,11 +120,23 @@ Pricing routes are bidirectional, so it does not matter which location is chosen
 
 Pricings are defined in the admin section of AA, so you need staff permissions to access it.
 
-Most parameters of a pricing are optional, but you need to define at least one of the four pricing components to create a valid pricing:
+Most parameters of a pricing are optional, but you need to define at least one of the four pricing components to create a valid pricing.
 
-- Minimum price
-- Base price
-- Price per volume
-- Price per collateral
+Parameter | Description | Pricing Functionality
+-- | -- | --
+Start Location | Starting station or structure for courier route | -
+End Location | Destination station or structure for courier route  | -
+Active | Non active pricings will not be used or shown | -
+Price base | Base price in ISK  | Pricing component
+Price min | Minimum total price in ISK | Pricing component
+Price per volume | Add-on price per m3 volume in ISK | Pricing component
+Price per collateral_percent | Add-on price in % of collateral | Pricing component
+Collateral min | Minimum required collateral in ISK | Validation check
+Collateral max | Maximum allowed collateral in ISK | Validation check
+Volume min | Minimum allowed volume in m3 | Validation check
+Volume max | Maximum allowed volume in m3 | Validation check
+Days to expire | Recommended days for contracts to expire | Info
+Days to complete | Recommended days for contract completion | Info
+Details | Text with additional instructions for using this pricing | Info
 
 > **Adding Locations**:<br>If you are creating a pricing for a new route or this is the first pricing you are creating you may need to first add the locations (stations and/or structures) to the app. The best way is add new locations is with the "Add Location" feature on the main page of the app. Alternatively you can also add locations manually in the admin section.
