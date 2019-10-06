@@ -35,7 +35,7 @@ class CalculatorForm(forms.Form):
         
         if errors:
             raise ValidationError(
-                'Input errors: ' + ", ".join(errors)
+                'Issues: ' + ", ".join(errors)
             )
     
 

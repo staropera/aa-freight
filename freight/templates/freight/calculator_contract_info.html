@@ -14,27 +14,27 @@
         <dd>{{ pricing.start_location }}</dd>
         
         {% if pricing.days_to_expire %}
-            <dt>Expiration</dt>
+            <dt>Expiration:</dt>
             <dd>{{ expires_on|date:'Y-m-d' }} </dd>
         {% endif %}
 
         <br>
         
-        <dt>Reward</dt>
+        <dt>Reward:</dt>
         <dd>{{ contract.reward|formatnumber:"0"|default_if_none:"???" }} ISK</dd>
 
-        <dt>Collateral</dt>
+        <dt>Collateral:</dt>
         <dd>{{ contract.collateral|formatnumber:"0"|default_if_none:"???" }} ISK</dd>
 
         <dt>Destination:</dt>
         <dd>{{ pricing.end_location }}</dd>
 
         {% if pricing.days_to_complete %}
-            <dt>Days to complete</dt>           
+            <dt>Days to complete:</dt>           
             <dd>{{ pricing.days_to_complete|default_if_none:"-" }}</dd>
         {% endif %}
 
-        <dt>Volume</dt>
+        <dt>Volume:</dt>
         <dd>{{ contract.volume|formatnumber:"0"|default_if_none:"???" }} m3</dd>
 
     </dl>
