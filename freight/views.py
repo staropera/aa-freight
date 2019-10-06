@@ -231,12 +231,12 @@ def create_or_update_service(request, token):
     if success:
         contract_handler = ContractHandler.objects.first()
         if contract_handler and contract_handler.alliance != alliance:
-            messages_plus.danger(
+            messages_plus.error(
                 request,
                 'There already is a contract handler installed for a '
                 + 'different alliance. You need to first delete the '
                 + 'existing contract handler in the admin section '
-                + 'before you can run set it up for a different alliance.'
+                + 'before you can set up this app for a different alliance.'
             )
             success = False
     
@@ -247,8 +247,7 @@ def create_or_update_service(request, token):
                 'character': owned_char
             }
         )          
-        tasks.run_contracts_sync.delay(
-            handler_pk=contract_handler.pk,
+        tasks.run_contracts_sync.delay(            
             force_sync=True,
             user_pk=request.user.pk
         )        

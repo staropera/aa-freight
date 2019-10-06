@@ -240,7 +240,7 @@ class TestRunContractsSync(TestCase):
         
         # run manager sync
         self.assertTrue(
-            tasks.run_contracts_sync(handler.pk)
+            tasks.run_contracts_sync()
         )
 
         handler.refresh_from_db()
@@ -258,20 +258,14 @@ class TestRunContractsSync(TestCase):
             4
         )
 
-    
-    # run for non existing handler
-    def test_run_unknown_handler(self):        
-        with self.assertRaises(ContractHandler.DoesNotExist):
-            tasks.run_contracts_sync(99)
-
-    
+        
     # run without char    
     def test_run_no_sync_char(self):
         handler = ContractHandler.objects.create(
             alliance=self.alliance
         )
         self.assertFalse(
-            tasks.run_contracts_sync(handler.pk)
+            tasks.run_contracts_sync()
         )
         handler.refresh_from_db()
         self.assertEqual(
@@ -301,7 +295,7 @@ class TestRunContractsSync(TestCase):
         )
         
         # run manager sync
-        self.assertFalse(tasks.run_contracts_sync(handler.pk))
+        self.assertFalse(tasks.run_contracts_sync())
 
         handler.refresh_from_db()
         self.assertEqual(
@@ -331,7 +325,7 @@ class TestRunContractsSync(TestCase):
         )
         
         # run manager sync
-        self.assertFalse(tasks.run_contracts_sync(handler.pk))
+        self.assertFalse(tasks.run_contracts_sync())
 
         handler.refresh_from_db()
         self.assertEqual(

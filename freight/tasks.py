@@ -34,22 +34,21 @@ get_corporations_corporation_id_contracts
 
 
 @shared_task
-def run_contracts_sync(handler_pk, force_sync = False, user_pk = None):
-    try:
-        handler = ContractHandler.objects.get(pk=handler_pk)
-    except ContractHandler.DoesNotExist:        
-        raise ContractHandler.DoesNotExist(
-            'task called for unknown contract handler with pk {}'.format(handler_pk)
-        )
-        return False
+def run_contracts_sync(force_sync = False, user_pk = None):
     
     try:
+        handler = ContractHandler.objects.first()
+        if not handler:
+            logger.info(
+                'could not sync contracts because no contract handler was found'
+            )
+            return False
+
         handler.last_sync = datetime.datetime.now(datetime.timezone.utc)
         handler.save()
 
         add_prefix = make_logger_prefix(handler)
-        alliance_name = handler.alliance.alliance_name
-        
+                
         if handler.character is None:
             logger.error(add_prefix(
                 'No character configured to sync the alliance'

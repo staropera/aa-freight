@@ -30,7 +30,11 @@
         {% endif %}
 
         <br>
-
+        {% if pricing.volume_min %}
+            <dt>Min Volume:</dt>
+            <dd>{{ pricing.volume_min|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
+        {% endif %}
+        
         {% if pricing.volume_max %}
             <dt>Max Volume:</dt>
             <dd>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>

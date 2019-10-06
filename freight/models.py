@@ -29,11 +29,11 @@ class Freight(models.Model):
         managed = False                         
         default_permissions = ()
         permissions = ( 
-            ('basic_access', 'Can access this app'),  
+            ('add_location', 'Can add / update locations'), 
+            ('basic_access', 'Can access this app'),              
             ('setup_contract_handler', 'Can setup contract handler'), 
             ('use_calculator', 'Can use the calculator'), 
-            ('view_contracts', 'Can view the contracts list'), 
-            ('add_location', 'Can add / update locations'), 
+            ('view_contracts', 'Can view the contracts list'),             
             ('view_statistics', 'Can view freight statistics'), 
         )
 
@@ -51,14 +51,33 @@ class Location(models.Model):
 
     id = models.BigIntegerField(
         primary_key=True,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
+        help_text='Eve Online location ID, ' \
+            + 'either item ID for stations or structure ID for structures'
     )
-    name = models.CharField(max_length=100)        
-    solar_system_id = models.IntegerField(default=None, null=True, blank=True)
-    type_id = models.IntegerField(default=None, null=True, blank=True)
+    name = models.CharField(
+        max_length=100,
+        help_text='In-game name of this station or structure'
+    ) 
+    solar_system_id = models.IntegerField(
+        default=None, 
+        null=True, 
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text='Eve Online solar system ID'
+    )
+    type_id = models.IntegerField(
+        default=None, 
+        null=True, 
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text='Eve Online type ID'
+    )
     category_id = models.IntegerField(
         choices=CATEGORY_CHOICES, 
-        default=CATEGORY_UNKNOWN_ID
+        default=CATEGORY_UNKNOWN_ID,
+        validators=[MinValueValidator(0)],
+        help_text='Eve Online category ID'
     )
     
     objects = LocationManager()
@@ -140,6 +159,13 @@ class Pricing(models.Model):
         blank=True, 
         validators=[MinValueValidator(0)],
         help_text='Maximum allowed collateral in ISK'
+    )
+    volume_min = models.FloatField(
+        default=None, 
+        null=True, 
+        blank=True, 
+        validators=[MinValueValidator(0)],
+        help_text='Minimum allowed volume in m3'
     )
     volume_max = models.FloatField(
         default=None, 
@@ -231,6 +257,10 @@ class Pricing(models.Model):
         self.clean()
         
         errors = list()
+        if self.volume_min and volume < self.volume_min:
+            errors.append('below the minimum required volume of '
+                + '{:,.0f} K m3'.format(self.volume_min / 1000))
+                
         if self.volume_max and volume > self.volume_max:
             errors.append('exceeds the maximum allowed volume of '
                 + '{:,.0f} K m3'.format(self.volume_max / 1000))

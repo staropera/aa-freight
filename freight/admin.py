@@ -26,8 +26,7 @@ class ContractHandlerAdmin(admin.ModelAdmin):
     def start_sync(self, request, queryset):
                         
         for obj in queryset:            
-            tasks.run_contracts_sync.delay(
-                handler_pk=obj.pk, 
+            tasks.run_contracts_sync.delay(                
                 force_sync=True,
                 user_pk=request.user.pk
             )            
