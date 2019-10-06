@@ -247,7 +247,7 @@ def create_or_update_service(request, token):
                 'character': owned_char
             }
         )          
-        tasks.sync_contracts.delay(
+        tasks.run_contracts_sync.delay(
             handler_pk=contract_handler.pk,
             force_sync=True,
             user_pk=request.user.pk

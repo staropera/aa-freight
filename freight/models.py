@@ -259,6 +259,25 @@ class Pricing(models.Model):
 
 class ContractHandler(models.Model):
     """Handler for syncing of contracts belonging to an alliance"""
+
+    ERROR_NONE = 0
+    ERROR_TOKEN_INVALID = 1
+    ERROR_TOKEN_EXPIRED = 2
+    ERROR_INSUFFICIENT_PERMISSIONS = 3    
+    ERROR_NO_CHARACTER = 4
+    ERROR_ESI_UNAVAILABLE = 5
+    ERROR_UNKNOWN = 99
+
+    ERRORS_LIST = [
+        (ERROR_NONE, 'No error'),
+        (ERROR_TOKEN_INVALID, 'Invalid token'),
+        (ERROR_TOKEN_EXPIRED, 'Expired token'),
+        (ERROR_INSUFFICIENT_PERMISSIONS, 'Insufficient permissions'),
+        (ERROR_NO_CHARACTER, 'No character set for fetching alliance contacts'),
+        (ERROR_ESI_UNAVAILABLE, 'ESI API is currently unavailable'),
+        (ERROR_UNKNOWN, 'Unknown error'),
+    ]
+
     alliance = models.OneToOneField(
         EveAllianceInfo, 
         on_delete=models.CASCADE, 
@@ -282,7 +301,7 @@ class ContractHandler(models.Model):
         default=None, 
         blank=True
     )
-
+    last_error = models.IntegerField(choices=ERRORS_LIST, default=ERROR_NONE)
 
     @classmethod
     def get_esi_scopes(cls):
@@ -293,6 +312,10 @@ class ContractHandler(models.Model):
 
     def __str__(self):
         return str(self.alliance)
+
+    def get_last_error_message(self):
+        msg = [(x, y) for x, y in self.ERRORS_LIST if x == self.last_error]
+        return msg[0][1] if len(msg) > 0 else 'Undefined error'
 
 
 class Contract(models.Model): 
