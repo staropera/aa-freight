@@ -32,7 +32,7 @@ To support this concept Alliance Freight offers the following main features:
 
 ### Reward Calculator
 
-![calculator](https://i.imgur.com/4tGcKUd.png)
+![calculator](https://i.imgur.com/2PTXo9N.png)
 
 ### Contract List
 
