@@ -16,10 +16,10 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     license='MIT',
-    description='Alliance Freight plugin app for Alliance Auth',
+    description='Alliance Auth plugin app for running an alliance freight service',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://gitlab.com/ErikKalkoken/allianceauth-example-plugin',
+    url='https://gitlab.com/ErikKalkoken/aa-freight',
     author='Erik Kalkoken',
     author_email='erik.kalkoken@gmail.com',
     classifiers=[

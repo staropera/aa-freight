@@ -1,6 +1,8 @@
 include LICENSE
 include README.md
+include freight/swagger.json
 recursive-include freight *.py
 recursive-include freight/static *
 recursive-include freight/templates *
+recursive-include freight/templatetags *
 
