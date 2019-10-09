@@ -168,4 +168,7 @@ class ContractManager(models.Manager):
                     sleep(1)
             else:
                 logger.info('No new contracts to notify about')
+        
+        else:
+            logger.info('Discord webhook not configured - skipping sending notifications')
 
