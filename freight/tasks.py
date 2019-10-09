@@ -283,7 +283,7 @@ def send_contract_notifications(force_sent = False):
     """Send notification about outstanding contracts that have pricing"""
       
     try:
-        Contract.objects.send_notifications()        
+        Contract.objects.send_notifications(force_sent)
         success = True
 
     except Exception as ex:

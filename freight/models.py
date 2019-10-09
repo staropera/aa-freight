@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from dhooks import Webhook, Embed
+from .discordhook import Webhook, Embed
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -517,13 +517,13 @@ class Contract(models.Model):
                 desc += '**Issued by**: {}\n'.format(self.issuer)
                 
                 embed = Embed(
-                    timestamp=self.date_issued.isoformat(),
-                    color=color
-                )
-                embed.set_thumbnail(self.issuer.portrait_url())
-                embed.description = desc
-                                
-                hook.send(content=contents, embed=embed) 
+                    description=desc,
+                    timestamp=self.date_issued,
+                    color=color,
+                    thumbnail_url=self.issuer.portrait_url()
+                )                
+                                                
+                hook.send(content=contents, embeds=[embed]) 
                 self.date_notified = datetime.datetime.now(
                     datetime.timezone.utc
                 )
