@@ -12,7 +12,6 @@ from django.urls import reverse
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo
 from allianceauth.eveonline.models import EveCharacter
-from evesde.models import EveSolarSystem, EveType
 
 from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_AVATAR_URL
 from .managers import LocationManager, ContractManager
