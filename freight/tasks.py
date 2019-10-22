@@ -154,7 +154,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                                 acceptor = EveCharacter.objects.get(
                                     character_id=contract['acceptor_id']
                                 )
-                            except EveAllianceInfo.DoesNotExist:
+                            except EveCharacter.DoesNotExist:
                                 acceptor = EveCharacter.objects.create_character(
                                     character_id=contract['acceptor_id']
                                 )
