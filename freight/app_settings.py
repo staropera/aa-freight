@@ -13,3 +13,11 @@ FREIGHT_DISCORD_AVATAR_URL = getattr(
     'FREIGHT_DISCORD_AVATAR_URL', 
     None
 )
+
+# If and how notifications are pinging on Discord
+# Valid values are: None, '@here' and '@everyone'.
+FREIGHT_DISCORD_PING_TYPE = getattr(
+    settings, 
+    'FREIGHT_DISCORD_PING_TYPE', 
+    None
+)

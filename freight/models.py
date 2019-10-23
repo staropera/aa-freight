@@ -13,7 +13,7 @@ from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo
 from allianceauth.eveonline.models import EveCharacter
 
-from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_AVATAR_URL
+from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_AVATAR_URL, FREIGHT_DISCORD_PING_TYPE
 from .managers import LocationManager, ContractManager
 from .utils import LoggerAddTag, DATETIME_FORMAT
 
@@ -481,8 +481,13 @@ class Contract(models.Model):
                     'Trying to sent notification about contract {}'.format(
                         self.contract_id
                     ) + ' to {}'.format(FREIGHT_DISCORD_WEBHOOK_URL))
-                contents = ('There is a new courier contract from {} '.format(
-                        self.issuer) + 'looking to be picked up:')
+                if FREIGHT_DISCORD_PING_TYPE in ['@here', '@everyone']:
+                    contents = FREIGHT_DISCORD_PING_TYPE + ' '
+                else:
+                    contents = ''
+
+                contents += 'There is a new courier contract from {} '.format(
+                        self.issuer) + 'looking to be picked up:'
                
                 desc = ''
                 desc += '**Route**: {} → {}\n'.format(
