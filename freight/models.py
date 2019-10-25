@@ -207,6 +207,16 @@ class Pricing(models.Model):
     def __str__(self):
         return self.name
 
+    def requires_volume(self) -> bool:
+        """whether this pricing required volume to be specified"""
+        return (self.price_per_volume is not None 
+            or self.volume_min is not None)
+
+    def requires_collateral(self) -> bool:
+        """whether this pricing required collateral to be specified"""
+        return (self.price_per_collateral_percent is not None 
+            or self.collateral_min is not None)
+
     def clean(self):
         if not (self.price_base 
                 or self.price_min 

@@ -113,8 +113,14 @@ def calculator(request):
         
         if form.is_valid():                                    
             pricing = form.cleaned_data['pricing']
-            volume = int(form.cleaned_data['volume'])
-            collateral = int(form.cleaned_data['collateral'])        
+            if form.cleaned_data['volume']:
+                volume = int(form.cleaned_data['volume'])
+            else:
+                volume = 0
+            if form.cleaned_data['collateral']:
+                collateral = int(form.cleaned_data['collateral'])        
+            else:
+                collateral = 0
             price = math.ceil((pricing.get_calculated_price(
                 volume * 1000,
                 collateral * 1000000) 
