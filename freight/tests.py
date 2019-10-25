@@ -16,7 +16,7 @@ from esi.errors import TokenExpiredError, TokenInvalidError
 
 from . import tasks
 from .models import *
-
+from .templatetags.freight_filters import power10, formatnumber
 
 # reconfigure logger so we get logging from tasks to console during test
 c_handler = logging.StreamHandler(sys.stdout)
@@ -331,4 +331,75 @@ class TestRunContractsSync(TestCase):
         self.assertEqual(
             handler.last_error, 
             ContractHandler.ERROR_TOKEN_INVALID            
+        )
+
+
+class TestFilters(TestCase):
+
+    def test_power10(self):
+        self.assertEqual(
+            power10(1),
+            1
+        )
+        self.assertEqual(
+            power10(1000, 3),
+            1
+        )
+        self.assertEqual(
+            power10(-1000, 3),
+            -1
+        )
+        self.assertEqual(
+            power10(0),
+            0            
+        )
+        self.assertEqual(
+            power10(None, 3),
+            None
+        )
+        self.assertEqual(
+            power10('xxx', 3),
+            None
+        )
+        self.assertEqual(
+            power10('', 3),
+            None
+        )
+        self.assertEqual(
+            power10(1000, 'xx'),
+            None
+        )
+
+    def test_formatnumber(self):
+        self.assertEqual(
+            formatnumber(1),
+            '1.0'
+        )
+        self.assertEqual(
+            formatnumber(1000),
+            '1,000.0'
+        )
+        self.assertEqual(
+            formatnumber(1000000),
+            '1,000,000.0'
+        )
+        self.assertEqual(
+            formatnumber(1, 0),
+            '1'
+        )
+        self.assertEqual(
+            formatnumber(1000, 0),
+            '1,000'
+        )
+        self.assertEqual(
+            formatnumber(1000000, 0),
+            '1,000,000'
+        )
+        self.assertEqual(
+            formatnumber(-1000),
+            '-1,000.0'
+        )
+        self.assertEqual(
+            formatnumber(None),
+            None
         )

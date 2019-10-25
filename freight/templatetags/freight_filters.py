@@ -5,15 +5,15 @@ register = template.Library()
 @register.filter
 def power10(value, k = 0):   
     """converts the value to a power of 10 representation""" 
-    if value:            
-        return value / (10 ** int(k))
-    else:
+    try:
+        return float(value) / (10 ** int(k))
+    except (ValueError, TypeError):
         return None
 
 @register.filter
 def formatnumber(value, p = 1):
     """return a formated number with thousands seperators""" 
-    if value:
+    try:
         return '{:,.{}f}'.format(float(value), int(p))
-    else:
+    except (ValueError, TypeError):
         return None

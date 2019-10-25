@@ -16,7 +16,7 @@ class CalculatorForm(forms.Form):
     volume = forms.IntegerField(
         help_text='Est. volume of your cargo in K x m3, e.g. "50" = 50.000 m3',
         validators=[            
-            MinValueValidator(1)
+            MinValueValidator(0)
         ]
     )
     collateral = forms.IntegerField(
@@ -27,10 +27,10 @@ class CalculatorForm(forms.Form):
         ]
     )
 
-    def clean(self):        
+    def clean(self):                
         issues = self.cleaned_data['pricing'].get_contract_price_check_issues(
-            self.cleaned_data['volume'] * 1000,
-            self.cleaned_data['collateral'] * 1000000                
+            self.cleaned_data['volume'] * 1000 if 'volume' in self.cleaned_data else 0,
+            self.cleaned_data['collateral'] * 1000000 if 'collateral' in self.cleaned_data else 0
         )
         
         if issues:

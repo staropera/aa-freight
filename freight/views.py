@@ -297,10 +297,10 @@ def add_location_2(request):
                     location_id,
                     add_unknown=False
                 )
-                action_txt = 'Added' if created else 'Updated'
+                action_txt = 'Added:' if created else 'Updated:'
                 messages_plus.success(
                     request,
-                    '{} "{}"'.format(
+                    '{} <strong>{}</strong>'.format(
                         action_txt,                        
                         location.name
                     )
