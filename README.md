@@ -111,8 +111,9 @@ Here is a list of available settings for this app. They can be configured by add
 
 Name | Description | Default
 -- | -- | --
-`FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications should appear | Not defined
-`FREIGHT_DISCORD_AVATAR_URL`| URL to an image file to override the default avatar on Discord notifications, which is the Eve alliance logo | Not defined
+`FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications should appear | Not defined = Deactivated
+`FREIGHT_DISCORD_AVATAR_URL`| URL to an image file to override the default avatar on Discord notifications, which is the Eve alliance logo | Alliance logo
+`FREIGHT_DISCORD_PING_TYPE`| Defines if and how notifications will ping on Discord by adding mentions: Valid values are: `@here` or `@everyone`  | Not defined = No ping
 
 ## Permissions
 
@@ -153,4 +154,4 @@ Days to expire | Recommended days for contracts to expire | Info
 Days to complete | Recommended days for contract completion | Info
 Details | Text with additional instructions for using this pricing | Info
 
-> **Adding Locations**:<br>If you are creating a pricing for a new route or this is the first pricing you are creating you may need to first add the locations (stations and/or structures) to the app. The best way is add new locations is with the "Add Location" feature on the main page of the app. Alternatively you can also add locations manually in the admin section.
+> **Adding Locations**:<br>If you are creating a pricing for a new route or this is the first pricing you are creating you may need to first add the locations (stations and/or structures) to the app. The best way is add new locations is with the "Add Location" feature on the main page of the app. Alternatively you can just create a courier contract between those locations in game. They will be added automatically when the contract is synced by Alliance Freight.
