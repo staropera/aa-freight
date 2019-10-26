@@ -30,127 +30,128 @@
             </div>
             <div class="col-md-6">                
                 
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h3 class="panel-title">Pricing details</h3>
-                    </div>
-                    <div class="panel-body" style="min-height: 100px;">    
-                        {% if pricing %}
+                {% if pricing %}
 
-                            <dl class="dl-horizontal">
+                
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Pricing details</h3>
+                        </div>
+                        <div class="panel-body" style="min-height: 100px;">    
+                            
+                                <dl class="dl-horizontal">
 
-                                <dt>Route</dt>
-                                <dd>{{ pricing.name }}</dd>
+                                    <dt>Route</dt>
+                                    <dd>{{ pricing.name }}</dd>
 
-                                <br>
+                                    <br>
 
-                                {% if pricing.price_min %}
-                                    <dt>Minimum price:</dt>
-                                    <dd>{{ pricing.price_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
-                                {% endif %}
+                                    {% if pricing.price_min %}
+                                        <dt>Minimum price:</dt>
+                                        <dd>{{ pricing.price_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                    {% endif %}
 
-                                {% if pricing.price_base %}
-                                    <dt>Base price:</dt>
-                                    <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>
-                                {% endif %}
-                                
-                                {% if pricing.price_per_volume %}
-                                    <dt>Price add-on per m3:</dt>
-                                    <dd>{{ pricing.price_per_volume|formatnumber:"0" }} ISK</dd>
-                                {% endif %}
+                                    {% if pricing.price_base %}
+                                        <dt>Base price:</dt>
+                                        <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                    {% endif %}
+                                    
+                                    {% if pricing.price_per_volume %}
+                                        <dt>Price add-on per m3:</dt>
+                                        <dd>{{ pricing.price_per_volume|formatnumber:"0" }} ISK</dd>
+                                    {% endif %}
 
-                                {% if pricing.price_per_collateral_percent %}
-                                    <dt>Price add-on collateral:</dt>
-                                    <dd>{{ pricing.price_per_collateral_percent }} %</dd>
-                                {% endif %}
+                                    {% if pricing.price_per_collateral_percent %}
+                                        <dt>Price add-on collateral:</dt>
+                                        <dd>{{ pricing.price_per_collateral_percent }} %</dd>
+                                    {% endif %}
 
-                                <br>
-                                {% if pricing.volume_min %}
-                                    <dt>Min Volume:</dt>
-                                    <dd>{{ pricing.volume_min|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
-                                {% endif %}
-                                
-                                {% if pricing.volume_max %}
-                                    <dt>Max Volume:</dt>
-                                    <dd>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
-                                {% endif %}
+                                    <br>
+                                    {% if pricing.volume_min %}
+                                        <dt>Min Volume:</dt>
+                                        <dd>{{ pricing.volume_min|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
+                                    {% endif %}
+                                    
+                                    {% if pricing.volume_max %}
+                                        <dt>Max Volume:</dt>
+                                        <dd>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
+                                    {% endif %}
 
-                                {% if pricing.collateral_min %}
-                                    <dt>Min. Collateral:</dt>
-                                    <dd>{{ pricing.collateral_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
-                                {% endif %}
+                                    {% if pricing.collateral_min %}
+                                        <dt>Min. Collateral:</dt>
+                                        <dd>{{ pricing.collateral_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                    {% endif %}
 
-                                {% if pricing.collateral_max %}
-                                    <dt>Max. Collateral:</dt>        
-                                    <dd>{{ pricing.collateral_max|power10:"6"|formatnumber:"0" }} M ISK</dd>
-                                {% endif %}
+                                    {% if pricing.collateral_max %}
+                                        <dt>Max. Collateral:</dt>        
+                                        <dd>{{ pricing.collateral_max|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                    {% endif %}
 
+                                    <br>
 
-                                <br>
+                                    {% if pricing.details %}
+                                        <dt>Additional Instructions:</dt>
+                                        <dd>{{ pricing.details|linebreaks }}</dd>
+                                    {% endif %}
 
-                                {% if pricing.details %}
-                                    <dt>Additional Instructions:</dt>
-                                    <dd>{{ pricing.details|linebreaks }}</dd>
-                                {% endif %}
+                                </dl>
 
-                            </dl>
+                        </div>
+                    </div> 
 
-                        {% else %}
-                            <p class="text-warning">No pricing defined yet</p>
-                        {% endif %}                
-                    </div>
-                </div> 
+                {% endif %}                
 
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h3 class="panel-title">Your contract</h3>
-                    </div>
-                    <div class="panel-body" style="min-height: 100px;">    
+                {% if price %}
+
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Your contract</h3>
+                        </div>
+                        <div class="panel-body" style="min-height: 100px;">    
+                            
+                            
+                                <dl class="dl-horizontal">
+
+                                    <dt>Contract Type:</dt>
+                                    <dd>Courier</dd>
+
+                                    <dt>Availability:</dt>
+                                    <dd>Alliance</dd>
+
+                                    <dt>Location:</dt>
+                                    <dd>{{ pricing.start_location }}</dd>
+                                    
+                                    {% if pricing.days_to_expire %}
+                                        <dt>Expiration:</dt>
+                                        <dd>{{ expires_on|date:'Y-m-d' }} </dd>
+                                    {% endif %}
+
+                                    <br>
+                                    
+                                    <dt>Reward:</dt>
+                                    <dd>{{ price|formatnumber:"0"|default_if_none:"???" }} ISK</dd>
+
+                                    <dt>Collateral:</dt>
+                                    <dd>{{ collateral|formatnumber:"0"|default_if_none:"???" }} ISK</dd>
+
+                                    <dt>Destination:</dt>
+                                    <dd>{{ pricing.end_location }}</dd>
+
+                                    {% if pricing.days_to_complete %}
+                                        <dt>Days to complete:</dt>           
+                                        <dd>{{ pricing.days_to_complete|default_if_none:"-" }}</dd>
+                                    {% endif %}
+
+                                    <dt>Volume:</dt>
+                                    <dd>{{ volume|formatnumber:"0"|default_if_none:"???" }} m3</dd>                                
+
+                                </dl>
+
                         
-                        {% if price %}
-
-                            <dl class="dl-horizontal">
-
-                                <dt>Contract Type:</dt>
-                                <dd>Courier</dd>
-
-                                <dt>Availability:</dt>
-                                <dd>Alliance</dd>
-
-                                <dt>Location:</dt>
-                                <dd>{{ pricing.start_location }}</dd>
-                                
-                                {% if pricing.days_to_expire %}
-                                    <dt>Expiration:</dt>
-                                    <dd>{{ expires_on|date:'Y-m-d' }} </dd>
-                                {% endif %}
-
-                                <br>
-                                
-                                <dt>Reward:</dt>
-                                <dd>{{ price|formatnumber:"0"|default_if_none:"???" }} ISK</dd>
-
-                                <dt>Collateral:</dt>
-                                <dd>{{ collateral|formatnumber:"0"|default_if_none:"???" }} ISK</dd>
-
-                                <dt>Destination:</dt>
-                                <dd>{{ pricing.end_location }}</dd>
-
-                                {% if pricing.days_to_complete %}
-                                    <dt>Days to complete:</dt>           
-                                    <dd>{{ pricing.days_to_complete|default_if_none:"-" }}</dd>
-                                {% endif %}
-
-                                <dt>Volume:</dt>
-                                <dd>{{ volume|formatnumber:"0"|default_if_none:"???" }} m3</dd>                                
-
-                            </dl>
-
-                        {% else %}
-                            <p class="text-warning">Not calculated yet</p>
-                        {% endif %}
+                            
+                        </div>
                     </div>
-                </div>
+                {% endif %}
 
             </div>
         </div>        

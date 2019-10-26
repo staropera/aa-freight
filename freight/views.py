@@ -145,9 +145,9 @@ def calculator(request, pricing_pk = None):
             price = None            
 
     if pricing:
-        if not pricing.requires_volume:
+        if not pricing.requires_volume():
             form.fields['volume'].widget = HiddenInput()
-        if not pricing.requires_collateral:
+        if not pricing.requires_collateral():
             form.fields['collateral'].widget = HiddenInput()
     
     if price:

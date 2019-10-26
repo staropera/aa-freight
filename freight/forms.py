@@ -44,11 +44,11 @@ class CalculatorForm(forms.Form):
         if self.cleaned_data['volume']:
             volume = self.cleaned_data['volume'] * 1000
         else:
-            volume = 0
+            volume = None
         if self.cleaned_data['collateral']:
-            collateral = self.cleaned_data['collateral'] * 1000
+            collateral = self.cleaned_data['collateral'] * 1000000
         else:
-            collateral = 0
+            collateral = None
         issues = pricing.get_contract_price_check_issues(
             volume,
             collateral

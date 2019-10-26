@@ -256,9 +256,9 @@ class Pricing(models.Model):
         ) -> list:
         """returns list of validation error messages or none if ok"""
         
-        if volume < 0:
+        if volume and volume < 0:
             raise ValueError('volume can not be negative')
-        if collateral < 0:
+        if collateral and collateral < 0:
             raise ValueError('collateral can not be negative')
         if reward and reward < 0:
             raise ValueError('reward can not be negative')
@@ -266,19 +266,20 @@ class Pricing(models.Model):
         self.clean()
         
         issues = list()
-        if self.volume_min and volume < self.volume_min:
+        
+        if volume and self.volume_min and volume < self.volume_min:
             issues.append('below the minimum required volume of '
                 + '{:,.0f} K m3'.format(self.volume_min / 1000))
                 
-        if self.volume_max and volume > self.volume_max:
+        if volume and self.volume_max and volume > self.volume_max:
             issues.append('exceeds the maximum allowed volume of '
                 + '{:,.0f} K m3'.format(self.volume_max / 1000))
         
-        if self.collateral_max and collateral > self.collateral_max:
+        if collateral and self.collateral_max and collateral > self.collateral_max:
             issues.append('exceeds the maximum allowed collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_max / 1000000))
         
-        if self.collateral_min and collateral < self.collateral_min:
+        if collateral and self.collateral_min and collateral < self.collateral_min:
             issues.append('below the minimum required collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_min / 1000000))
 
