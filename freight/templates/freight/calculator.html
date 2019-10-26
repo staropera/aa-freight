@@ -46,43 +46,43 @@
 
                                     <br>
 
-                                    {% if pricing.price_min %}
+                                    {% if pricing.price_min != None %}
                                         <dt>Minimum price:</dt>
                                         <dd>{{ pricing.price_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
                                     {% endif %}
 
-                                    {% if pricing.price_base %}
+                                    {% if pricing.price_base != None %}
                                         <dt>Base price:</dt>
                                         <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>
                                     {% endif %}
                                     
-                                    {% if pricing.price_per_volume %}
+                                    {% if pricing.price_per_volume != None %}
                                         <dt>Price add-on per m3:</dt>
                                         <dd>{{ pricing.price_per_volume|formatnumber:"0" }} ISK</dd>
                                     {% endif %}
 
-                                    {% if pricing.price_per_collateral_percent %}
+                                    {% if pricing.price_per_collateral_percent != None %}
                                         <dt>Price add-on collateral:</dt>
                                         <dd>{{ pricing.price_per_collateral_percent }} %</dd>
                                     {% endif %}
 
                                     <br>
-                                    {% if pricing.volume_min %}
+                                    {% if pricing.volume_min != None %}
                                         <dt>Min Volume:</dt>
                                         <dd>{{ pricing.volume_min|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
                                     {% endif %}
                                     
-                                    {% if pricing.volume_max %}
+                                    {% if pricing.volume_max != None %}
                                         <dt>Max Volume:</dt>
                                         <dd>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
                                     {% endif %}
 
-                                    {% if pricing.collateral_min %}
+                                    {% if pricing.collateral_min != None %}
                                         <dt>Min. Collateral:</dt>
                                         <dd>{{ pricing.collateral_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
                                     {% endif %}
 
-                                    {% if pricing.collateral_max %}
+                                    {% if pricing.collateral_max != None %}
                                         <dt>Max. Collateral:</dt>        
                                         <dd>{{ pricing.collateral_max|power10:"6"|formatnumber:"0" }} M ISK</dd>
                                     {% endif %}
@@ -101,7 +101,7 @@
 
                 {% endif %}                
 
-                {% if price %}
+                {% if price != None %}
 
                     <div class="panel panel-default">
                         <div class="panel-heading">
@@ -116,7 +116,7 @@
                                     <dd>Courier</dd>
 
                                     <dt>Availability:</dt>
-                                    <dd>Alliance</dd>
+                                    <dd>Alliance ({{ alliance_name }})</dd>
 
                                     <dt>Location:</dt>
                                     <dd>{{ pricing.start_location }}</dd>

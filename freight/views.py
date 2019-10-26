@@ -135,11 +135,11 @@ def calculator(request, pricing_pk = None):
                 collateral = int(form.cleaned_data['collateral'])        
             else:
                 collateral = 0
-            price = math.ceil((pricing.get_calculated_price(
-                volume * 1000,
-                collateral * 1000000) 
-                / 1000000) * 1000000
-            )            
+            price = math.ceil(pricing.get_calculated_price(
+                    volume * 1000, 
+                    collateral * 1000000
+                ) / 1000000
+            ) * 1000000
                 
         else:
             price = None            
@@ -161,14 +161,21 @@ def calculator(request, pricing_pk = None):
         collateral = None
         volume = None
         expires_on = None
+
+    handler = ContractHandler.objects.first()
+    if handler:
+        alliance_name = handler.alliance.alliance_name
+    else:
+        alliance_name = None
         
     return render(
         request, 'freight/calculator.html', 
         {
             'page_title': 'Reward Calculator',            
-            'form': form, 
+            'form': form,             
             'pricing': pricing,
             'price': price,
+            'alliance_name': alliance_name,
             'collateral': collateral * 1000000 if collateral else 0,
             'volume': volume * 1000 if volume else None,
             'expires_on': expires_on

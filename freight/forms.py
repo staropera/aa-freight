@@ -30,15 +30,16 @@ class CalculatorForm(forms.Form):
 
     def clean(self):                
         pricing = self.cleaned_data['pricing']
+        issue_prefix = '⚠ Issues:'
         
         if pricing.requires_volume() and not self.cleaned_data['volume']:
             raise ValidationError(
-                'Issues: volume is required'
+                '{} volume is required'.format(issue_prefix)
             )
 
         if pricing.requires_collateral() and not self.cleaned_data['collateral']:
             raise ValidationError(
-                'Issues: collateral is required'
+                '{} collateral is required'.format(issue_prefix)
             )
         
         if self.cleaned_data['volume']:
@@ -55,8 +56,8 @@ class CalculatorForm(forms.Form):
         )
         
         if issues:
-            raise ValidationError(
-                'Issues: ' + ", ".join(issues)
+            raise ValidationError(                
+                '{} {}'.format(issue_prefix, ", ".join(issues))
             )
     
 
