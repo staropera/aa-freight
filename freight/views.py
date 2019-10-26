@@ -1,12 +1,14 @@
-import math
 import datetime
 import json
+import math
 
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, Http404, JsonResponse
-from django.template import loader
+from django.forms import HiddenInput
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse, Http404, JsonResponse
+from django.shortcuts import render, redirect
+from django.template import loader
+
 from django.utils.html import mark_safe
 
 from allianceauth.authentication.models import CharacterOwnership
@@ -21,7 +23,7 @@ from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
 
 ADD_LOCATION_TOKEN_TAG = 'freight_add_location_token'
-CALCULATOR_DATA = 'freight_calculator_data'
+
 
 @login_required
 @permission_required('freight.basic_access')
@@ -101,18 +103,30 @@ def contract_list_data(request):
 
 @login_required
 @permission_required('freight.use_calculator')
-def calculator(request):            
+def calculator(request, pricing_pk = None):            
     from .forms import CalculatorForm
     if request.method != 'POST':
-        form = CalculatorForm()
+        if pricing_pk:
+            try:
+                pricing = Pricing.objects.filter(active__exact=True).get(pk=pricing_pk)
+            except Pricing.DoesNotExist:
+                pricing = Pricing.objects.filter(active__exact=True).first()
+        else:            
+            pricing = Pricing.objects.filter(active__exact=True).first()
+        form = CalculatorForm(initial={'pricing': pricing})
         price = None        
 
     else:
         form = CalculatorForm(request.POST)
         request.POST._mutable = True
+
+        try:
+            pricing = Pricing.objects.filter(active__exact=True).get(pk=form.data['pricing'])
+        except Pricing.DoesNotExist:
+            pricing = Pricing.objects.filter(active__exact=True).first()
         
         if form.is_valid():                                    
-            pricing = form.cleaned_data['pricing']
+            # pricing = form.cleaned_data['pricing']
             if form.cleaned_data['volume']:
                 volume = int(form.cleaned_data['volume'])
             else:
@@ -128,66 +142,36 @@ def calculator(request):
             )            
                 
         else:
-            price = None
-        
+            price = None            
+
+    if pricing:
+        if not pricing.requires_volume:
+            form.fields['volume'].widget = HiddenInput()
+        if not pricing.requires_collateral:
+            form.fields['collateral'].widget = HiddenInput()
+    
     if price:
-        request.session[CALCULATOR_DATA] = {
-            'volume': volume * 1000,
-            'collateral': collateral * 1000000,
-            'reward': price
-        }
-    else:
-        request.session[CALCULATOR_DATA] = None
-
-    return render(
-        request, 'freight/calculator.html', 
-        {
-            'page_title': 'Reward Calculator',            
-            'form': form, 
-            'price': price,            
-        }
-    )
-
-
-@login_required
-@permission_required('freight.use_calculator')
-def calculator_pricing_info(request, pricing_pk):
-    try:
-        pricing = Pricing.objects.get(pk=pricing_pk)
-    except:
-        pricing = None
-    return render(
-        request, 
-        'freight/calculator_pricing_info.html', 
-        {            
-            'pricing': pricing
-        }
-    )
-
-
-@login_required
-@permission_required('freight.use_calculator')
-def calculator_contract_info(request, pricing_pk):
-    try:
-        pricing = Pricing.objects.get(pk=pricing_pk)        
-        contract = request.session[CALCULATOR_DATA]
         if pricing.days_to_expire:
             expires_on = datetime.datetime.now(
                 datetime.timezone.utc
             )  + datetime.timedelta(days=pricing.days_to_expire)
         else:
             expires_on = None
-    except:
-        pricing = None
-        contract = None
+    else:
+        collateral = None
+        volume = None
         expires_on = None
+        
     return render(
-        request, 
-        'freight/calculator_contract_info.html', 
-        {            
-            'contract': contract,
+        request, 'freight/calculator.html', 
+        {
+            'page_title': 'Reward Calculator',            
+            'form': form, 
             'pricing': pricing,
-            'expires_on': expires_on,
+            'price': price,
+            'collateral': collateral * 1000000 if collateral else 0,
+            'volume': volume * 1000 if volume else None,
+            'expires_on': expires_on
         }
     )
 

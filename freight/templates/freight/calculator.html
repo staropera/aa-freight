@@ -2,6 +2,7 @@
 {% load i18n %}
 {% load humanize %}
 {% load bootstrap %}
+{% load static %}
 {% load freight_filters %}
 
 {% block details %}
@@ -28,56 +29,158 @@
 
             </div>
             <div class="col-md-6">                
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h3 class="panel-title">Your contract</h3>
-                    </div>
-                    <div class="panel-body" style="min-height: 100px;">    
-                        <div id="div_contract_info"></div>                   
-                    </div>
-                </div>
-
+                
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title">Pricing details</h3>
                     </div>
                     <div class="panel-body" style="min-height: 100px;">    
-                        <div id="div_pricing_info"></div>                   
+                        {% if pricing %}
+
+                            <dl class="dl-horizontal">
+
+                                <dt>Route</dt>
+                                <dd>{{ pricing.name }}</dd>
+
+                                <br>
+
+                                {% if pricing.price_min %}
+                                    <dt>Minimum price:</dt>
+                                    <dd>{{ pricing.price_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                {% endif %}
+
+                                {% if pricing.price_base %}
+                                    <dt>Base price:</dt>
+                                    <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                {% endif %}
+                                
+                                {% if pricing.price_per_volume %}
+                                    <dt>Price add-on per m3:</dt>
+                                    <dd>{{ pricing.price_per_volume|formatnumber:"0" }} ISK</dd>
+                                {% endif %}
+
+                                {% if pricing.price_per_collateral_percent %}
+                                    <dt>Price add-on collateral:</dt>
+                                    <dd>{{ pricing.price_per_collateral_percent }} %</dd>
+                                {% endif %}
+
+                                <br>
+                                {% if pricing.volume_min %}
+                                    <dt>Min Volume:</dt>
+                                    <dd>{{ pricing.volume_min|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
+                                {% endif %}
+                                
+                                {% if pricing.volume_max %}
+                                    <dt>Max Volume:</dt>
+                                    <dd>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
+                                {% endif %}
+
+                                {% if pricing.collateral_min %}
+                                    <dt>Min. Collateral:</dt>
+                                    <dd>{{ pricing.collateral_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                {% endif %}
+
+                                {% if pricing.collateral_max %}
+                                    <dt>Max. Collateral:</dt>        
+                                    <dd>{{ pricing.collateral_max|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                {% endif %}
+
+
+                                <br>
+
+                                {% if pricing.details %}
+                                    <dt>Additional Instructions:</dt>
+                                    <dd>{{ pricing.details|linebreaks }}</dd>
+                                {% endif %}
+
+                            </dl>
+
+                        {% else %}
+                            <p class="text-warning">No pricing defined yet</p>
+                        {% endif %}                
                     </div>
                 </div> 
+
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Your contract</h3>
+                    </div>
+                    <div class="panel-body" style="min-height: 100px;">    
+                        
+                        {% if price %}
+
+                            <dl class="dl-horizontal">
+
+                                <dt>Contract Type:</dt>
+                                <dd>Courier</dd>
+
+                                <dt>Availability:</dt>
+                                <dd>Alliance</dd>
+
+                                <dt>Location:</dt>
+                                <dd>{{ pricing.start_location }}</dd>
+                                
+                                {% if pricing.days_to_expire %}
+                                    <dt>Expiration:</dt>
+                                    <dd>{{ expires_on|date:'Y-m-d' }} </dd>
+                                {% endif %}
+
+                                <br>
+                                
+                                <dt>Reward:</dt>
+                                <dd>{{ price|formatnumber:"0"|default_if_none:"???" }} ISK</dd>
+
+                                <dt>Collateral:</dt>
+                                <dd>{{ collateral|formatnumber:"0"|default_if_none:"???" }} ISK</dd>
+
+                                <dt>Destination:</dt>
+                                <dd>{{ pricing.end_location }}</dd>
+
+                                {% if pricing.days_to_complete %}
+                                    <dt>Days to complete:</dt>           
+                                    <dd>{{ pricing.days_to_complete|default_if_none:"-" }}</dd>
+                                {% endif %}
+
+                                <dt>Volume:</dt>
+                                <dd>{{ volume|formatnumber:"0"|default_if_none:"???" }} m3</dd>                                
+
+                            </dl>
+
+                        {% else %}
+                            <p class="text-warning">Not calculated yet</p>
+                        {% endif %}
+                    </div>
+                </div>
 
             </div>
         </div>        
     </form>
 <br>    
-    
-
         
 {% endblock %}
 
-{% block extra_script %}
-    function pricing_detail_update(){        
-        var value = $("#id_pricing").val();        
-        if (value == null) { 
-            value = 0;
-        }        
-        $("#div_pricing_info").load(
-            "{% url 'freight:calculator_pricing_info' 0 %}".replace(
-                "0",
-                value                 
-            )            
-        );
-        $("#div_contract_info").load(
-            "{% url 'freight:calculator_contract_info' 0 %}".replace(
-                "0",
-                value                 
-            )            
-        );
-    }
-    $(document).ready(function(){        
-        pricing_detail_update()
-        $("#id_pricing").change(function(){                        
-            pricing_detail_update()
+{% block extra_css %}    
+    <link 
+        href="{% static 'freight/calculator.css' %}" 
+        type="text/css" 
+        rel="stylesheet"
+    >
+{% endblock %}
+
+{% block extra_script %}    
+    $(document).ready(function(){                
+        /* redirecting to updated calculator view with chosen pricing */
+        $("#id_pricing").change(function(){            
+            var value = $("#id_pricing").val();        
+            if (value == null) { 
+                value = 0;
+            }
+            window.location.replace(
+                "{% url 'freight:calculator' 0 %}".replace(
+                    "0",
+                    value                 
+                )
+            );
         });
     });
 {% endblock %}

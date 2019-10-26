@@ -12,9 +12,10 @@ urlpatterns = [
     ),
     url(r'^add_location/$', views.add_location, name='add_location'),
     url(r'^add_location_2/$', views.add_location_2, name='add_location_2'),
+    
     url(r'^calculator/$', views.calculator, name='calculator'),
-    url(r'^calculator_pricing_info/(?P<pricing_pk>[0-9]+)/$', views.calculator_pricing_info, name='calculator_pricing_info'),
-    url(r'^calculator_contract_info/(?P<pricing_pk>[0-9]+)/$', views.calculator_contract_info, name='calculator_contract_info'),
+    url(r'^calculator/(?P<pricing_pk>[0-9]+)/$', views.calculator, name='calculator'),    
+    
     url(r'^contract_list/$', views.contract_list, name='contract_list'),    
     url(r'^contract_list_data/$', views.contract_list_data, name='contract_list_data'),    
 ]
