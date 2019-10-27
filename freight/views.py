@@ -1,12 +1,14 @@
-import math
 import datetime
 import json
+import math
 
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, Http404, JsonResponse
-from django.template import loader
+from django.forms import HiddenInput
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse, Http404, JsonResponse
+from django.shortcuts import render, redirect
+from django.template import loader
+
 from django.utils.html import mark_safe
 
 from allianceauth.authentication.models import CharacterOwnership
@@ -21,7 +23,7 @@ from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
 
 ADD_LOCATION_TOKEN_TAG = 'freight_add_location_token'
-CALCULATOR_DATA = 'freight_calculator_data'
+
 
 @login_required
 @permission_required('freight.basic_access')
@@ -101,87 +103,82 @@ def contract_list_data(request):
 
 @login_required
 @permission_required('freight.use_calculator')
-def calculator(request):            
+def calculator(request, pricing_pk = None):            
     from .forms import CalculatorForm
     if request.method != 'POST':
-        form = CalculatorForm()
+        if pricing_pk:
+            try:
+                pricing = Pricing.objects.filter(active__exact=True).get(pk=pricing_pk)
+            except Pricing.DoesNotExist:
+                pricing = Pricing.objects.filter(active__exact=True).first()
+        else:            
+            pricing = Pricing.objects.filter(active__exact=True).first()
+        form = CalculatorForm(initial={'pricing': pricing})
         price = None        
 
     else:
         form = CalculatorForm(request.POST)
         request.POST._mutable = True
+
+        try:
+            pricing = Pricing.objects.filter(active__exact=True).get(pk=form.data['pricing'])
+        except Pricing.DoesNotExist:
+            pricing = Pricing.objects.filter(active__exact=True).first()
         
         if form.is_valid():                                    
-            pricing = form.cleaned_data['pricing']
-            volume = int(form.cleaned_data['volume'])
-            collateral = int(form.cleaned_data['collateral'])        
-            price = math.ceil((pricing.get_calculated_price(
-                volume * 1000,
-                collateral * 1000000) 
-                / 1000000) * 1000000
-            )            
+            # pricing = form.cleaned_data['pricing']
+            if form.cleaned_data['volume']:
+                volume = int(form.cleaned_data['volume'])
+            else:
+                volume = 0
+            if form.cleaned_data['collateral']:
+                collateral = int(form.cleaned_data['collateral'])        
+            else:
+                collateral = 0
+            price = math.ceil(pricing.get_calculated_price(
+                    volume * 1000, 
+                    collateral * 1000000
+                ) / 1000000
+            ) * 1000000
                 
         else:
-            price = None
-        
+            price = None            
+
+    if pricing:
+        if not pricing.requires_volume():
+            form.fields['volume'].widget = HiddenInput()
+        if not pricing.requires_collateral():
+            form.fields['collateral'].widget = HiddenInput()
+    
     if price:
-        request.session[CALCULATOR_DATA] = {
-            'volume': volume * 1000,
-            'collateral': collateral * 1000000,
-            'reward': price
-        }
-    else:
-        request.session[CALCULATOR_DATA] = None
-
-    return render(
-        request, 'freight/calculator.html', 
-        {
-            'page_title': 'Reward Calculator',            
-            'form': form, 
-            'price': price,            
-        }
-    )
-
-
-@login_required
-@permission_required('freight.use_calculator')
-def calculator_pricing_info(request, pricing_pk):
-    try:
-        pricing = Pricing.objects.get(pk=pricing_pk)
-    except:
-        pricing = None
-    return render(
-        request, 
-        'freight/calculator_pricing_info.html', 
-        {            
-            'pricing': pricing
-        }
-    )
-
-
-@login_required
-@permission_required('freight.use_calculator')
-def calculator_contract_info(request, pricing_pk):
-    try:
-        pricing = Pricing.objects.get(pk=pricing_pk)        
-        contract = request.session[CALCULATOR_DATA]
         if pricing.days_to_expire:
             expires_on = datetime.datetime.now(
                 datetime.timezone.utc
             )  + datetime.timedelta(days=pricing.days_to_expire)
         else:
             expires_on = None
-    except:
-        pricing = None
-        contract = None
+    else:
+        collateral = None
+        volume = None
         expires_on = None
+
+    handler = ContractHandler.objects.first()
+    if handler:
+        alliance_name = handler.alliance.alliance_name
+    else:
+        alliance_name = None
+        
     return render(
-        request, 
-        'freight/calculator_contract_info.html', 
-        {            
-            'contract': contract,
+        request, 'freight/calculator.html', 
+        {
+            'page_title': 'Reward Calculator',            
+            'form': form,             
             'pricing': pricing,
-            'expires_on': expires_on,
+            'price': price,
+            'alliance_name': alliance_name,
+            'collateral': collateral * 1000000 if collateral else 0,
+            'volume': volume * 1000 if volume else None,
+            'expires_on': expires_on
         }
     )
 
@@ -194,7 +191,7 @@ def create_or_update_service(request, token):
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
     if token_char.alliance_id is None:
-        messages_plus.warning(
+        messages_plus.error(
             request, 
             'Can not setup contract handler, '
             'because {} is not a member of any alliance'.format(token_char)
@@ -208,9 +205,13 @@ def create_or_update_service(request, token):
                 character=token_char
             )            
         except CharacterOwnership.DoesNotExist:
-            messages_plus.warning(
+            messages_plus.error(
                 request,
-                'Could not find character {}'.format(token_char.character_name)    
+                'You can only use your main or alt characters to setup '
+                + ' the contract handler. '
+                + 'However, character <strong>{}</strong> is neither. '.format(
+                    token_char.character_name
+                )
             )
             success = False
     
@@ -308,7 +309,7 @@ def add_location_2(request):
                 return redirect('freight:add_location_2')    
 
             except Exception as ex:
-                messages_plus.warning(
+                messages_plus.error(
                     request,
                     'Failed to add location with token from {}'.format(token.character_name)
                     + ' for location ID {}: '. format(location_id)

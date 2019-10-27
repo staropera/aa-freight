@@ -7,14 +7,14 @@ from .models import Pricing
 
 class CalculatorForm(forms.Form):             
     pricing = forms.ModelChoiceField(
-        queryset=Pricing.objects.filter(active__exact=True),
-        initial=Pricing.objects.filter(active__exact=True).first(),
+        queryset=Pricing.objects.filter(active__exact=True),        
         label='Route',
         help_text='Pick a route for your courier contract',
         empty_label=None
     )    
     volume = forms.IntegerField(
         help_text='Est. volume of your cargo in K x m3, e.g. "50" = 50.000 m3',
+        required = False,
         validators=[            
             MinValueValidator(0)
         ]
@@ -22,20 +22,42 @@ class CalculatorForm(forms.Form):
     collateral = forms.IntegerField(
         help_text='Collaterial in M ISK, must be roughly equal to the est. '\
             + 'value of your cargo',
+        required = False,
         validators=[            
             MinValueValidator(0)
         ]
     )
 
     def clean(self):                
-        issues = self.cleaned_data['pricing'].get_contract_price_check_issues(
-            self.cleaned_data['volume'] * 1000 if 'volume' in self.cleaned_data else 0,
-            self.cleaned_data['collateral'] * 1000000 if 'collateral' in self.cleaned_data else 0
+        pricing = self.cleaned_data['pricing']
+        issue_prefix = '⚠ Issues:'
+        
+        if pricing.requires_volume() and not self.cleaned_data['volume']:
+            raise ValidationError(
+                '{} volume is required'.format(issue_prefix)
+            )
+
+        if pricing.requires_collateral() and not self.cleaned_data['collateral']:
+            raise ValidationError(
+                '{} collateral is required'.format(issue_prefix)
+            )
+        
+        if self.cleaned_data['volume']:
+            volume = self.cleaned_data['volume'] * 1000
+        else:
+            volume = None
+        if self.cleaned_data['collateral']:
+            collateral = self.cleaned_data['collateral'] * 1000000
+        else:
+            collateral = None
+        issues = pricing.get_contract_price_check_issues(
+            volume,
+            collateral
         )
         
         if issues:
-            raise ValidationError(
-                'Issues: ' + ", ".join(issues)
+            raise ValidationError(                
+                '{} {}'.format(issue_prefix, ", ".join(issues))
             )
     
 

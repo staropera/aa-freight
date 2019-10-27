@@ -207,11 +207,28 @@ class Pricing(models.Model):
     def __str__(self):
         return self.name
 
+    def requires_volume(self) -> bool:
+        """whether this pricing required volume to be specified"""
+        return (self.price_per_volume is not None 
+            or self.volume_min is not None)
+
+    def requires_collateral(self) -> bool:
+        """whether this pricing required collateral to be specified"""
+        return (self.price_per_collateral_percent is not None 
+            or self.collateral_min is not None)
+
+    def is_fix_price(self) -> bool:
+        """whether this pricing is a fix price"""
+        return (self.price_base is not None 
+            and self.price_min is None
+            and self.price_per_volume is None
+            and self.price_per_collateral_percent is None)
+
     def clean(self):
-        if not (self.price_base 
-                or self.price_min 
-                or self.price_per_volume 
-                or self.price_per_collateral_percent):
+        if (self.price_base is None
+                and self.price_min is None
+                and self.price_per_volume is None
+                and self.price_per_collateral_percent is None):
             raise ValidationError(
                 'You must specify at least one price component'
             )
@@ -219,12 +236,19 @@ class Pricing(models.Model):
     def get_calculated_price(self, volume: float, collateral: float) -> float:
         """returns the calculated price for the given parameters"""
 
+        if not volume:
+            volume = 0
+
+        if not collateral:
+            collateral = 0
+        
         if volume < 0:
             raise ValueError('volume can not be negative')
         if collateral < 0:
             raise ValueError('collateral can not be negative')
-        
-        self.clean()
+
+        volume = float(volume)
+        collateral = float(collateral)
 
         price_base = 0 if not self.price_base else self.price_base
         price_min = 0 if not self.price_min else self.price_min
@@ -246,33 +270,32 @@ class Pricing(models.Model):
         ) -> list:
         """returns list of validation error messages or none if ok"""
         
-        if volume < 0:
+        if volume and volume < 0:
             raise ValueError('volume can not be negative')
-        if collateral < 0:
+        if collateral and collateral < 0:
             raise ValueError('collateral can not be negative')
         if reward and reward < 0:
             raise ValueError('reward can not be negative')
         
-        self.clean()
-        
         issues = list()
-        if self.volume_min and volume < self.volume_min:
+        
+        if volume is not None and self.volume_min and volume < self.volume_min:
             issues.append('below the minimum required volume of '
                 + '{:,.0f} K m3'.format(self.volume_min / 1000))
                 
-        if self.volume_max and volume > self.volume_max:
+        if volume is not None and self.volume_max and volume > self.volume_max:
             issues.append('exceeds the maximum allowed volume of '
                 + '{:,.0f} K m3'.format(self.volume_max / 1000))
         
-        if self.collateral_max and collateral > self.collateral_max:
+        if collateral is not None and self.collateral_max and collateral > self.collateral_max:
             issues.append('exceeds the maximum allowed collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_max / 1000000))
         
-        if self.collateral_min and collateral < self.collateral_min:
+        if collateral is not None and self.collateral_min and collateral < self.collateral_min:
             issues.append('below the minimum required collateral of '
                 + '{:,.0f} M ISK'.format(self.collateral_min / 1000000))
 
-        if reward:
+        if reward is not None:
             calculated_price = self.get_calculated_price(
                 volume, collateral
             )

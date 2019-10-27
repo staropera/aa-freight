@@ -20,9 +20,9 @@ This app helps running a central freight service for an alliance. The main conce
 
 To support this concept Alliance Freight offers the following main features:
 
-- A reward calculator, so alliance members can easily calculate the reward for their current courier contract
+- Reward calculator allowing  members to easily calculate the correct reward for their a courier contract
 
-- A list of outstanding courier contracts incl. an indicator showing if the contract is compliant to the pricing for that route
+- Page showing the list of currently outstanding courier contracts incl. an indicator  if the contract is compliant with the pricing for the respective route
 
 - Multiple routes can be defined, each with its own pricing
 
@@ -135,14 +135,14 @@ Pricing routes are bidirectional, so it does not matter which location is chosen
 
 Pricings are defined in the admin section of AA, so you need staff permissions to access it.
 
-Most parameters of a pricing are optional, but you need to define at least one of the four pricing components to create a valid pricing.
+Most parameters of a pricing are optional, but you need to define at least one of the four pricing components to create a valid pricing. It's also possible to define a route that does not require a reward by setting "Price base" to 0 and not setting any other pricing components.
 
 Parameter | Description | Pricing Functionality
 -- | -- | --
 Start Location | Starting station or structure for courier route | -
 End Location | Destination station or structure for courier route  | -
 Active | Non active pricings will not be used or shown | -
-Price base | Base price in ISK  | Pricing component
+Price base | Base price in ISK. If this is the only defined pricing component it will be shown as "Fix price" in the calculator. | Pricing component
 Price min | Minimum total price in ISK | Pricing component
 Price per volume | Add-on price per m3 volume in ISK | Pricing component
 Price per collateral_percent | Add-on price in % of collateral | Pricing component

@@ -98,8 +98,25 @@ class TestPricing(TestCase):
             p.get_calculated_price(50, -5)
 
         p = Pricing()
-        with self.assertRaises(ValidationError):
-            p.get_calculated_price(1, 1)
+        p.price_base = 0    
+        self.assertEqual(
+            p.get_calculated_price(None, None),
+            0
+        )
+
+        p = Pricing()
+        p.price_per_volume = 50
+        self.assertEqual(
+            p.get_calculated_price(10, None),
+            500
+        )
+
+        p = Pricing()
+        p.price_per_collateral_percent = 2
+        self.assertEqual(
+            p.get_calculated_price(None, 100),
+            2
+        )
 
     
     def test_get_contract_pricing_errors(self):
@@ -137,10 +154,6 @@ class TestPricing(TestCase):
         with self.assertRaises(ValueError):            
             p.get_contract_price_check_issues(50, 5, -5)
         
-        p = Pricing()
-        with self.assertRaises(ValidationError):
-            p.get_calculated_price(1, 1)
-
 
 class TestRunContractsSync(TestCase):
     
