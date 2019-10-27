@@ -28,6 +28,8 @@ To support this concept Alliance Freight offers the following main features:
 
 - Automatic notification to a Discord channel about new courier contracts
 
+- User can check the current status of his courier contracts
+
 ## Screenshots
 
 ### Reward Calculator

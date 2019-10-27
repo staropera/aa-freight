@@ -8,7 +8,7 @@
     
     <div class="panel panel-primary">   
         <div class="panel-heading">
-            <h3 class="panel-title">Active Contracts</h3>
+            <h3 class="panel-title">Courier Contracts</h3>
         </div>
         <div class="panel-body">        
             <table class="table table-striped" id="tab_contracts">
@@ -60,9 +60,9 @@
 
 {% block extra_script %}
     $(document).ready(function(){
-        $('#tab_contracts').DataTable({
+        $('#tab_contracts').DataTable({            
             ajax: {
-                url: '{% url 'freight:contract_list_data' %}',
+                url: '{% url 'freight:contract_list_data' category %}',
                 dataSrc: '',
                 cache: false
             },
@@ -80,7 +80,9 @@
                 { data: 'issuer' },
                 { data: 'date_accepted' },
                 { data: 'acceptor' }
-            ]
+            ],
+
+            order: [ [ 7, "desc" ] ],
         });       
     });
 {% endblock %}
