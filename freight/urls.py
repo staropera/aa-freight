@@ -16,6 +16,7 @@ urlpatterns = [
     url(r'^calculator/$', views.calculator, name='calculator'),
     url(r'^calculator/(?P<pricing_pk>[0-9]+)/$', views.calculator, name='calculator'),    
     
-    url(r'^contract_list/$', views.contract_list, name='contract_list'),    
-    url(r'^contract_list_data/$', views.contract_list_data, name='contract_list_data'),    
+    url(r'^contract_list_active/$', views.contract_list_active, name='contract_list_active'),
+    url(r'^contract_list_user/$', views.contract_list_user, name='contract_list_user'),
+    url(r'^contract_list_data/(?P<category>.+)/$', views.contract_list_data, name='contract_list_data'),    
 ]

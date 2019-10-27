@@ -35,6 +35,8 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],
     install_requires=[ 
-        'requests'
+        'requests',
+        'django-navhelper',
+        'django-bootstrap-form',
     ]
 )

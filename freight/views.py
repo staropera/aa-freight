@@ -23,7 +23,8 @@ from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
 
 ADD_LOCATION_TOKEN_TAG = 'freight_add_location_token'
-
+CONTRACT_LIST_USER = 'user'
+CONTRACT_LIST_ACTIVE = 'active'
 
 @login_required
 @permission_required('freight.basic_access')
@@ -33,25 +34,51 @@ def index(request):
 
 @login_required
 @permission_required('freight.view_contracts')
-def contract_list(request):
+def contract_list_active(request):
         
     context = {
-        'page_title': 'Contracts'
+        'page_title': 'Active Contracts',
+        'category': CONTRACT_LIST_ACTIVE
     }        
     return render(request, 'freight/contract_list.html', context)
 
 
 @login_required
-@permission_required('freight.view_contracts')
-def contract_list_data(request):
+@permission_required('freight.use_calculator')
+def contract_list_user(request):
+        
+    context = {
+        'page_title': 'My Contracts',
+        'category': CONTRACT_LIST_USER
+    }        
+    return render(request, 'freight/contract_list.html', context)
+
+
+@login_required
+@permission_required('freight.basic_access')
+def contract_list_data(request, category):
     """returns list of outstanding contracts for contract_list AJAX call"""
-    contracts = Contract.objects.filter(
-        handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
-        status__in=[
-            Contract.STATUS_OUTSTANDING,
-            Contract.STATUS_IN_PROGRESS
-        ]
-    ).select_related()
+    if category == CONTRACT_LIST_ACTIVE:
+        if not request.user.has_perm('freight.view_contracts'):
+            raise RuntimeError('Insufficient permissions')
+        else:
+            contracts = Contract.objects.filter(
+                handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
+                status__in=[
+                    Contract.STATUS_OUTSTANDING,
+                    Contract.STATUS_IN_PROGRESS
+                ]
+            ).select_related()
+    elif category == CONTRACT_LIST_USER:
+        if not request.user.has_perm('freight.use_calculator'):
+            raise RuntimeError('Insufficient permissions')
+        else:
+            contracts = Contract.objects.filter(
+                handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
+                issuer__in=[x.character for x in request.user.character_ownerships.all()]
+            ).select_related()
+    else:
+        raise ValueError('Invalid category: {}'.format(category))
 
     contracts_data = list()
     datetime_format = lambda x: x.strftime(DATETIME_FORMAT) if x else None
