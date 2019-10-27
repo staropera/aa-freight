@@ -113,7 +113,7 @@ Name | Description | Default
 -- | -- | --
 `FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications should appear | Not defined = Deactivated
 `FREIGHT_DISCORD_AVATAR_URL`| URL to an image file to override the default avatar on Discord notifications, which is the Eve alliance logo | Alliance logo
-`FREIGHT_DISCORD_PING_TYPE`| Defines if and how notifications will ping on Discord by adding mentions: Valid values are: `@here` or `@everyone`  | Not defined = No ping
+`FREIGHT_DISCORD_PING_TYPE`| Defines if and how notifications will ping on Discord by adding mentions: Valid values are: `'@here'` or `'@everyone'`  | Not defined = No ping
 
 ## Permissions
 
