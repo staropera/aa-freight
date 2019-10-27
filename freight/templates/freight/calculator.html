@@ -52,7 +52,11 @@
                                     {% endif %}
 
                                     {% if pricing.price_base != None %}
-                                        <dt>Base price:</dt>
+                                        {% if pricing.is_fix_price %}
+                                            <dt>Fix price:</dt>
+                                        {% else %}
+                                            <dt>Base price:</dt>
+                                        {% endif %}
                                         <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>
                                     {% endif %}
                                     
@@ -142,8 +146,10 @@
                                         <dd>{{ pricing.days_to_complete|default_if_none:"-" }}</dd>
                                     {% endif %}
 
-                                    <dt>Volume:</dt>
-                                    <dd>{{ volume|formatnumber:"0"|default_if_none:"???" }} m3</dd>                                
+                                    {% if pricing.requires_volume %}
+                                        <dt>Volume:</dt>
+                                        <dd>{{ volume|formatnumber:"0"|default_if_none:"???" }} m3</dd>
+                                    {% endif %}
 
                                 </dl>
 

@@ -217,6 +217,13 @@ class Pricing(models.Model):
         return (self.price_per_collateral_percent is not None 
             or self.collateral_min is not None)
 
+    def is_fix_price(self) -> bool:
+        """whether this pricing is a fix price"""
+        return (self.price_base is not None 
+            and self.price_min is None
+            and self.price_per_volume is None
+            and self.price_per_collateral_percent is None)
+
     def clean(self):
         if (self.price_base is None
                 and self.price_min is None

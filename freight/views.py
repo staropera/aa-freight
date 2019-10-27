@@ -191,7 +191,7 @@ def create_or_update_service(request, token):
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
     if token_char.alliance_id is None:
-        messages_plus.warning(
+        messages_plus.error(
             request, 
             'Can not setup contract handler, '
             'because {} is not a member of any alliance'.format(token_char)
@@ -205,9 +205,13 @@ def create_or_update_service(request, token):
                 character=token_char
             )            
         except CharacterOwnership.DoesNotExist:
-            messages_plus.warning(
+            messages_plus.error(
                 request,
-                'Could not find character {}'.format(token_char.character_name)    
+                'You can only use your main or alt characters to setup '
+                + ' the contract handler. '
+                + 'However, character <strong>{}</strong> is neither. '.format(
+                    token_char.character_name
+                )
             )
             success = False
     
@@ -305,7 +309,7 @@ def add_location_2(request):
                 return redirect('freight:add_location_2')    
 
             except Exception as ex:
-                messages_plus.warning(
+                messages_plus.error(
                     request,
                     'Failed to add location with token from {}'.format(token.character_name)
                     + ' for location ID {}: '. format(location_id)
