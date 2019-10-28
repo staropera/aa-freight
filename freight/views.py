@@ -83,19 +83,18 @@ def contract_list_data(request, category):
     contracts_data = list()
     datetime_format = lambda x: x.strftime(DATETIME_FORMAT) if x else None
     character_format = lambda x: x.character_name if x else None
-    for contract in contracts:                                
-        has_pricing = contract.pricing is not None
-        has_pricing_errors = contract.issues is not None            
-        if has_pricing:            
-            if not has_pricing_errors:
+    for contract in contracts:                                        
+        if contract.has_pricing:            
+            route_name = contract.pricing.name
+            if not contract.has_pricing_errors:
                 glyph = 'ok'
                 color = 'green'
-                tooltip_text = contract.pricing.name
+                tooltip_text = route_name
             else:
                 glyph = 'warning-sign'
                 color = 'red'                
                 tooltip_text = '{}\n{}'.format(
-                    contract.pricing.name, 
+                    route_name, 
                     '\n'.join(json.loads(contract.issues))
                 )
             pricing_check = ('<span class="glyphicon '
@@ -104,9 +103,10 @@ def contract_list_data(request, category):
                 + 'style="color:' + color + ' ;" ' 
                 + 'data-toggle="tooltip" data-placement="top" '
                 + 'title="' + tooltip_text + '">'
-                + '</span>')
+                + '</span>')            
         else:
-            pricing_check = 'N/A'
+            route_name = ''
+            pricing_check = '-'
 
         contracts_data.append({
             'status': contract.status,
@@ -120,9 +120,13 @@ def contract_list_data(request, category):
             'issuer': character_format(contract.issuer),
             'date_accepted': datetime_format(contract.date_accepted),
             'acceptor': character_format(contract.acceptor),
-            'has_pricing': has_pricing,
-            'has_pricing_errors': has_pricing_errors,
-            'pricing_check': pricing_check
+            'has_pricing': contract.has_pricing,
+            'has_pricing_errors': contract.has_pricing_errors,
+            'pricing_check': pricing_check,
+            'route_name': route_name,
+            'is_in_progress': contract.is_in_progress,
+            'is_failed': contract.is_failed,
+            'is_completed': contract.is_completed,            
         })
 
     return JsonResponse(contracts_data, safe=False)

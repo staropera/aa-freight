@@ -38,7 +38,7 @@
         <span class="glyphicon glyphicon-ok" aria-hidden="true"></span> = OK &nbsp;&nbsp; 
         <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span> = Errors &nbsp;&nbsp;
         If they are errors you find them in the tooltip of the shown symbol &nbsp;&nbsp;
-        <strong>N/A</strong> = No pricing found for this route
+        <strong>-</strong> = No price check performed
     </p>
     
 {% endblock %}
@@ -46,16 +46,15 @@
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}    
     
+    <!--load JS for filterDropDown plugin -->
+    <script type="text/javascript" src="{% static 'freight/filterDropDown.min.js' %}">
+    </script>
 {% endblock %}
 
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}    
 
-    <link 
-        href="{% static 'freight/contracts.css' %}" 
-        type="text/css" 
-        rel="stylesheet"
-    >
+    <link href="{% static 'freight/contracts.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_script %}
@@ -79,10 +78,50 @@
                 { data: 'date_expired' },
                 { data: 'issuer' },
                 { data: 'date_accepted' },
-                { data: 'acceptor' }
+                { data: 'acceptor' },
+                
+                /* hidden columns for filter */
+                { data: 'route_name' }
+            ],
+
+            columnDefs: [														
+                { "orderable": false, "targets": [ 6 ] },
+                { "visible": false, "targets": [ 12 ] },
             ],
 
             order: [ [ 7, "desc" ] ],
+
+            filterDropDown: {										
+                columns: [	                                        
+                    {
+                        idx: 12,
+                        title: 'Route'
+                    },
+                    {
+                        idx: 0
+                    },
+                    {
+                        idx: 9
+                    }
+                ],
+                bootstrap: true
+            },
+
+            createdRow: function( row, data, dataIndex ) 
+            {
+                if (data['is_in_progress'])
+                {
+                    $(row).addClass('info');
+                }
+                else if (data['is_failed'])
+                {
+                    $(row).addClass('warning');
+                }
+                else if (data['is_completed'])
+                {
+                    $(row).addClass('success');
+                }
+            },
         });       
     });
 {% endblock %}

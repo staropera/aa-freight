@@ -1,6 +1,8 @@
-from django.contrib import admin
-from django.utils.html import format_html
 from django import forms
+from django.contrib import admin
+from django.conf import settings
+from django.utils.html import format_html
+
 from .models import *
 from . import tasks
 
@@ -10,13 +12,19 @@ class LocationAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'category_id')    
     list_filter = ('category_id',)
     search_fields = ['name']
+    list_select_related = True
 
 
 @admin.register(Pricing)
 class PricingAdmin(admin.ModelAdmin):
     list_display = ('name', 'start_location', 'end_location', 'active')    
-    list_filter = ('active',)
-    
+    list_filter = (
+        'active',
+        ('start_location', admin.RelatedOnlyFieldListFilter),
+        ('end_location', admin.RelatedOnlyFieldListFilter),
+    )
+    list_select_related = True
+
 
 @admin.register(ContractHandler)
 class ContractHandlerAdmin(admin.ModelAdmin):
@@ -82,12 +90,23 @@ class ContractAdmin(admin.ModelAdmin):
         'date_issued',
         'issuer',        
     ]
-    list_filter = ('status',)
+    list_filter = (
+        'status',
+        ('issuer', admin.RelatedOnlyFieldListFilter),
+    )
     search_fields = ['issuer']
+
+    list_select_related = True
 
     # This will help you to disbale add functionality
     def has_add_permission(self, request):
-        return False
+        if settings.DEBUG:
+            return True
+        else:
+            return False
 
     def has_change_permission(self, request, obj=None):
-        return False
+        if settings.DEBUG:
+            return True
+        else:
+            return False

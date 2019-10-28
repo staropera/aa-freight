@@ -139,6 +139,8 @@ class ContractManager(models.Manager):
                         issues = contract.get_price_check_issues(pricing)
                         if issues:
                             contract.issues = json.dumps(issues)
+                        else:
+                            contract.issues = None
                     
                 contract.pricing = pricing
 

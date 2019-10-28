@@ -199,7 +199,7 @@ class Pricing(models.Model):
     
     @property
     def name(self):
-        return '{} - {}'.format(
+        return '{} 🡘 {}'.format(
             self.start_location.solar_system_name,
             self.end_location.solar_system_name
         )
@@ -412,11 +412,12 @@ class Contract(models.Model):
         on_delete=models.CASCADE, 
         default=None, 
         null=True,
+        blank=True,
         related_name='contract_acceptor'
     )
     collateral = models.FloatField()    
-    date_accepted = models.DateTimeField(default=None, null=True)
-    date_completed = models.DateTimeField(default=None, null=True)
+    date_accepted = models.DateTimeField(default=None, null=True, blank=True)
+    date_completed = models.DateTimeField(default=None, null=True, blank=True)
     date_expired = models.DateTimeField()
     date_issued = models.DateTimeField()
     days_to_complete = models.IntegerField()
@@ -435,8 +436,7 @@ class Contract(models.Model):
         EveCharacter, 
         on_delete=models.CASCADE,        
         related_name='contract_issuer'
-    )
-    price = models.FloatField()
+    )    
     reward = models.FloatField()
     start_location = models.ForeignKey(
         Location, 
@@ -444,22 +444,30 @@ class Contract(models.Model):
         related_name='contract_start_location'
     )
     status = models.CharField(max_length=32, choices=STATUS_CHOICES)
-    title = models.CharField(max_length=100, default=None, null=True)    
+    title = models.CharField(
+        max_length=100, 
+        default=None, 
+        null=True, 
+        blank=True
+    )
     volume = models.FloatField()
     pricing = models.ForeignKey(
         Pricing, 
         on_delete=models.SET_DEFAULT, 
         default=None, 
-        null=True
+        null=True,
+        blank=True
     )
     date_notified = models.DateTimeField(
         default=None, 
         null=True,
+        blank=True,
         help_text='datetime of latest notification, None = none has been sent'
     )
     issues = models.TextField(
         default=None,
         null=True,
+        blank=True,
         help_text='List or price check issues as JSON array of strings or None'
     )
 
@@ -470,12 +478,42 @@ class Contract(models.Model):
         indexes = [
             models.Index(fields=['status']),
         ]
-    
-    def __str__(self):
+
+    @property
+    def is_completed(self) -> bool:
+        """whether this contract is completed or active"""
+        return self.status in [
+            self.STATUS_FINISHED_ISSUER,
+            self.STATUS_FINISHED_CONTRACTOR,
+            self.STATUS_FINISHED_ISSUER,
+            self.STATUS_CANCELED,
+            self.STATUS_REJECTED,
+            self.STATUS_DELETED,
+            self.STATUS_FINISHED,
+            self.STATUS_FAILED
+        ]
+
+    @property
+    def is_in_progress(self) -> bool:
+        return self.status == self.STATUS_IN_PROGRESS
+
+    @property
+    def is_failed(self) -> bool:
+        return self.status == self.STATUS_FAILED
+
+    @property
+    def has_pricing(self) -> bool:
+        return bool(self.pricing)
+
+    @property
+    def has_pricing_errors(self) -> bool:
+        return bool(self.issues)
+
+    def __str__(self) -> str:
         return '{}: {} -> {}'.format(
             self.contract_id,
-            self.start_location,
-            self.end_location
+            self.start_location.solar_system_name,
+            self.end_location.solar_system_name
         )
 
     def get_price_check_issues(self, pricing: Pricing) -> list:
