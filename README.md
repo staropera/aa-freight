@@ -4,7 +4,17 @@ This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianc
 
 ![License](https://img.shields.io/badge/license-MIT-green) ![python](https://img.shields.io/badge/python-3.5-informational) ![django](https://img.shields.io/badge/django-2.2-informational)
 
-**Status**: In Development
+## Contents
+
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Screenshots](#screenshots)
+- [Installation](#installation)
+- [Updating](#updating)
+- [Settings](#settings)
+- [Permissions](#permissions)
+- [Pricing](#pricing)
+- [Change Log](CHANGELOG.md)
 
 ## Overview
 
@@ -34,11 +44,11 @@ To support this concept Alliance Freight offers the following main features:
 
 ### Reward Calculator
 
-![calculator](https://i.imgur.com/2PTXo9N.png)
+![calculator](https://i.imgur.com/h9BZG4D.png)
 
 ### Contract List
 
-![contract list](https://i.imgur.com/E5ZEGuM.png)
+![contract list](https://i.imgur.com/aJc6dwG.png)
 
 ### Discord Notification
 
@@ -107,6 +117,26 @@ Finally go ahead and define the first pricing of a courier route. See section **
 
 That's it. The Alliance Freight app is fully installed and ready to be used.
 
+## Updating
+
+To update your existing installation of Alliance Freight first enable your virtual environment. 
+
+Then run the following commands from your AA project directory (the one that contains `manage.py`).
+
+```bash
+pip install git+https://gitlab.com/ErikKalkoken/aa-freight.git
+```
+
+```bash
+python manage.py migrate
+```
+
+```bash
+python manage.py collectstatic
+```
+
+Finally restart your AA supervisor services.
+
 ## Settings
 
 Here is a list of available settings for this app. They can be configured by adding them to your AA settings file (`local.py`). If they are not set the defaults are used.
@@ -126,7 +156,7 @@ Name | Purpose | Code
 Can add / update locations | User can add and update Eve Online contract locations, e.g. stations and upwell structures |  `add_location`
 Can access this app |Enabling the app for a user. This permission should be enabled for everyone who is allowed to use the app (e.g. Member state) |  `basic_access`
 Can setup contract handler | Add or updates the alliance character for syncing contracts. This should be limited to users with admins / leadership privileges. |  `setup_contract_handler`
-Can use the calculator | Enables using the calculator page the app. This permission is usually enabled for every alliance member. |  `use_calculator`
+Can use the calculator | Enables using the calculator page and the "My Contracts" page. This permission is usually enabled for every alliance member. |  `use_calculator`
 Can view the contracts list | Enables viewing the page with all outstanding courier contracts  |  `view_contracts`
 
 ## Pricing
