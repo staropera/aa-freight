@@ -9,12 +9,12 @@ This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianc
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Screenshots](#screenshots)
-- [Change Log](CHANGELOG.md)
 - [Installation](#installation)
 - [Updating](#updating)
 - [Settings](#settings)
 - [Permissions](#permissions)
 - [Pricing](#pricing)
+- [Change Log](CHANGELOG.md)
 
 ## Overview
 
@@ -44,16 +44,15 @@ To support this concept Alliance Freight offers the following main features:
 
 ### Reward Calculator
 
-![calculator](https://i.imgur.com/2PTXo9N.png)
+![calculator](https://i.imgur.com/h9BZG4D.png)
 
 ### Contract List
 
-![contract list](https://i.imgur.com/E5ZEGuM.png)
+![contract list](https://i.imgur.com/aJc6dwG.png)
 
 ### Discord Notification
 
 ![notification](https://i.imgur.com/ynWnW0o.png)
-
 
 ## Installation
 
