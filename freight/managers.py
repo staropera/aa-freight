@@ -6,10 +6,10 @@ from bravado.exception import *
 
 from django.db import models, transaction
 from esi.clients import esi_client_factory
-from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.eveonline.models import EveCharacter
 
 from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL
-from .utils import LoggerAddTag, make_logger_prefix
+from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -109,6 +109,99 @@ class LocationManager(models.Manager):
                 raise ex
        
         return location, created
+
+
+class EveOrganizationManager(models.Manager):
+    
+    def get_or_create_esi(
+            self,             
+            organization_id: int
+        ) -> list:
+        """gets or creates organization object with data fetched from ESI"""
+        from .models import EveOrganization
+        try:
+            organization = self.get(id=organization_id)
+            created = False
+        except EveOrganization.DoesNotExist:
+            organization, created = self.update_or_create_esi(organization_id)
+        
+        return organization, created
+
+
+    def update_or_create_esi(
+            self,             
+            organization_id: int
+        ) -> list:
+        """updates or creates organization object with data fetched from ESI"""
+        from .models import EveOrganization
+
+        addPrefix = make_logger_prefix(organization_id)
+        
+        logger.info(addPrefix('Fetching organization from ESI'))
+        try:
+            client = esi_client_factory(spec_file=get_swagger_spec_path())
+            response = client.Universe.post_universe_names(
+                ids=[organization_id]
+            ).result()
+            if len(response) != 1:
+                raise RuntimeError('ESI did not find any entity with this ID')            
+            else:
+                organization_data = response[0]
+            organization, created = self.update_or_create(
+                id=organization_data['id'],
+                defaults={
+                    'name': organization_data['name'],
+                    'category': organization_data['category'],
+                }
+            ) 
+        except Exception as ex:
+            logger.warn(addPrefix(
+                'Failed to load organization from ESI: '.format(ex)
+            ))
+            raise ex
+        
+       
+        return organization, created
+
+
+    def update_or_create_from_evecharacter(
+            self,             
+            character: EveCharacter,
+            category: str
+        ) -> list:
+        """updates or creates organization object from an evecharacter object"""
+        from .models import EveOrganization
+        
+        addPrefix = make_logger_prefix(character.character_id)
+
+        try:            
+            if category == EveOrganization.CATEGORY_ALLIANCE:            
+                if not character.alliance_id:
+                    raise ValueError('character is not an alliance member')
+                organization, created = self.update_or_create(
+                    id=character.alliance_id,
+                    defaults={
+                        'name': character.alliance_name,
+                        'category': EveOrganization.CATEGORY_ALLIANCE,
+                    }
+                )
+            elif category == EveOrganization.CATEGORY_CORPORATION:
+                organization, created = self.update_or_create(
+                    id=character.corporation_id,
+                    defaults={
+                        'name': character.corporation_name,
+                        'category': EveOrganization.CATEGORY_CORPORATION,
+                    }
+                )
+            else:
+                raise ValueError('Invalid category: {}'. format(category))
+        except Exception as ex:
+            logger.warn(addPrefix(
+                'Failed to load organization from ESI: '.format(ex)
+            ))
+            raise ex
+
+        return organization, created
 
 
 class ContractManager(models.Manager):

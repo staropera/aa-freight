@@ -6,9 +6,9 @@ app_name = 'freight'
 urlpatterns = [
     url(r'^$', views.index, name='index'),
     url(
-        r'^create_or_update_service/$', 
-        views.create_or_update_service, 
-        name='create_or_update_service'
+        r'^setup_contract_handler/$', 
+        views.setup_contract_handler, 
+        name='setup_contract_handler'
     ),
     url(r'^add_location/$', views.add_location, name='add_location'),
     url(r'^add_location_2/$', views.add_location_2, name='add_location_2'),

@@ -14,7 +14,7 @@ from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo
 from allianceauth.eveonline.models import EveCharacter
 
 from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_AVATAR_URL, FREIGHT_DISCORD_PING_TYPE
-from .managers import LocationManager, ContractManager
+from .managers import LocationManager, EveOrganizationManager, ContractManager
 from .utils import LoggerAddTag, DATETIME_FORMAT
 
 
@@ -307,10 +307,56 @@ class Pricing(models.Model):
             return None
         else:
             return issues
-    
+
+
+class EveOrganization(models.Model):
+    """An Eve corporation or alliance"""
+
+    CATEGORY_ALLIANCE = 'alliance'
+    CATEGORY_CORPORATION = 'corporation'
+    CATEGORIES_DEF = [
+        (CATEGORY_ALLIANCE, 'Alliance'),
+        (CATEGORY_CORPORATION, 'Corporation'),
+    ]
+
+    EVE_IMAGE_SERVER_BASE_URL = 'https://imageserver.eveonline.com'
+
+    id = models.IntegerField(        
+        primary_key=True,
+        validators=[MinValueValidator(0)],
+    )
+    category = models.CharField(
+        max_length=32,
+        choices=CATEGORIES_DEF, 
+    )
+    name = models.CharField(
+        max_length=254
+    )
+
+    objects = EveOrganizationManager()
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def is_alliance(self) -> bool:
+        return self.category == self.CATEGORY_ALLIANCE
+
+    @property
+    def is_corporation(self) -> bool:
+        return self.category == self.CATEGORY_CORPORATION
+
+    @property
+    def avatar_url(self) -> str:
+        """returns the url to an icon image for this organization"""
+        return '{}/{}/{}_128.png'.format(
+            self.category.title(), 
+            self.EVE_IMAGE_SERVER_BASE_URL,
+            self.id)
+        
 
 class ContractHandler(models.Model):
-    """Handler for syncing of contracts belonging to an alliance"""
+    """Handler for syncing of contracts belonging to an alliance or corporation"""
 
     ERROR_NONE = 0
     ERROR_TOKEN_INVALID = 1
@@ -329,9 +375,9 @@ class ContractHandler(models.Model):
         (ERROR_ESI_UNAVAILABLE, 'ESI API is currently unavailable'),
         (ERROR_UNKNOWN, 'Unknown error'),
     ]
-
-    alliance = models.OneToOneField(
-        EveAllianceInfo, 
+  
+    organization = models.OneToOneField(
+        EveOrganization, 
         on_delete=models.CASCADE, 
         primary_key=True
     )
@@ -339,7 +385,8 @@ class ContractHandler(models.Model):
         CharacterOwnership,
         on_delete=models.SET_DEFAULT,
         default=None,
-        null=True
+        null=True,
+        help_text='character used for syncing contracts'
     )    
     version_hash = models.CharField(
         max_length=32, 
@@ -368,7 +415,7 @@ class ContractHandler(models.Model):
         ]
 
     def __str__(self):
-        return str(self.alliance)
+        return str(self.organization.name)
 
     def get_last_error_message(self):
         msg = [(x, y) for x, y in self.ERRORS_LIST if x == self.last_error]
@@ -529,8 +576,8 @@ class Contract(models.Model):
             if FREIGHT_DISCORD_AVATAR_URL:
                 avatar_url = FREIGHT_DISCORD_AVATAR_URL
             else:    
-                avatar_url = ('https://imageserver.eveonline.com/Alliance/'
-                    + '{}_128.png'.format(self.handler.alliance.alliance_id))
+                avatar_url = self.handler.organization.avatar_url
+
             hook = Webhook(
                 FREIGHT_DISCORD_WEBHOOK_URL, 
                 username='Alliance Freight',

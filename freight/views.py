@@ -63,7 +63,7 @@ def contract_list_data(request, category):
             raise RuntimeError('Insufficient permissions')
         else:
             contracts = Contract.objects.filter(
-                handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
+                handler__organization__id=request.user.profile.main_character.alliance_id,
                 status__in=[
                     Contract.STATUS_OUTSTANDING,
                     Contract.STATUS_IN_PROGRESS
@@ -74,7 +74,7 @@ def contract_list_data(request, category):
             raise RuntimeError('Insufficient permissions')
         else:
             contracts = Contract.objects.filter(
-                handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
+                handler__organization__id=request.user.profile.main_character.alliance_id,
                 issuer__in=[x.character for x in request.user.character_ownerships.all()]
             ).select_related()
     else:
@@ -195,9 +195,9 @@ def calculator(request, pricing_pk = None):
 
     handler = ContractHandler.objects.first()
     if handler:
-        alliance_name = handler.alliance.alliance_name
+        organization_name = handler.organization.name
     else:
-        alliance_name = None
+        organization_name = None
         
     return render(
         request, 'freight/calculator.html', 
@@ -206,7 +206,7 @@ def calculator(request, pricing_pk = None):
             'form': form,             
             'pricing': pricing,
             'price': price,
-            'alliance_name': alliance_name,
+            'organization_name': organization_name,
             'collateral': collateral * 1000000 if collateral else 0,
             'volume': volume * 1000 if volume else None,
             'expires_on': expires_on
@@ -217,7 +217,7 @@ def calculator(request, pricing_pk = None):
 @login_required
 @permission_required('freight.setup_contract_handler')
 @token_required(scopes=ContractHandler.get_esi_scopes())
-def create_or_update_service(request, token):
+def setup_contract_handler(request, token):
     success = True
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
@@ -247,31 +247,26 @@ def create_or_update_service(request, token):
             success = False
     
     if success:
-        try:
-            alliance = EveAllianceInfo.objects.get(
-                alliance_id=token_char.alliance_id
-            )
-        except EveAllianceInfo.DoesNotExist:
-            alliance = EveAllianceInfo.objects.create_alliance(
-                token_char.alliance_id
-            )
-            alliance.save()
+        organization, _ = EveOrganization.objects.update_or_create_from_evecharacter(
+            token_char,
+            EveOrganization.CATEGORY_ALLIANCE
+        )
 
     if success:
         contract_handler = ContractHandler.objects.first()
-        if contract_handler and contract_handler.alliance != alliance:
+        if contract_handler and contract_handler.organization != organization:
             messages_plus.error(
                 request,
                 'There already is a contract handler installed for a '
-                + 'different alliance. You need to first delete the '
+                + 'different organization. You need to first delete the '
                 + 'existing contract handler in the admin section '
-                + 'before you can set up this app for a different alliance.'
+                + 'before you can set up this app for a different organization.'
             )
             success = False
     
     if success:
         contract_handler, created = ContractHandler.objects.update_or_create(
-            alliance=alliance,
+            organization=organization,
             defaults={
                 'character': owned_char
             }
@@ -283,7 +278,7 @@ def create_or_update_service(request, token):
         messages_plus.success(
             request, 
             'Contract Handler setup completed for '
-            + '<strong>{}</strong> alliance '.format(alliance.alliance_name)
+            + '<strong>{}</strong> organization '.format(organization.name)
             + 'with <strong>{}</strong> as sync character. '.format(
                     contract_handler.character.character.character_name, 
                 )
