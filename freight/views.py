@@ -80,6 +80,15 @@ def contract_list_data(request, category):
     else:
         raise ValueError('Invalid category: {}'.format(category))
 
+    create_glyph_html = lambda glyph, tooltip_text, color = 'initial': \
+        ('<span class="glyphicon '
+        + 'glyphicon-'+ glyph + '" ' 
+        + 'aria-hidden="true" '
+        + 'style="color:' + color + ' ;" ' 
+        + 'data-toggle="tooltip" data-placement="top" '
+        + 'title="' + tooltip_text + '">'
+        + '</span>')
+
     contracts_data = list()
     datetime_format = lambda x: x.strftime(DATETIME_FORMAT) if x else None
     character_format = lambda x: x.character_name if x else None
@@ -97,17 +106,16 @@ def contract_list_data(request, category):
                     route_name, 
                     '\n'.join(json.loads(contract.issues))
                 )
-            pricing_check = ('<span class="glyphicon '
-                + 'glyphicon-'+ glyph + '" ' 
-                + 'aria-hidden="true" '
-                + 'style="color:' + color + ' ;" ' 
-                + 'data-toggle="tooltip" data-placement="top" '
-                + 'title="' + tooltip_text + '">'
-                + '</span>')            
+            pricing_check = create_glyph_html(glyph, tooltip_text, color)
         else:
             route_name = ''
             pricing_check = '-'
-
+        
+        if contract.title:
+            notes = create_glyph_html('envelope', contract.title)
+        else:
+            notes = ''
+        
         contracts_data.append({
             'status': contract.status,
             'start_location': str(contract.start_location),
@@ -118,6 +126,7 @@ def contract_list_data(request, category):
             'date_issued': datetime_format(contract.date_issued),
             'date_expired': datetime_format(contract.date_expired),
             'issuer': character_format(contract.issuer),
+            'notes': notes,
             'date_accepted': datetime_format(contract.date_accepted),
             'acceptor': character_format(contract.acceptor),
             'has_pricing': contract.has_pricing,

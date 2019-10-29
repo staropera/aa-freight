@@ -11,7 +11,11 @@ Here we write upgrading notes for upcoming releases.
 
 ### Added
 
+- Contract notes / comments are now visible on the contracts list
+
 ### Changed
+
+- Technical change to enable both alliances and corporations to receive contracts
 
 ### Fixed
 
