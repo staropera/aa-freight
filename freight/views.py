@@ -17,8 +17,9 @@ from esi.clients import esi_client_factory
 from esi.models import Token
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 
-from .models import *
 from . import tasks
+from .app_settings import get_freight_operation_mode_friendly
+from .models import *
 from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
 
@@ -58,12 +59,18 @@ def contract_list_user(request):
 @permission_required('freight.basic_access')
 def contract_list_data(request, category):
     """returns list of outstanding contracts for contract_list AJAX call"""
+        
+    if EveOrganization.get_category_for_operation_mode(FREIGHT_OPERATION_MODE) == EveOrganization.CATEGORY_CORPORATION:
+        user_organization_id = request.user.profile.main_character.corporation_id
+    else:        
+        user_organization_id = request.user.profile.main_character.alliance_id
+
     if category == CONTRACT_LIST_ACTIVE:
         if not request.user.has_perm('freight.view_contracts'):
             raise RuntimeError('Insufficient permissions')
         else:
             contracts = Contract.objects.filter(
-                handler__organization__id=request.user.profile.main_character.alliance_id,
+                handler__organization__id=user_organization_id,
                 status__in=[
                     Contract.STATUS_OUTSTANDING,
                     Contract.STATUS_IN_PROGRESS
@@ -74,7 +81,7 @@ def contract_list_data(request, category):
             raise RuntimeError('Insufficient permissions')
         else:
             contracts = Contract.objects.filter(
-                handler__organization__id=request.user.profile.main_character.alliance_id,
+                handler__organization__id=user_organization_id,
                 issuer__in=[x.character for x in request.user.character_ownerships.all()]
             ).select_related()
     else:
@@ -205,8 +212,10 @@ def calculator(request, pricing_pk = None):
     handler = ContractHandler.objects.first()
     if handler:
         organization_name = handler.organization.name
+        availability = get_freight_operation_mode_friendly(handler.operation_mode)
     else:
         organization_name = None
+        availability = None
         
     return render(
         request, 'freight/calculator.html', 
@@ -218,7 +227,8 @@ def calculator(request, pricing_pk = None):
             'organization_name': organization_name,
             'collateral': collateral * 1000000 if collateral else 0,
             'volume': volume * 1000 if volume else None,
-            'expires_on': expires_on
+            'expires_on': expires_on,
+            'availability': availability,
         }
     )
 
@@ -230,7 +240,8 @@ def setup_contract_handler(request, token):
     success = True
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
-    if token_char.alliance_id is None:
+    if (FREIGHT_OPERATION_MODE in [FREIGHT_OPERATION_MODE_MY_ALLIANCE]
+            and token_char.alliance_id is None):
         messages_plus.error(
             request, 
             'Can not setup contract handler, '
@@ -256,13 +267,26 @@ def setup_contract_handler(request, token):
             success = False
     
     if success:
+        contract_handler = ContractHandler.objects.first()
+        if contract_handler and contract_handler.operation_mode != FREIGHT_OPERATION_MODE:
+            messages_plus.error(
+                request,
+                'There already is a contract handler installed for a '
+                + 'different operation mode. You need to first delete the '
+                + 'existing contract handler in the admin section '
+                + 'before you can set up this app for a different operation mode.'
+            )
+            success = False
+
+    if success:        
         organization, _ = EveOrganization.objects.update_or_create_from_evecharacter(
             token_char,
-            EveOrganization.CATEGORY_ALLIANCE
+            EveOrganization.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE
+            )
         )
 
     if success:
-        contract_handler = ContractHandler.objects.first()
         if contract_handler and contract_handler.organization != organization:
             messages_plus.error(
                 request,
@@ -277,7 +301,8 @@ def setup_contract_handler(request, token):
         contract_handler, created = ContractHandler.objects.update_or_create(
             organization=organization,
             defaults={
-                'character': owned_char
+                'character': owned_char,
+                'operation_mode': FREIGHT_OPERATION_MODE
             }
         )          
         tasks.run_contracts_sync.delay(            
@@ -291,6 +316,7 @@ def setup_contract_handler(request, token):
             + 'with <strong>{}</strong> as sync character. '.format(
                     contract_handler.character.character.character_name, 
                 )
+            + 'Operation mode: {}. '.format(FREIGHT_OPERATION_MODE)
             + 'Started syncing of courier contracts. '
             + 'You will receive a report once it is completed.'
         )

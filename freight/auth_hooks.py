@@ -4,7 +4,6 @@ from allianceauth.services.hooks import MenuItemHook, UrlHook
 from allianceauth import hooks
 
 from . import urls
-from .app_settings import FREIGHT_APP_TITLE
 
 
 class ExampleMenuItem(MenuItemHook):
@@ -13,7 +12,7 @@ class ExampleMenuItem(MenuItemHook):
         # setup menu entry for sidebar                
         MenuItemHook.__init__(
             self,
-            _(FREIGHT_APP_TITLE),
+            _('Alliance Freight'),
             'fa fa-truck fa-fw',
             'freight:index',
             navactive=['freight:index']

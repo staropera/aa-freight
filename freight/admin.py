@@ -34,7 +34,7 @@ class EveOrganizationAdmin(admin.ModelAdmin):
 
 @admin.register(ContractHandler)
 class ContractHandlerAdmin(admin.ModelAdmin):
-    list_display = ('organization', 'character', 'last_sync')
+    list_display = ('organization', 'character', 'operation_mode', 'last_sync')
     actions = ['send_notifications', 'start_sync', 'update_pricing']
 
     def start_sync(self, request, queryset):

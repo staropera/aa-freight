@@ -143,9 +143,10 @@ Here is a list of available settings for this app. They can be configured by add
 
 Name | Description | Default
 -- | -- | --
-`FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications should appear | Not defined = Deactivated
 `FREIGHT_DISCORD_AVATAR_URL`| URL to an image file to override the default avatar on Discord notifications, which is the Eve alliance logo | Alliance logo
-`FREIGHT_DISCORD_PING_TYPE`| Defines if and how notifications will ping on Discord by adding mentions: Valid values are: `@here` or `@everyone`  | Not defined = No ping
+`FREIGHT_DISCORD_PING_TYPE`| Defines if and how notifications will ping on Discord by adding mentions: Valid values are: `@here` or `@everyone`  | No ping
+`FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications should appear. | Deactivated
+`FREIGHT_OPERATION_MODE`| Defines which kind of contracts are handled by the app.  Available operation modes:<br>`'my_alliance'`: contracts available to my alliance only<br> `'my_corporation'`: contracts available to my corporation only | `'my_alliance'`
 
 ## Permissions
 

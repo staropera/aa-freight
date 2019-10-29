@@ -167,11 +167,12 @@ class TestRunContractsSync(TestCase):
 
         # create environment
         # 1 user
-        cls.character = EveCharacter.objects.create_character(207150426)  
-        cls.alliance_id = 498125261        
-        cls.alliance = EveAllianceInfo.objects.create_alliance(
-            cls.alliance_id
-        )        
+        cls.character = EveCharacter.objects.create_character(207150426)          
+        cls.organization = EveOrganization.objects.create(
+            id = 498125261,
+            category = EveOrganization.CATEGORY_ALLIANCE,
+            name = 'Dummy Alliance'
+        )
         cls.user = User.objects.create_user(cls.character.character_name)
 
         cls.main_ownership = CharacterOwnership.objects.create(
@@ -247,7 +248,7 @@ class TestRunContractsSync(TestCase):
         self.user.user_permissions.add(p)
         self.user.save()
         handler = ContractHandler.objects.create(
-            alliance=self.alliance,
+            organization=self.organization,
             character=self.main_ownership
         )
         
@@ -275,7 +276,7 @@ class TestRunContractsSync(TestCase):
     # run without char    
     def test_run_no_sync_char(self):
         handler = ContractHandler.objects.create(
-            alliance=self.alliance
+            organization=self.organization
         )
         self.assertFalse(
             tasks.run_contracts_sync()
@@ -303,7 +304,7 @@ class TestRunContractsSync(TestCase):
         self.user.user_permissions.add(p)
         self.user.save()
         handler = ContractHandler.objects.create(
-            alliance=self.alliance,
+            organization=self.organization,
             character=self.main_ownership
         )
         
@@ -333,7 +334,7 @@ class TestRunContractsSync(TestCase):
         self.user.user_permissions.add(p)
         self.user.save()
         handler = ContractHandler.objects.create(
-            alliance=self.alliance,
+            organization=self.organization,
             character=self.main_ownership
         )
         

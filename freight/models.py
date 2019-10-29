@@ -13,7 +13,7 @@ from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo
 from allianceauth.eveonline.models import EveCharacter
 
-from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_AVATAR_URL, FREIGHT_DISCORD_PING_TYPE
+from .app_settings import *
 from .managers import LocationManager, EveOrganizationManager, ContractManager
 from .utils import LoggerAddTag, DATETIME_FORMAT
 
@@ -353,17 +353,27 @@ class EveOrganization(models.Model):
             self.category.title(), 
             self.EVE_IMAGE_SERVER_BASE_URL,
             self.id)
-        
+
+    @classmethod
+    def get_category_for_operation_mode(cls, mode):
+        """return organization category related to given operation mode"""
+        if mode in [FREIGHT_OPERATION_MODE_MY_CORPORATION]:
+            return cls.CATEGORY_CORPORATION
+        else:
+            return cls.CATEGORY_ALLIANCE
+
 
 class ContractHandler(models.Model):
     """Handler for syncing of contracts belonging to an alliance or corporation"""
-
+    
+    # errors
     ERROR_NONE = 0
     ERROR_TOKEN_INVALID = 1
     ERROR_TOKEN_EXPIRED = 2
     ERROR_INSUFFICIENT_PERMISSIONS = 3    
     ERROR_NO_CHARACTER = 4
     ERROR_ESI_UNAVAILABLE = 5
+    ERROR_OPERATION_MODE_MISMATCH = 6
     ERROR_UNKNOWN = 99
 
     ERRORS_LIST = [
@@ -373,6 +383,7 @@ class ContractHandler(models.Model):
         (ERROR_INSUFFICIENT_PERMISSIONS, 'Insufficient permissions'),
         (ERROR_NO_CHARACTER, 'No character set for fetching alliance contacts'),
         (ERROR_ESI_UNAVAILABLE, 'ESI API is currently unavailable'),
+        (ERROR_OPERATION_MODE_MISMATCH, 'Operaton mode does not match with current setting'),
         (ERROR_UNKNOWN, 'Unknown error'),
     ]
   
@@ -387,7 +398,13 @@ class ContractHandler(models.Model):
         default=None,
         null=True,
         help_text='character used for syncing contracts'
-    )    
+    )
+    operation_mode = models.CharField(
+        max_length=32, 
+        choices=FREIGHT_OPERATION_MODES, 
+        default=FREIGHT_OPERATION_MODE_MY_ALLIANCE,        
+        help_text='defines what kind of contracts are synced'
+    )
     version_hash = models.CharField(
         max_length=32, 
         null=True, 
@@ -413,13 +430,19 @@ class ContractHandler(models.Model):
             'esi-contracts.read_corporation_contracts.v1',
             'esi-universe.read_structures.v1'
         ]
-
+    
     def __str__(self):
         return str(self.organization.name)
 
     def get_last_error_message(self):
         msg = [(x, y) for x, y in self.ERRORS_LIST if x == self.last_error]
         return msg[0][1] if len(msg) > 0 else 'Undefined error'
+
+    class Meta:
+        verbose_name = 'Contract Handler [{}]'.format(
+             FREIGHT_OPERATION_MODE
+        )
+        verbose_name_plural = verbose_name
 
 
 class Contract(models.Model): 

@@ -11,6 +11,7 @@ Here we write upgrading notes for upcoming releases.
 
 ### Added
 
+- The new operation mode defines which kind of contracts are processed by the app. In addition to the default "My Alliance" mode, the mode "My Corporation" is now available. ([#3](https://gitlab.com/ErikKalkoken/aa-freight/issues/3))
 - Contract notes / comments are now visible on the contracts list
 
 ### Changed

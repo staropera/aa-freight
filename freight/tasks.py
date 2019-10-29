@@ -45,7 +45,17 @@ def run_contracts_sync(force_sync = False, user_pk = None):
         handler.save()
 
         add_prefix = make_logger_prefix(handler)
+
+        # abort if operation mode from settings is different
+        if handler.operation_mode != FREIGHT_OPERATION_MODE:
+            logger.error(add_prefix(
+                'Current operation mode not matching the handler'
+            ))           
+            handler.last_error = ContractHandler.ERROR_OPERATION_MODE_MISMATCH
+            handler.save()
+            raise ValueError()
                 
+        # abort if character is not configured
         if handler.character is None:
             logger.error(add_prefix(
                 'No character configured to sync'
@@ -115,9 +125,9 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                     corporation_id=handler.character.character.corporation_id,
                     page=page
                 ).result()
-
-            # store to disk (for debugging)
+            
             """
+            # store to disk (for debugging)
             with open('contracts.json', 'w', encoding='utf-8') as f:
                 json.dump(
                     contracts_all, 
@@ -226,7 +236,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 Contract.objects.update_pricing()
 
             else:
-                logger.info(add_prefix('Alliance contracts are unchanged.'))
+                logger.info(add_prefix('Contracts are unchanged.'))
                 success = True
 
             send_contract_notifications.delay()
@@ -242,8 +252,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
     except Exception as ex:
         success = False
         error_code = type(ex).__name__
-        raise ex
-
+        
     else:
         success = True
 

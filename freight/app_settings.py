@@ -22,22 +22,25 @@ FREIGHT_DISCORD_PING_TYPE = getattr(
     None
 )
 
-# mode of operation for Alliance Freight
+# modes of operation for Alliance Freight
 FREIGHT_OPERATION_MODE_MY_ALLIANCE = 'my_alliance'
 FREIGHT_OPERATION_MODE_MY_CORPORATION = 'my_corporation'
-_FREIGHT_OPERATION_MODES_DEF = [
-    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
-    FREIGHT_OPERATION_MODE_MY_CORPORATION
+
+FREIGHT_OPERATION_MODES = [
+    (FREIGHT_OPERATION_MODE_MY_ALLIANCE, 'My Alliance'),
+    (FREIGHT_OPERATION_MODE_MY_CORPORATION, 'My Corporation'),        
 ]
 
 if (hasattr(settings, 'FREIGHT_OPERATION_MODE') 
-    and settings.FREIGHT_OPERATION_MODE in (_FREIGHT_OPERATION_MODES_DEF)):
+    and settings.FREIGHT_OPERATION_MODE in [x[0] for x in FREIGHT_OPERATION_MODES]):
     FREIGHT_OPERATION_MODE = settings.FREIGHT_OPERATION_MODE
 else:
     FREIGHT_OPERATION_MODE = FREIGHT_OPERATION_MODE_MY_ALLIANCE
 
-# define app title based on operation mode
-if FREIGHT_OPERATION_MODE == FREIGHT_OPERATION_MODE_MY_CORPORATION:
-    FREIGHT_APP_TITLE = 'Corporation Freight'
-else:
-    FREIGHT_APP_TITLE = 'Alliance Freight'
+def get_freight_operation_mode_friendly(mode: str) -> str:
+    """returns user friendly description of operation mode"""    
+    msg = [(x, y) for x, y in FREIGHT_OPERATION_MODES if x == mode]
+    if len(msg) != 1:
+        raise ValueError('Undefined mode')
+    else:
+        return msg[0][1]
