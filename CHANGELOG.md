@@ -15,7 +15,13 @@ Here we write notes for upcoming releases.
 
 ## [0.5.0] - 2019-10-30
 
-"Run migrations" needs to be run when updating to this version.
+You need to run migrations when updating to this version.
+
+**IMPORTANT**
+
+You need to delete your current contract handler **before** starting migrations or they will fail !! You can delete the contract handler on the admin page.
+
+In case you already ran into this issue you can fix this by rewinding migrations to 0004, delete the contract handler and then re-run migrations. The command for rewinding migrations to 004 is: `python manage.py migrate freight 0004`.
 
 ### Added
 
