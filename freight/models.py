@@ -349,9 +349,9 @@ class EveOrganization(models.Model):
     @property
     def avatar_url(self) -> str:
         """returns the url to an icon image for this organization"""
-        return '{}/{}/{}_128.png'.format(
-            self.category.title(), 
+        return '{}/{}/{}_128.png'.format(            
             self.EVE_IMAGE_SERVER_BASE_URL,
+            self.category.title(), 
             self.id)
 
     @classmethod
@@ -424,20 +424,25 @@ class ContractHandler(models.Model):
         help_text='error that occurred at the last sync atttempt (if any)'
     )
 
+    def __str__(self):
+        return str(self.organization.name)
+
+    @property
+    def operation_mode_friendly(self) -> str:
+        return get_freight_operation_mode_friendly(self.operation_mode)
+    
+    @property
+    def last_error_message_friendly(self) -> str:
+        msg = [(x, y) for x, y in self.ERRORS_LIST if x == self.last_error]
+        return msg[0][1] if len(msg) > 0 else 'Undefined error'
+
     @classmethod
-    def get_esi_scopes(cls):
+    def get_esi_scopes(cls) -> list:
         return [
             'esi-contracts.read_corporation_contracts.v1',
             'esi-universe.read_structures.v1'
         ]
     
-    def __str__(self):
-        return str(self.organization.name)
-
-    def get_last_error_message(self):
-        msg = [(x, y) for x, y in self.ERRORS_LIST if x == self.last_error]
-        return msg[0][1] if len(msg) > 0 else 'Undefined error'
-
     class Meta:
         verbose_name = 'Contract Handler [{}]'.format(
              FREIGHT_OPERATION_MODE

@@ -1,6 +1,6 @@
 # Freight for Alliance Auth
 
-This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) (AA) that adds an alliance Freight service.
+This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) (AA) that adds a central freight service.
 
 ![License](https://img.shields.io/badge/license-MIT-green) ![python](https://img.shields.io/badge/python-3.5-informational) ![django](https://img.shields.io/badge/django-2.2-informational)
 
@@ -12,19 +12,20 @@ This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianc
 - [Installation](#installation)
 - [Updating](#updating)
 - [Settings](#settings)
+- [Operation Mode](#operation-mode)
 - [Permissions](#permissions)
 - [Pricing](#pricing)
 - [Change Log](CHANGELOG.md)
 
 ## Overview
 
-This app helps running a central freight service for an alliance. The main concept of such a freight service is as follows:
+This app helps running a central freight service for an alliance or corporation. The main concept of such a freight service is as follows:
 
-- Every alliance member can create courier contracts to the alliance for defined routes
+- Every member can create courier contracts for defined routes
 
 - Courier contracts have a reward according to the official pricing for that route and sufficient collateral to prevent scamming
 
-- Every interested alliance member can pick up and deliver existing courier contracts
+- Every interested member can pick up and deliver existing courier contracts
 
 ## Key Features
 
@@ -107,9 +108,9 @@ Now you can access Alliance Auth and setup permissions for your users. See secti
 
 ### 6. Setup contract handler
 
-Finally you need to set the contract handler with the alliance character that will be used for fetching the alliance contracts and related structures. Just click on "Set Contract Handler" and add the requested token. Note that only users with the appropriate permission will be able to see and use this function.
+Finally you need to set the contract handler with the character that will be used for fetching the corporation or alliance contracts and related structures. Just click on "Set Contract Handler" and add the requested token. Note that only users with the appropriate permission will be able to see and use this function.
 
-Once a contract handler is set the app will start fetching alliance contracts. Wait a minute and then reload the contract list page to see the result.
+Once a contract handler is set the app will start fetching contracts. Wait a minute and then reload the contract list page to see the result.
 
 ### 7. Define pricing
 
@@ -119,7 +120,7 @@ That's it. The Alliance Freight app is fully installed and ready to be used.
 
 ## Updating
 
-To update your existing installation of Alliance Freight first enable your virtual environment. 
+To update your existing installation of Alliance Freight first enable your virtual environment.
 
 Then run the following commands from your AA project directory (the one that contains `manage.py`).
 
@@ -143,10 +144,21 @@ Here is a list of available settings for this app. They can be configured by add
 
 Name | Description | Default
 -- | -- | --
-`FREIGHT_DISCORD_AVATAR_URL`| URL to an image file to override the default avatar on Discord notifications, which is the Eve alliance logo | Alliance logo
+`FREIGHT_DISCORD_AVATAR_URL`| URL to an image file to override the default avatar on Discord notifications, which a custom logo | Eve alliance or corporation logo from the contract handler
 `FREIGHT_DISCORD_PING_TYPE`| Defines if and how notifications will ping on Discord by adding mentions: Valid values are: `@here` or `@everyone`  | No ping
 `FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications should appear. | Deactivated
-`FREIGHT_OPERATION_MODE`| Defines which kind of contracts are handled by the app.  Available operation modes:<br>`'my_alliance'`: contracts available to my alliance only<br> `'my_corporation'`: contracts available to my corporation only | `'my_alliance'`
+`FREIGHT_OPERATION_MODE`| See section [Operation Mode](#operation-mode) for details.<br> Note that switching operation modes requires you to remove the existing contract handler with all its contracts and then setup a new contract handler | `'my_alliance'`
+
+## Operation Mode
+
+The operation mode defines which class of contracts are handled by the Alliance Freight. Note that you can see the currently configured operation mode on the admin page for the contract handler.
+
+The following operation modes are available:
+
+Name | Description
+-- | -- | --
+`'my_alliance'`| contracts available to members of my own alliance only
+`'my_corporation'`| contracts available to members of my own corporation only
 
 ## Permissions
 
@@ -156,8 +168,8 @@ Name | Purpose | Code
 -- | -- | --
 Can add / update locations | User can add and update Eve Online contract locations, e.g. stations and upwell structures |  `add_location`
 Can access this app |Enabling the app for a user. This permission should be enabled for everyone who is allowed to use the app (e.g. Member state) |  `basic_access`
-Can setup contract handler | Add or updates the alliance character for syncing contracts. This should be limited to users with admins / leadership privileges. |  `setup_contract_handler`
-Can use the calculator | Enables using the calculator page and the "My Contracts" page. This permission is usually enabled for every alliance member. |  `use_calculator`
+Can setup contract handler | Add or updates the character for syncing contracts. This should be limited to users with admins / leadership privileges. |  `setup_contract_handler`
+Can use the calculator | Enables using the calculator page and the "My Contracts" page. This permission is usually enabled for every user with the member state. |  `use_calculator`
 Can view the contracts list | Enables viewing the page with all outstanding courier contracts  |  `view_contracts`
 
 ## Pricing
@@ -187,4 +199,4 @@ Days to expire | Recommended days for contracts to expire | Info
 Days to complete | Recommended days for contract completion | Info
 Details | Text with additional instructions for using this pricing | Info
 
-> **Adding Locations**:<br>If you are creating a pricing for a new route or this is the first pricing you are creating you may need to first add the locations (stations and/or structures) to the app. The best way is add new locations is with the "Add Location" feature on the main page of the app. Alternatively you can just create a courier contract between those locations in game. They will be added automatically when the contract is synced by Alliance Freight.
+> **How to add new locations**:<br>If you are creating a pricing for a new route you may need to first add the locations (stations and/or structures).<br>The easiest way is to create a courier contract between those locations in game and then run contract sync. Those locations will then be added automatically.<br>Alternatively you can use the "Add Location" feature on the main page of the app. This will require you to provide the respective station or structure eve ID.

@@ -59,18 +59,19 @@ def contract_list_user(request):
 @permission_required('freight.basic_access')
 def contract_list_data(request, category):
     """returns list of outstanding contracts for contract_list AJAX call"""
-        
-    if EveOrganization.get_category_for_operation_mode(FREIGHT_OPERATION_MODE) == EveOrganization.CATEGORY_CORPORATION:
-        user_organization_id = request.user.profile.main_character.corporation_id
-    else:        
-        user_organization_id = request.user.profile.main_character.alliance_id
-
+    
+    user_characters = [x.character for x in request.user.character_ownerships.select_related().all()]
     if category == CONTRACT_LIST_ACTIVE:
         if not request.user.has_perm('freight.view_contracts'):
             raise RuntimeError('Insufficient permissions')
         else:
+            # identify all corporation and alliances this users characters are in            
+            corporation_ids = {x.corporation_id for x in user_characters} 
+            alliance_ids= {x.alliance_id for x in user_characters if x.alliance_id}
+            user_organization_ids = corporation_ids.union(alliance_ids)
+
             contracts = Contract.objects.filter(
-                handler__organization__id=user_organization_id,
+                handler__organization__id__in=user_organization_ids,
                 status__in=[
                     Contract.STATUS_OUTSTANDING,
                     Contract.STATUS_IN_PROGRESS
@@ -80,9 +81,8 @@ def contract_list_data(request, category):
         if not request.user.has_perm('freight.use_calculator'):
             raise RuntimeError('Insufficient permissions')
         else:
-            contracts = Contract.objects.filter(
-                handler__organization__id=user_organization_id,
-                issuer__in=[x.character for x in request.user.character_ownerships.all()]
+            contracts = Contract.objects.filter(                
+                issuer__in=user_characters
             ).select_related()
     else:
         raise ValueError('Invalid category: {}'.format(category))
@@ -267,8 +267,8 @@ def setup_contract_handler(request, token):
             success = False
     
     if success:
-        contract_handler = ContractHandler.objects.first()
-        if contract_handler and contract_handler.operation_mode != FREIGHT_OPERATION_MODE:
+        handler = ContractHandler.objects.first()
+        if handler and handler.operation_mode != FREIGHT_OPERATION_MODE:
             messages_plus.error(
                 request,
                 'There already is a contract handler installed for a '
@@ -287,7 +287,7 @@ def setup_contract_handler(request, token):
         )
 
     if success:
-        if contract_handler and contract_handler.organization != organization:
+        if handler and handler.organization != organization:
             messages_plus.error(
                 request,
                 'There already is a contract handler installed for a '
@@ -298,7 +298,7 @@ def setup_contract_handler(request, token):
             success = False
     
     if success:
-        contract_handler, created = ContractHandler.objects.update_or_create(
+        handler, created = ContractHandler.objects.update_or_create(
             organization=organization,
             defaults={
                 'character': owned_char,
@@ -314,9 +314,9 @@ def setup_contract_handler(request, token):
             'Contract Handler setup completed for '
             + '<strong>{}</strong> organization '.format(organization.name)
             + 'with <strong>{}</strong> as sync character. '.format(
-                    contract_handler.character.character.character_name, 
+                    handler.character.character.character_name, 
                 )
-            + 'Operation mode: {}. '.format(FREIGHT_OPERATION_MODE)
+            + 'Operation mode: <strong>{}</strong>. '.format(handler.operation_mode_friendly)
             + 'Started syncing of courier contracts. '
             + 'You will receive a report once it is completed.'
         )

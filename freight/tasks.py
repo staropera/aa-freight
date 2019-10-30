@@ -258,8 +258,9 @@ def run_contracts_sync(force_sync = False, user_pk = None):
 
     if user_pk:
         try:
-            message = 'Syncing of contracts for "{}" {}.\n'.format(
+            message = 'Syncing of contracts for "{}" in operation mode "{}" {}.\n'.format(
                 handler.organization.name,
+                handler.operation_mode_friendly,
                 'completed successfully' if success else 'has failed'
             )
             if success:
