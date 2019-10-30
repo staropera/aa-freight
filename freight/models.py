@@ -13,8 +13,8 @@ from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo
 from allianceauth.eveonline.models import EveCharacter
 
-from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_AVATAR_URL, FREIGHT_DISCORD_PING_TYPE
-from .managers import LocationManager, ContractManager
+from .app_settings import *
+from .managers import LocationManager, EveOrganizationManager, ContractManager
 from .utils import LoggerAddTag, DATETIME_FORMAT
 
 
@@ -307,17 +307,73 @@ class Pricing(models.Model):
             return None
         else:
             return issues
-    
+
+
+class EveOrganization(models.Model):
+    """An Eve corporation or alliance"""
+
+    CATEGORY_ALLIANCE = 'alliance'
+    CATEGORY_CORPORATION = 'corporation'
+    CATEGORIES_DEF = [
+        (CATEGORY_ALLIANCE, 'Alliance'),
+        (CATEGORY_CORPORATION, 'Corporation'),
+    ]
+
+    EVE_IMAGE_SERVER_BASE_URL = 'https://imageserver.eveonline.com'
+
+    id = models.IntegerField(        
+        primary_key=True,
+        validators=[MinValueValidator(0)],
+    )
+    category = models.CharField(
+        max_length=32,
+        choices=CATEGORIES_DEF, 
+    )
+    name = models.CharField(
+        max_length=254
+    )
+
+    objects = EveOrganizationManager()
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def is_alliance(self) -> bool:
+        return self.category == self.CATEGORY_ALLIANCE
+
+    @property
+    def is_corporation(self) -> bool:
+        return self.category == self.CATEGORY_CORPORATION
+
+    @property
+    def avatar_url(self) -> str:
+        """returns the url to an icon image for this organization"""
+        return '{}/{}/{}_128.png'.format(            
+            self.EVE_IMAGE_SERVER_BASE_URL,
+            self.category.title(), 
+            self.id)
+
+    @classmethod
+    def get_category_for_operation_mode(cls, mode):
+        """return organization category related to given operation mode"""
+        if mode in [FREIGHT_OPERATION_MODE_MY_CORPORATION]:
+            return cls.CATEGORY_CORPORATION
+        else:
+            return cls.CATEGORY_ALLIANCE
+
 
 class ContractHandler(models.Model):
-    """Handler for syncing of contracts belonging to an alliance"""
-
+    """Handler for syncing of contracts belonging to an alliance or corporation"""
+    
+    # errors
     ERROR_NONE = 0
     ERROR_TOKEN_INVALID = 1
     ERROR_TOKEN_EXPIRED = 2
     ERROR_INSUFFICIENT_PERMISSIONS = 3    
     ERROR_NO_CHARACTER = 4
     ERROR_ESI_UNAVAILABLE = 5
+    ERROR_OPERATION_MODE_MISMATCH = 6
     ERROR_UNKNOWN = 99
 
     ERRORS_LIST = [
@@ -327,11 +383,12 @@ class ContractHandler(models.Model):
         (ERROR_INSUFFICIENT_PERMISSIONS, 'Insufficient permissions'),
         (ERROR_NO_CHARACTER, 'No character set for fetching alliance contacts'),
         (ERROR_ESI_UNAVAILABLE, 'ESI API is currently unavailable'),
+        (ERROR_OPERATION_MODE_MISMATCH, 'Operaton mode does not match with current setting'),
         (ERROR_UNKNOWN, 'Unknown error'),
     ]
-
-    alliance = models.OneToOneField(
-        EveAllianceInfo, 
+  
+    organization = models.OneToOneField(
+        EveOrganization, 
         on_delete=models.CASCADE, 
         primary_key=True
     )
@@ -339,8 +396,15 @@ class ContractHandler(models.Model):
         CharacterOwnership,
         on_delete=models.SET_DEFAULT,
         default=None,
-        null=True
-    )    
+        null=True,
+        help_text='character used for syncing contracts'
+    )
+    operation_mode = models.CharField(
+        max_length=32, 
+        choices=FREIGHT_OPERATION_MODES, 
+        default=FREIGHT_OPERATION_MODE_MY_ALLIANCE,        
+        help_text='defines what kind of contracts are synced'
+    )
     version_hash = models.CharField(
         max_length=32, 
         null=True, 
@@ -360,19 +424,30 @@ class ContractHandler(models.Model):
         help_text='error that occurred at the last sync atttempt (if any)'
     )
 
+    def __str__(self):
+        return str(self.organization.name)
+
+    @property
+    def operation_mode_friendly(self) -> str:
+        return get_freight_operation_mode_friendly(self.operation_mode)
+    
+    @property
+    def last_error_message_friendly(self) -> str:
+        msg = [(x, y) for x, y in self.ERRORS_LIST if x == self.last_error]
+        return msg[0][1] if len(msg) > 0 else 'Undefined error'
+
     @classmethod
-    def get_esi_scopes(cls):
+    def get_esi_scopes(cls) -> list:
         return [
             'esi-contracts.read_corporation_contracts.v1',
             'esi-universe.read_structures.v1'
         ]
-
-    def __str__(self):
-        return str(self.alliance)
-
-    def get_last_error_message(self):
-        msg = [(x, y) for x, y in self.ERRORS_LIST if x == self.last_error]
-        return msg[0][1] if len(msg) > 0 else 'Undefined error'
+    
+    class Meta:
+        verbose_name = 'Contract Handler [{}]'.format(
+             FREIGHT_OPERATION_MODE
+        )
+        verbose_name_plural = verbose_name
 
 
 class Contract(models.Model): 
@@ -529,8 +604,8 @@ class Contract(models.Model):
             if FREIGHT_DISCORD_AVATAR_URL:
                 avatar_url = FREIGHT_DISCORD_AVATAR_URL
             else:    
-                avatar_url = ('https://imageserver.eveonline.com/Alliance/'
-                    + '{}_128.png'.format(self.handler.alliance.alliance_id))
+                avatar_url = self.handler.organization.avatar_url
+
             hook = Webhook(
                 FREIGHT_DISCORD_WEBHOOK_URL, 
                 username='Alliance Freight',

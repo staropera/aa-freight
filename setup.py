@@ -36,7 +36,6 @@ setup(
     ],
     install_requires=[ 
         'requests',
-        'django-navhelper',
-        'django-bootstrap-form',
+        'django-navhelper',        
     ]
 )

@@ -1,4 +1,5 @@
 from django.utils.translation import ugettext_lazy as _
+
 from allianceauth.services.hooks import MenuItemHook, UrlHook
 from allianceauth import hooks
 
@@ -8,7 +9,7 @@ from . import urls
 class ExampleMenuItem(MenuItemHook):
     """ This class ensures only authorized users will see the menu entry """
     def __init__(self):
-        # setup menu entry for sidebar
+        # setup menu entry for sidebar                
         MenuItemHook.__init__(
             self,
             _('Alliance Freight'),

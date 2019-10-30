@@ -7,17 +7,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-Here we write upgrading notes for upcoming releases.
+Here we write notes for upcoming releases.
+
+### Added
+### Changed
+### Fixed
+
+## [0.5.0] - 2019-10-30
+
+You need to run migrations when updating to this version.
+
+**IMPORTANT**
+
+You need to delete your current contract handler **before** starting migrations or they will fail !! You can delete the contract handler on the admin page.
+
+In case you already ran into this issue you can fix this by rewinding migrations to 0004, delete the contract handler and then re-run migrations. The command for rewinding migrations to 004 is: `python manage.py migrate freight 0004`.
 
 ### Added
 
-### Changed
-
-### Fixed
+- The new feature "operation mode" allows to configure which kind of contracts are processed by the app. Default mode is "My Alliance" for contracts available to members of your alliance only.
+- New operation mode "My Corporation" for contracts available to members of your corporation only. ([#3](https://gitlab.com/ErikKalkoken/aa-freight/issues/3))
+- Notes / comments on contracts are now visible in the contracts list
 
 ## [0.4.0] - 2019-10-28
 
-"Run migrations" and "collect static" needs to be run for when updating to this version.
+"Run migrations" and "collect static" needs to be run when updating to this version.
 
 ### Added
 

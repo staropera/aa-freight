@@ -17,8 +17,9 @@ from esi.clients import esi_client_factory
 from esi.models import Token
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 
-from .models import *
 from . import tasks
+from .app_settings import get_freight_operation_mode_friendly
+from .models import *
 from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
 
@@ -58,12 +59,19 @@ def contract_list_user(request):
 @permission_required('freight.basic_access')
 def contract_list_data(request, category):
     """returns list of outstanding contracts for contract_list AJAX call"""
+    
+    user_characters = [x.character for x in request.user.character_ownerships.select_related().all()]
     if category == CONTRACT_LIST_ACTIVE:
         if not request.user.has_perm('freight.view_contracts'):
             raise RuntimeError('Insufficient permissions')
         else:
+            # identify all corporation and alliances this users characters are in            
+            corporation_ids = {x.corporation_id for x in user_characters} 
+            alliance_ids= {x.alliance_id for x in user_characters if x.alliance_id}
+            user_organization_ids = corporation_ids.union(alliance_ids)
+
             contracts = Contract.objects.filter(
-                handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
+                handler__organization__id__in=user_organization_ids,
                 status__in=[
                     Contract.STATUS_OUTSTANDING,
                     Contract.STATUS_IN_PROGRESS
@@ -73,12 +81,20 @@ def contract_list_data(request, category):
         if not request.user.has_perm('freight.use_calculator'):
             raise RuntimeError('Insufficient permissions')
         else:
-            contracts = Contract.objects.filter(
-                handler__alliance__alliance_id=request.user.profile.main_character.alliance_id,
-                issuer__in=[x.character for x in request.user.character_ownerships.all()]
+            contracts = Contract.objects.filter(                
+                issuer__in=user_characters
             ).select_related()
     else:
         raise ValueError('Invalid category: {}'.format(category))
+
+    create_glyph_html = lambda glyph, tooltip_text, color = 'initial': \
+        ('<span class="glyphicon '
+        + 'glyphicon-'+ glyph + '" ' 
+        + 'aria-hidden="true" '
+        + 'style="color:' + color + ' ;" ' 
+        + 'data-toggle="tooltip" data-placement="top" '
+        + 'title="' + tooltip_text + '">'
+        + '</span>')
 
     contracts_data = list()
     datetime_format = lambda x: x.strftime(DATETIME_FORMAT) if x else None
@@ -97,17 +113,16 @@ def contract_list_data(request, category):
                     route_name, 
                     '\n'.join(json.loads(contract.issues))
                 )
-            pricing_check = ('<span class="glyphicon '
-                + 'glyphicon-'+ glyph + '" ' 
-                + 'aria-hidden="true" '
-                + 'style="color:' + color + ' ;" ' 
-                + 'data-toggle="tooltip" data-placement="top" '
-                + 'title="' + tooltip_text + '">'
-                + '</span>')            
+            pricing_check = create_glyph_html(glyph, tooltip_text, color)
         else:
             route_name = ''
             pricing_check = '-'
-
+        
+        if contract.title:
+            notes = create_glyph_html('envelope', contract.title)
+        else:
+            notes = ''
+        
         contracts_data.append({
             'status': contract.status,
             'start_location': str(contract.start_location),
@@ -118,6 +133,7 @@ def contract_list_data(request, category):
             'date_issued': datetime_format(contract.date_issued),
             'date_expired': datetime_format(contract.date_expired),
             'issuer': character_format(contract.issuer),
+            'notes': notes,
             'date_accepted': datetime_format(contract.date_accepted),
             'acceptor': character_format(contract.acceptor),
             'has_pricing': contract.has_pricing,
@@ -195,9 +211,11 @@ def calculator(request, pricing_pk = None):
 
     handler = ContractHandler.objects.first()
     if handler:
-        alliance_name = handler.alliance.alliance_name
+        organization_name = handler.organization.name
+        availability = get_freight_operation_mode_friendly(handler.operation_mode)
     else:
-        alliance_name = None
+        organization_name = None
+        availability = None
         
     return render(
         request, 'freight/calculator.html', 
@@ -206,10 +224,11 @@ def calculator(request, pricing_pk = None):
             'form': form,             
             'pricing': pricing,
             'price': price,
-            'alliance_name': alliance_name,
+            'organization_name': organization_name,
             'collateral': collateral * 1000000 if collateral else 0,
             'volume': volume * 1000 if volume else None,
-            'expires_on': expires_on
+            'expires_on': expires_on,
+            'availability': availability,
         }
     )
 
@@ -217,11 +236,12 @@ def calculator(request, pricing_pk = None):
 @login_required
 @permission_required('freight.setup_contract_handler')
 @token_required(scopes=ContractHandler.get_esi_scopes())
-def create_or_update_service(request, token):
+def setup_contract_handler(request, token):
     success = True
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
-    if token_char.alliance_id is None:
+    if (FREIGHT_OPERATION_MODE in [FREIGHT_OPERATION_MODE_MY_ALLIANCE]
+            and token_char.alliance_id is None):
         messages_plus.error(
             request, 
             'Can not setup contract handler, '
@@ -247,33 +267,42 @@ def create_or_update_service(request, token):
             success = False
     
     if success:
-        try:
-            alliance = EveAllianceInfo.objects.get(
-                alliance_id=token_char.alliance_id
-            )
-        except EveAllianceInfo.DoesNotExist:
-            alliance = EveAllianceInfo.objects.create_alliance(
-                token_char.alliance_id
-            )
-            alliance.save()
-
-    if success:
-        contract_handler = ContractHandler.objects.first()
-        if contract_handler and contract_handler.alliance != alliance:
+        handler = ContractHandler.objects.first()
+        if handler and handler.operation_mode != FREIGHT_OPERATION_MODE:
             messages_plus.error(
                 request,
                 'There already is a contract handler installed for a '
-                + 'different alliance. You need to first delete the '
+                + 'different operation mode. You need to first delete the '
                 + 'existing contract handler in the admin section '
-                + 'before you can set up this app for a different alliance.'
+                + 'before you can set up this app for a different operation mode.'
+            )
+            success = False
+
+    if success:        
+        organization, _ = EveOrganization.objects.update_or_create_from_evecharacter(
+            token_char,
+            EveOrganization.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE
+            )
+        )
+
+    if success:
+        if handler and handler.organization != organization:
+            messages_plus.error(
+                request,
+                'There already is a contract handler installed for a '
+                + 'different organization. You need to first delete the '
+                + 'existing contract handler in the admin section '
+                + 'before you can set up this app for a different organization.'
             )
             success = False
     
     if success:
-        contract_handler, created = ContractHandler.objects.update_or_create(
-            alliance=alliance,
+        handler, created = ContractHandler.objects.update_or_create(
+            organization=organization,
             defaults={
-                'character': owned_char
+                'character': owned_char,
+                'operation_mode': FREIGHT_OPERATION_MODE
             }
         )          
         tasks.run_contracts_sync.delay(            
@@ -283,10 +312,11 @@ def create_or_update_service(request, token):
         messages_plus.success(
             request, 
             'Contract Handler setup completed for '
-            + '<strong>{}</strong> alliance '.format(alliance.alliance_name)
+            + '<strong>{}</strong> organization '.format(organization.name)
             + 'with <strong>{}</strong> as sync character. '.format(
-                    contract_handler.character.character.character_name, 
+                    handler.character.character.character_name, 
                 )
+            + 'Operation mode: <strong>{}</strong>. '.format(handler.operation_mode_friendly)
             + 'Started syncing of courier contracts. '
             + 'You will receive a report once it is completed.'
         )

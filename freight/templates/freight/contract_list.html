@@ -16,30 +16,36 @@
                     <tr>
                         <th>Status</th>
                         <th>Start</th>
-                        <th>End</th>                        
-                        <th>Reward<br>Mio ISK</th>
-                        <th>Collaterial<br>Mio ISK</th>
-                        <th>Volume<br>K m3</th>
+                        <th>Destination</th>                        
+                        <th>Rew.<br>M&nbsp;ISK</th>
+                        <th>Coll.<br>M&nbsp;ISK</th>
+                        <th>Vol.<br>K&nbsp;m3</th>
                         <th>Price Check</th>
-                        <th>Issued On</th>
-                        <th>Expires On</th>
-                        <th>Issued By</th>
-                        <th>Accepted On</th>
-                        <th>Accepted By</th>
+                        <th>Issued<br>On</th>
+                        <th>Expires<br>On</th>
+                        <th>Issued<br>By</th>
+                        <th>Notes</th>
+                        <th>Accepted<br>On</th>
+                        <th>Accepted<br>By</th>
                     </tr>
                 </thead>
                 <tbody>                   
                 </tbody>                
             </table>
         </div>
-    </div>
+    </div>    
     <p class="text-muted">
-        Price check: 
+        Price check:&nbsp;&nbsp; 
         <span class="glyphicon glyphicon-ok" aria-hidden="true"></span> = OK &nbsp;&nbsp; 
         <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span> = Errors &nbsp;&nbsp;
-        If they are errors you find them in the tooltip of the shown symbol &nbsp;&nbsp;
+        If they are errors you find them in the tooltip of icon &nbsp;&nbsp;
         <strong>-</strong> = No price check performed
     </p>
+    <p class="text-muted">
+        Notes:&nbsp;&nbsp;
+        <span class="glyphicon glyphicon-envelope" aria-hidden="true"></span> &nbsp;&nbsp;
+        If icon is shown you can hover with the mouse over it to see the notes.
+    </p>  
     
 {% endblock %}
 
@@ -77,6 +83,7 @@
                 { data: 'date_issued' },
                 { data: 'date_expired' },
                 { data: 'issuer' },
+                { data: 'notes' },
                 { data: 'date_accepted' },
                 { data: 'acceptor' },
                 
@@ -86,7 +93,7 @@
 
             columnDefs: [														
                 { "orderable": false, "targets": [ 6 ] },
-                { "visible": false, "targets": [ 12 ] },
+                { "visible": false, "targets": [ 13 ] },
             ],
 
             order: [ [ 7, "desc" ] ],
@@ -94,7 +101,7 @@
             filterDropDown: {										
                 columns: [	                                        
                     {
-                        idx: 12,
+                        idx: 13,
                         title: 'Route'
                     },
                     {

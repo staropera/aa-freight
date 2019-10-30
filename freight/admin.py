@@ -17,7 +17,7 @@ class LocationAdmin(admin.ModelAdmin):
 
 @admin.register(Pricing)
 class PricingAdmin(admin.ModelAdmin):
-    list_display = ('name', 'start_location', 'end_location', 'active')    
+    list_display = ('name', 'start_location', 'end_location', 'active')
     list_filter = (
         'active',
         ('start_location', admin.RelatedOnlyFieldListFilter),
@@ -26,9 +26,15 @@ class PricingAdmin(admin.ModelAdmin):
     list_select_related = True
 
 
+@admin.register(EveOrganization)
+class EveOrganizationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category')
+    list_filter = ('category', )
+
+
 @admin.register(ContractHandler)
 class ContractHandlerAdmin(admin.ModelAdmin):
-    list_display = ('alliance', 'character', 'last_sync')
+    list_display = ('organization', 'character', 'operation_mode', 'last_sync')
     actions = ['send_notifications', 'start_sync', 'update_pricing']
 
     def start_sync(self, request, queryset):
@@ -110,3 +116,4 @@ class ContractAdmin(admin.ModelAdmin):
             return True
         else:
             return False
+

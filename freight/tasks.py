@@ -12,7 +12,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.notifications import notify
-from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
+from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
@@ -45,10 +45,20 @@ def run_contracts_sync(force_sync = False, user_pk = None):
         handler.save()
 
         add_prefix = make_logger_prefix(handler)
+
+        # abort if operation mode from settings is different
+        if handler.operation_mode != FREIGHT_OPERATION_MODE:
+            logger.error(add_prefix(
+                'Current operation mode not matching the handler'
+            ))           
+            handler.last_error = ContractHandler.ERROR_OPERATION_MODE_MISMATCH
+            handler.save()
+            raise ValueError()
                 
+        # abort if character is not configured
         if handler.character is None:
             logger.error(add_prefix(
-                'No character configured to sync the alliance'
+                'No character configured to sync'
             ))           
             handler.last_error = ContractHandler.ERROR_NO_CHARACTER
             handler.save()
@@ -76,7 +86,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             ).require_valid().first()
         except TokenInvalidError:        
             logger.error(add_prefix(
-                'Invalid token for fetching alliance contracts'
+                'Invalid token for fetching contracts'
             ))            
             handler.last_error = ContractHandler.ERROR_TOKEN_INVALID
             handler.save()
@@ -84,7 +94,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             
         except TokenExpiredError:            
             logger.error(add_prefix(
-                'Token expired for fetching alliance contracts'
+                'Token expired for fetching contracts'
             ))
             handler.last_error = ContractHandler.ERROR_TOKEN_EXPIRED
             handler.save()
@@ -92,7 +102,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
         
         try:
             # fetching data from ESI
-            logger.info(add_prefix('Fetching alliance contracts from ESI - page 1'))
+            logger.info(add_prefix('Fetching contracts from ESI - page 1'))
             client = esi_client_factory(
                 token=token, 
                 spec_file=get_swagger_spec_path()
@@ -109,15 +119,15 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             # add contracts from additional pages if any            
             for page in range(2, pages + 1):
                 logger.info(add_prefix(
-                    'Fetching alliance contracts from ESI - page {}'.format(page)
+                    'Fetching contracts from ESI - page {}'.format(page)
                 ))
                 contracts_all += client.Contracts.get_corporations_corporation_id_contracts(
                     corporation_id=handler.character.character.corporation_id,
                     page=page
                 ).result()
-
-            # store to disk (for debugging)
+            
             """
+            # store to disk (for debugging)
             with open('contracts.json', 'w', encoding='utf-8') as f:
                 json.dump(
                     contracts_all, 
@@ -132,7 +142,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             contracts = [
                 x for x in contracts_all 
                 if x['type'] == 'courier' 
-                and int(x['assignee_id']) == int(handler.alliance.alliance_id)
+                and int(x['assignee_id']) == int(handler.organization.id)
             ]
 
             # determine if contracts have changed by comparing their hashes
@@ -141,7 +151,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             ).hexdigest()
             if force_sync or new_version_hash != handler.version_hash:
                 logger.info(add_prefix(
-                    'Storing alliance update with {:,} contracts'.format(
+                    'Storing update with {:,} contracts'.format(
                         len(contracts)
                     ))
                 )                
@@ -226,7 +236,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 Contract.objects.update_pricing()
 
             else:
-                logger.info(add_prefix('Alliance contracts are unchanged.'))
+                logger.info(add_prefix('Contracts are unchanged.'))
                 success = True
 
             send_contract_notifications.delay()
@@ -242,14 +252,15 @@ def run_contracts_sync(force_sync = False, user_pk = None):
     except Exception as ex:
         success = False
         error_code = type(ex).__name__
-
+        
     else:
         success = True
 
     if user_pk:
         try:
-            message = 'Syncing of alliance contracts for "{}" {}.\n'.format(
-                handler.alliance,
+            message = 'Syncing of contracts for "{}" in operation mode "{}" {}.\n'.format(
+                handler.organization.name,
+                handler.operation_mode_friendly,
                 'completed successfully' if success else 'has failed'
             )
             if success:
@@ -262,7 +273,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             notify(
                 user=User.objects.get(pk=user_pk),
                 title='Freight: Contracts sync for {}: {}'.format(
-                    handler.alliance,
+                    handler.organization.name,
                     'OK' if success else 'FAILED'
                 ),
                 message=message,
@@ -272,7 +283,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             logger.error(add_prefix(
                 'An unexpected error ocurred while trying to '
                 + 'report to user: {}'. format(ex)
-            ))        
+            ))
     
     return success
 

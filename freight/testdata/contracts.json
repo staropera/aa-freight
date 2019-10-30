@@ -19,7 +19,7 @@
         "reward": 0.0,
         "start_location_id": 1022167642188,
         "status": "finished",
-        "title": "",
+        "title": "this contract should be ignored by all modes",
         "type": "item_exchange",
         "volume": 486000.0
     },        
@@ -43,7 +43,7 @@
         "reward": 100000000.0,
         "start_location_id": 1022167642188,
         "status": "outstanding",
-        "title": "",
+        "title": "my_alliance mode only",
         "type": "courier",
         "volume": 486000.0
     },
@@ -67,7 +67,7 @@
         "reward": 25000000.0,
         "start_location_id": 60003760,
         "status": "outstanding",
-        "title": "This is urgent please",
+        "title": "my_alliance mode only",
         "type": "courier",
         "volume": 115000.0
     },        
@@ -91,7 +91,7 @@
         "reward": 110000000.0,
         "start_location_id": 1022167642188,
         "status": "outstanding",
-        "title": "",
+        "title": "my_alliance mode only",
         "type": "courier",
         "volume": 486000.0
     },
@@ -115,7 +115,31 @@
         "reward": 24000000.0,
         "start_location_id": 60003760,
         "status": "outstanding",
-        "title": "This is urgent please",
+        "title": "my_alliance mode only",
+        "type": "courier",
+        "volume": 115000.0
+    },
+    {
+        "acceptor_id": 0,
+        "assignee_id": 1018389948,
+        "availability": "personal",
+        "buyout": null,
+        "collateral": 51000000.0,
+        "contract_id": 149409016,
+        "date_accepted": null,
+        "date_completed": null,
+        "date_expired": "2019-10-30T23:52:20Z",
+        "date_issued": "2019-10-02T23:52:20Z",
+        "days_to_complete": 3,
+        "end_location_id": 1022167642188,
+        "for_corporation": false,
+        "issuer_corporation_id": 98267621,
+        "issuer_id": 207150426,
+        "price": 50000000.0,
+        "reward": 24000000.0,
+        "start_location_id": 60003760,
+        "status": "outstanding",
+        "title": "my_corporation mode only",
         "type": "courier",
         "volume": 115000.0
     }
