@@ -199,7 +199,7 @@ class Pricing(models.Model):
     
     @property
     def name(self):
-        return '{} 🡘 {}'.format(
+        return '{} <-> {}'.format(
             self.start_location.solar_system_name,
             self.end_location.solar_system_name
         )
