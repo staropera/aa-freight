@@ -444,10 +444,7 @@ class ContractHandler(models.Model):
         ]
     
     class Meta:
-        verbose_name = 'Contract Handler [{}]'.format(
-             FREIGHT_OPERATION_MODE
-        )
-        verbose_name_plural = verbose_name
+        verbose_name_plural = verbose_name = 'Contract Handler'        
 
 
 class Contract(models.Model): 

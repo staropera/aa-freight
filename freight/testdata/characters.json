@@ -1,0 +1,42 @@
+[    
+    {        
+        "character_id": 90000001,
+        "character_name": "Bruce Wayne",
+        "corporation_id": 92000001,
+        "corporation_name": "Wayne Enterprise",
+        "corporation_ticker": "WE",
+        "alliance_id": 93000001,
+        "alliance_name": "Justice League",
+        "alliance_ticker": "JL"    
+    },
+    {        
+        "character_id": 90000002,
+        "character_name": "Robin",
+        "corporation_id": 92000001,
+        "corporation_name": "Wayne Enterprise",
+        "corporation_ticker": "WE",
+        "alliance_id": 93000001,
+        "alliance_name": "Justice League",
+        "alliance_ticker": "JL"    
+    },
+    {        
+        "character_id": 90000003,
+        "character_name": "Clark Kent",
+        "corporation_id": 92000002,
+        "corporation_name": "The PLanet",
+        "corporation_ticker": "",
+        "alliance_id": 93000001,
+        "alliance_name": "Justice League",
+        "alliance_ticker": "JL"    
+    },
+    {  
+        "character_id": 90000004,
+        "character_name": "Peter Parker",
+        "corporation_id": 92000002,
+        "corporation_name": "Daily Bugle",
+        "corporation_ticker": "DAB",
+        "alliance_id": 93000002,
+        "alliance_name": "The Avengers",
+        "alliance_ticker": "XXX"  
+    }
+]

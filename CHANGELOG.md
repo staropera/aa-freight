@@ -9,9 +9,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Here we write notes for upcoming releases.
 
-### Added
+## [0.5.2] - 2019-10-30
+
 ### Changed
+
+- Users can now see all active contracts even if they don't have a character in the organization running the freight service (they still need to respective permission though)
+- Current operation mode no longer shown on admin page
+
 ### Fixed
+
+- Contracts from non corp characters are no longer processes for my_corporation mode
 
 ## [0.5.1] - 2019-10-30
 

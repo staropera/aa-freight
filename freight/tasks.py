@@ -7,6 +7,7 @@ import json
 from celery import shared_task
 
 from django.db import transaction
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 
@@ -126,24 +127,47 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                     page=page
                 ).result()
             
-            """
-            # store to disk (for debugging)
-            with open('contracts.json', 'w', encoding='utf-8') as f:
-                json.dump(
-                    contracts_all, 
-                    f, 
-                    cls=DjangoJSONEncoder, 
-                    sort_keys=True, 
-                    indent=4
-                )
-            """
-            
-            # filter out relevant contracts
-            contracts = [
+            if settings.DEBUG:
+                # store to disk (for debugging)
+                with open('contracts_raw.json', 'w', encoding='utf-8') as f:
+                    json.dump(
+                        contracts_all, 
+                        f, 
+                        cls=DjangoJSONEncoder, 
+                        sort_keys=True, 
+                        indent=4
+                    )
+                        
+            # 1st filter: reduce to courier contracts assigned to handler org
+            contracts_courier = [
                 x for x in contracts_all 
                 if x['type'] == 'courier' 
                 and int(x['assignee_id']) == int(handler.organization.id)
             ]
+
+            # 2nd filter: remove contracts not in scope due to operation mode
+            contracts = list()
+            for contract in contracts_courier:
+                try:
+                    issuer = EveCharacter.objects.get(
+                        character_id=contract['issuer_id']
+                    )
+                except EveCharacter.DoesNotExist:
+                    issuer = EveCharacter.objects.create_character(
+                        character_id=contract['issuer_id']
+                    )
+                if handler.operation_mode == FREIGHT_OPERATION_MODE_MY_CORPORATION:
+                    in_scope = (int(issuer.corporation_id) == handler.organization_id)
+                elif handler.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
+                    in_scope = (int(issuer.alliance_id) == handler.organization_id)                        
+                else:
+                    raise NotImplementedError(
+                        'Unsupported operation mode: {}'.format(
+                            handler.operation_mode
+                        )
+                    )
+                if in_scope:
+                    contracts.append(contract)
 
             # determine if contracts have changed by comparing their hashes
             new_version_hash = hashlib.md5(
@@ -154,7 +178,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                     'Storing update with {:,} contracts'.format(
                         len(contracts)
                     ))
-                )                
+                )
                 
                 # update contracts in local DB
                 with transaction.atomic():                

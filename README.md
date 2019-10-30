@@ -108,7 +108,7 @@ Now you can access Alliance Auth and setup permissions for your users. See secti
 
 ### 6. Setup contract handler
 
-Finally you need to set the contract handler with the character that will be used for fetching the corporation or alliance contracts and related structures. Just click on "Set Contract Handler" and add the requested token. Note that only users with the appropriate permission will be able to see and use this function.
+Finally you need to set the contract handler with the character that will be used for fetching the corporation or alliance contracts and related structures. Just click on "Set Contract Handler" and add the requested token. Note that only users with the appropriate permission will be able to see and use this function. However, the respective character does not need any special corporation roles. Any corp member will work.
 
 Once a contract handler is set the app will start fetching contracts. Wait a minute and then reload the contract list page to see the result.
 
@@ -151,7 +151,7 @@ Name | Description | Default
 
 ## Operation Mode
 
-The operation mode defines which class of contracts are handled by the Alliance Freight. Note that you can see the currently configured operation mode on the admin page for the contract handler.
+The operation mode defines which class of contracts are handled by the Alliance Freight.
 
 The following operation modes are available:
 

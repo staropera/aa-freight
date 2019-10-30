@@ -60,18 +60,11 @@ def contract_list_user(request):
 def contract_list_data(request, category):
     """returns list of outstanding contracts for contract_list AJAX call"""
     
-    user_characters = [x.character for x in request.user.character_ownerships.select_related().all()]
     if category == CONTRACT_LIST_ACTIVE:
         if not request.user.has_perm('freight.view_contracts'):
             raise RuntimeError('Insufficient permissions')
-        else:
-            # identify all corporation and alliances this users characters are in            
-            corporation_ids = {x.corporation_id for x in user_characters} 
-            alliance_ids= {x.alliance_id for x in user_characters if x.alliance_id}
-            user_organization_ids = corporation_ids.union(alliance_ids)
-
-            contracts = Contract.objects.filter(
-                handler__organization__id__in=user_organization_ids,
+        else:            
+            contracts = Contract.objects.filter(                
                 status__in=[
                     Contract.STATUS_OUTSTANDING,
                     Contract.STATUS_IN_PROGRESS
@@ -81,7 +74,8 @@ def contract_list_data(request, category):
         if not request.user.has_perm('freight.use_calculator'):
             raise RuntimeError('Insufficient permissions')
         else:
-            contracts = Contract.objects.filter(                
+            user_characters = [x.character for x in request.user.character_ownerships.select_related().all()]
+            contracts = Contract.objects.filter(
                 issuer__in=user_characters
             ).select_related()
     else:

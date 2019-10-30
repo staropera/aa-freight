@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 from django.contrib.auth.models import User, Permission 
 from django.test import TestCase
 
-from allianceauth.eveonline.models import EveCharacter, EveAllianceInfo
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.authentication.models import CharacterOwnership
 from esi.models import Token, Scope
 from esi.errors import TokenExpiredError, TokenInvalidError
@@ -167,19 +167,51 @@ class TestRunContractsSync(TestCase):
     def setUpClass(cls):
         super(TestRunContractsSync, cls).setUpClass()
 
-        # create environment
+        # load test data
+        currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
+            inspect.currentframe()
+        )))
+
+        # ESI contracts        
+        with open(
+            currentdir + '/testdata/contracts.json', 
+            'r', 
+            encoding='utf-8'
+        ) as f:
+            cls.contracts = json.load(f)
+
+        # Eve characters
+        with open(
+            currentdir + '/testdata/characters.json', 
+            'r', 
+            encoding='utf-8'
+        ) as f:
+            characters = json.load(f)
+
+        for character in characters:
+            EveCharacter.objects.create(**character)
+            EveCorporationInfo.objects.get_or_create(
+                corporation_id=character['corporation_id'],
+                defaults={
+                    'corporation_name': character['corporation_name'],
+                    'corporation_ticker': character['corporation_ticker'],
+                    'member_count': 42
+                }
+            )
+
+        # setup test data
         # 1 user
-        cls.character = EveCharacter.objects.create_character(207150426)          
+        cls.character = EveCharacter.objects.get(character_id=90000001)
         
         cls.alliance = EveOrganization.objects.create(
-            id = 498125261,
+            id = cls.character.alliance_id,
             category = EveOrganization.CATEGORY_ALLIANCE,
-            name = 'Test Alliance Pleas Ignore'
+            name = cls.character.alliance_name
         )
         cls.corporation = EveOrganization.objects.create(
-            id = 1018389948,
+            id = cls.character.corporation_id,
             category = EveOrganization.CATEGORY_CORPORATION,
-            name = 'Dreddit'
+            name = cls.character.corporation_name
         )
         cls.user = User.objects.create_user(cls.character.character_name)
 
@@ -205,16 +237,6 @@ class TestRunContractsSync(TestCase):
             category_id=65
         )      
         
-        # ESI contracts
-        currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-            inspect.currentframe()
-        )))
-        with open(
-            currentdir + '/testdata/contracts.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            cls.contracts = json.load(f)
 
 
     # identify wrong operation mode
@@ -317,14 +339,16 @@ class TestRunContractsSync(TestCase):
 
 
     # normal synch of new contracts, mode my_alliance
+    # freight.tests.TestRunContractsSync.test_run_manager_sync_normal_my_alliance    
     @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch('freight.tasks.send_contract_notifications')
     @patch('freight.tasks.esi_client_factory')
     def test_run_manager_sync_normal_my_alliance(
             self, 
             mock_esi_client_factory, 
-            mock_send_contract_notifications
+            mock_send_contract_notifications            
         ):
+        
         # create mocks
         def get_contracts_page(*args, **kwargs):
             """returns single page for operation.result(), first with header"""
@@ -339,7 +363,7 @@ class TestRunContractsSync(TestCase):
                 return [self.contracts[start:stop], mock_response]
             else:
                 return self.contracts[start:stop]
-        
+
         mock_client = Mock()
         mock_operation = Mock()
         mock_operation.result.side_effect = get_contracts_page        

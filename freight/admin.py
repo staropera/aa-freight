@@ -52,7 +52,7 @@ class ContractHandlerAdmin(admin.ModelAdmin):
                 text
             )
     
-    start_sync.short_description = "Sync contracts with Eve Online server"
+    start_sync.short_description = "Fetch contracts from Eve Online server"
 
     def send_notifications(self, request, queryset):
                         

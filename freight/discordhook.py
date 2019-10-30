@@ -244,7 +244,7 @@ class Webhook:
 
         # send request to webhook
         logger.info('Trying to send message to {}'.format(self._url))
-        logger.info('Payload to {}: {}'.format(self._url, payload))
+        logger.debug('Payload to {}: {}'.format(self._url, payload))
         res = requests.post(
             url=self._url, 
             params={'wait': wait_for_response},
