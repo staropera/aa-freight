@@ -15,6 +15,8 @@ Here we write notes for upcoming releases.
 
 ## [0.5.1] - 2019-10-30
 
+You need to run migrations when updating to this version.
+
 ### Fixed
 
 - Trying to create a new route leads to an internal error 500: (`MySQLdb._exceptions.OperationalError: (1366, "Incorrect string value`...)
