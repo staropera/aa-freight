@@ -15,8 +15,10 @@ from esi.models import Token, Scope
 from esi.errors import TokenExpiredError, TokenInvalidError
 
 from . import tasks
+from .app_settings import *
 from .models import *
 from .templatetags.freight_filters import power10, formatnumber
+
 
 # reconfigure logger so we get logging from tasks to console during test
 c_handler = logging.StreamHandler(sys.stdout)
@@ -168,10 +170,16 @@ class TestRunContractsSync(TestCase):
         # create environment
         # 1 user
         cls.character = EveCharacter.objects.create_character(207150426)          
-        cls.organization = EveOrganization.objects.create(
+        
+        cls.alliance = EveOrganization.objects.create(
             id = 498125261,
             category = EveOrganization.CATEGORY_ALLIANCE,
-            name = 'Dummy Alliance'
+            name = 'Test Alliance Pleas Ignore'
+        )
+        cls.corporation = EveOrganization.objects.create(
+            id = 1018389948,
+            category = EveOrganization.CATEGORY_CORPORATION,
+            name = 'Dreddit'
         )
         cls.user = User.objects.create_user(cls.character.character_name)
 
@@ -179,7 +187,7 @@ class TestRunContractsSync(TestCase):
             character=cls.character,
             owner_hash='x1',
             user=cls.user
-        )
+        )        
 
         # Locations
         Location.objects.create(
@@ -209,10 +217,110 @@ class TestRunContractsSync(TestCase):
             cls.contracts = json.load(f)
 
 
-    # normal synch of new contracts
+    # identify wrong operation mode
+    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_MY_CORPORATION)
+    def test_run_wrong_operation_mode(self):
+        handler = ContractHandler.objects.create(
+            organization=self.alliance,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+            character=self.main_ownership,
+        )
+        self.assertFalse(
+            tasks.run_contracts_sync()
+        )
+        handler.refresh_from_db()
+        self.assertEqual(
+            handler.last_error, 
+            ContractHandler.ERROR_OPERATION_MODE_MISMATCH
+        )
+
+
+    # run without char    
+    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_MY_ALLIANCE)
+    def test_run_no_sync_char(self):
+        handler = ContractHandler.objects.create(
+            organization=self.alliance,            
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+        )
+        self.assertFalse(
+            tasks.run_contracts_sync()
+        )
+        handler.refresh_from_db()
+        self.assertEqual(
+            handler.last_error, 
+            ContractHandler.ERROR_NO_CHARACTER
+        )
+
+    
+    # test expired token
+    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_MY_ALLIANCE)
+    @patch('freight.tasks.Token')    
+    def test_run_manager_sync_expired_token(
+            self,             
+            mock_Token
+        ):                
+        
+        mock_Token.objects.filter.side_effect = TokenExpiredError()        
+                        
+        # create test data
+        p = Permission.objects.filter(            
+            codename='setup_contract_handler'
+        ).first()
+        self.user.user_permissions.add(p)
+        self.user.save()
+        handler = ContractHandler.objects.create(
+            organization=self.alliance,
+            character=self.main_ownership,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+        )
+        
+        # run manager sync
+        self.assertFalse(tasks.run_contracts_sync())
+
+        handler.refresh_from_db()
+        self.assertEqual(
+            handler.last_error, 
+            ContractHandler.ERROR_TOKEN_EXPIRED            
+        )
+
+    
+    # test invalid token
+    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_MY_ALLIANCE)
+    @patch('freight.tasks.Token')
+    def test_run_manager_sync_invalid_token(
+            self,             
+            mock_Token
+        ):                
+        
+        mock_Token.objects.filter.side_effect = TokenInvalidError()        
+                        
+        # create test data
+        p = Permission.objects.filter(            
+            codename='setup_contract_handler'
+        ).first()
+        self.user.user_permissions.add(p)
+        self.user.save()
+        handler = ContractHandler.objects.create(
+            organization=self.alliance,
+            character=self.main_ownership,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+        )
+        
+        # run manager sync
+        self.assertFalse(tasks.run_contracts_sync())
+
+        handler.refresh_from_db()
+        self.assertEqual(
+            handler.last_error, 
+            ContractHandler.ERROR_TOKEN_INVALID            
+        )
+
+
+    # normal synch of new contracts, mode my_alliance
+    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch('freight.tasks.send_contract_notifications')
     @patch('freight.tasks.esi_client_factory')
-    def test_run_manager_sync_normal(
+    def test_run_manager_sync_normal_my_alliance(
             self, 
             mock_esi_client_factory, 
             mock_send_contract_notifications
@@ -239,7 +347,7 @@ class TestRunContractsSync(TestCase):
             return_value=mock_operation
         )
         mock_esi_client_factory.return_value = mock_client        
-        mock_send_contract_notifications.delay = Mock()
+        mock_send_contract_notifications.delay = Mock()        
 
         # create test data
         p = Permission.objects.filter(            
@@ -248,8 +356,9 @@ class TestRunContractsSync(TestCase):
         self.user.user_permissions.add(p)
         self.user.save()
         handler = ContractHandler.objects.create(
-            organization=self.organization,
-            character=self.main_ownership
+            organization=self.alliance,
+            character=self.main_ownership,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE
         )
         
         # run manager sync
@@ -272,79 +381,69 @@ class TestRunContractsSync(TestCase):
             4
         )
 
+    # normal synch of new contracts, mode my_corporation
+    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_MY_CORPORATION)
+    @patch('freight.tasks.send_contract_notifications')
+    @patch('freight.tasks.esi_client_factory')
+    def test_run_manager_sync_normal_my_corporation(
+            self, 
+            mock_esi_client_factory, 
+            mock_send_contract_notifications
+        ):
+        # create mocks
+        def get_contracts_page(*args, **kwargs):
+            """returns single page for operation.result(), first with header"""
+            page_size = 2
+            mock_calls_count = len(mock_operation.mock_calls)
+            start = (mock_calls_count - 1) * page_size
+            stop = start + page_size
+            pages_count = int(math.ceil(len(self.contracts) / page_size))
+            if mock_calls_count == 1:
+                mock_response = Mock()
+                mock_response.headers = {'x-pages': pages_count}
+                return [self.contracts[start:stop], mock_response]
+            else:
+                return self.contracts[start:stop]
         
-    # run without char    
-    def test_run_no_sync_char(self):
-        handler = ContractHandler.objects.create(
-            organization=self.organization
+        mock_client = Mock()
+        mock_operation = Mock()
+        mock_operation.result.side_effect = get_contracts_page        
+        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
+            return_value=mock_operation
         )
-        self.assertFalse(
+        mock_esi_client_factory.return_value = mock_client        
+        mock_send_contract_notifications.delay = Mock()        
+
+        # create test data
+        p = Permission.objects.filter(            
+            codename='setup_contract_handler'
+        ).first()
+        self.user.user_permissions.add(p)
+        self.user.save()
+        handler = ContractHandler.objects.create(
+            organization=self.corporation,
+            character=self.main_ownership,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_CORPORATION
+        )
+        
+        # run manager sync
+        self.assertTrue(
             tasks.run_contracts_sync()
         )
-        handler.refresh_from_db()
-        self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_NO_CHARACTER            
-        )
-
-    
-    # test expired token
-    @patch('freight.tasks.Token')    
-    def test_run_manager_sync_expired_token(
-            self,             
-            mock_Token
-        ):                
-        
-        mock_Token.objects.filter.side_effect = TokenExpiredError()        
-                        
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
-        handler = ContractHandler.objects.create(
-            organization=self.organization,
-            character=self.main_ownership
-        )
-        
-        # run manager sync
-        self.assertFalse(tasks.run_contracts_sync())
 
         handler.refresh_from_db()
         self.assertEqual(
             handler.last_error, 
-            ContractHandler.ERROR_TOKEN_EXPIRED            
-        )
-
-    
-    # test invalid token
-    @patch('freight.tasks.Token')    
-    def test_run_manager_sync_invalid_token(
-            self,             
-            mock_Token
-        ):                
-        
-        mock_Token.objects.filter.side_effect = TokenInvalidError()        
-                        
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
-        handler = ContractHandler.objects.create(
-            organization=self.organization,
-            character=self.main_ownership
+            ContractHandler.ERROR_NONE            
         )
         
-        # run manager sync
-        self.assertFalse(tasks.run_contracts_sync())
+        # should have tried to fetch contracts
+        self.assertEqual(mock_operation.result.call_count, 3)
 
-        handler.refresh_from_db()
+        # should be number of contracts stored in DV        
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_TOKEN_INVALID            
+            Contract.objects.filter(handler=handler).count(),
+            1
         )
 
 
