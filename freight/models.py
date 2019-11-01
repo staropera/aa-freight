@@ -598,14 +598,16 @@ class Contract(models.Model):
     def send_notification(self):
         """sends notification about this contract to the DISCORD webhook"""
         if FREIGHT_DISCORD_WEBHOOK_URL:                        
-            if FREIGHT_DISCORD_AVATAR_URL:
-                avatar_url = FREIGHT_DISCORD_AVATAR_URL
-            else:    
+            if FREIGHT_DISCORD_DISABLE_BRANDING:
+                username = None
+                avatar_url = None
+            else:
+                username = 'Alliance Freight'
                 avatar_url = self.handler.organization.avatar_url
 
             hook = Webhook(
                 FREIGHT_DISCORD_WEBHOOK_URL, 
-                username='Alliance Freight',
+                username=username,
                 avatar_url=avatar_url
             )            
             # reverse('freight:contract_list')

@@ -7,10 +7,17 @@ FREIGHT_DISCORD_WEBHOOK_URL = getattr(
     None
 )
 
-# Will be shown as avatar icon for Discord notifications if defined
-FREIGHT_DISCORD_AVATAR_URL = getattr(
+# Will be shown as "user name" instead of "Alliance Freight" for notifications if defined
+FREIGHT_DISCORD_AVATAR_NAME = getattr(
     settings, 
-    'FREIGHT_DISCORD_AVATAR_URL', 
+    'FREIGHT_DISCORD_AVATAR_NAME', 
+    None
+)
+
+# when set true will no longer set name and avatar for webhooks
+FREIGHT_DISCORD_DISABLE_BRANDING = getattr(
+    settings, 
+    'FREIGHT_DISCORD_DISABLE_BRANDING', 
     None
 )
 

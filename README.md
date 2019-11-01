@@ -2,8 +2,6 @@
 
 This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) (AA) that adds a central freight service.
 
-![License](https://img.shields.io/badge/license-MIT-green) ![python](https://img.shields.io/badge/python-3.5-informational) ![django](https://img.shields.io/badge/django-2.2-informational)
-
 ## Contents
 
 - [Overview](#overview)
@@ -144,7 +142,7 @@ Here is a list of available settings for this app. They can be configured by add
 
 Name | Description | Default
 -- | -- | --
-`FREIGHT_DISCORD_AVATAR_URL`| URL to an image file to override the default avatar on Discord notifications, which a custom logo | Eve alliance or corporation logo from the contract handler
+`FREIGHT_DISCORD_DISABLE_BRANDING`| Turns off setting the name and avatar url for the webhook | Notifications will be posted by a bot called "Alliance Freight" with the logo of your organization as avatar image
 `FREIGHT_DISCORD_PING_TYPE`| Defines if and how notifications will ping on Discord by adding mentions: Valid values are: `@here` or `@everyone`  | No ping
 `FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications should appear. | Deactivated
 `FREIGHT_OPERATION_MODE`| See section [Operation Mode](#operation-mode) for details.<br> Note that switching operation modes requires you to remove the existing contract handler with all its contracts and then setup a new contract handler | `'my_alliance'`

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Here we write notes for upcoming releases.
 
+## [0.6.0] - 2019-11-01
+
+### Added
+
+- Automatic branding of webhook can not be turned off with a new setting ([#10](https://gitlab.com/ErikKalkoken/aa-freight/issues/10))
+
+### Changed
+
+- Removed FREIGHT_DISCORD_AVATAR_URL setting, since the same effect can not now be achieved by turning off branding
+
 ## [0.5.2] - 2019-10-30
 
 ### Changed
