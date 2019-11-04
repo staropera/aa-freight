@@ -343,7 +343,7 @@ class TestRunContractsSync(TestCase):
     @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch('freight.tasks.send_contract_notifications')
     @patch('freight.tasks.esi_client_factory')
-    def test_run_manager_sync_normal_my_alliance(
+    def test_sync_my_alliance_contracts_only(
             self, 
             mock_esi_client_factory, 
             mock_send_contract_notifications            
@@ -397,19 +397,19 @@ class TestRunContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 3)
+        self.assertEqual(mock_operation.result.call_count, 4)
 
-        # should be number of contracts stored in DV        
-        self.assertEqual(
-            Contract.objects.filter(handler=handler).count(),
-            4
+        # should only contain the right contract
+        self.assertCountEqual(
+            [x['contract_id'] for x in Contract.objects.values('contract_id')],
+            [149409005, 149409014, 149409006, 149409015]
         )
 
     # normal synch of new contracts, mode my_corporation
-    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_MY_CORPORATION)
+    @patch('freight.tasks.FREIGHT_OPERATION_MODE',FREIGHT_OPERATION_MODE_MY_CORPORATION)
     @patch('freight.tasks.send_contract_notifications')
     @patch('freight.tasks.esi_client_factory')
-    def test_run_manager_sync_normal_my_corporation(
+    def test_sync_my_corporation_contracts_only(
             self, 
             mock_esi_client_factory, 
             mock_send_contract_notifications
@@ -462,12 +462,80 @@ class TestRunContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 3)
+        self.assertEqual(mock_operation.result.call_count, 4)
 
-        # should be number of contracts stored in DV        
+        # should only contain the right contract
+        self.assertCountEqual(
+            [x['contract_id'] for x in Contract.objects.values('contract_id')],
+            [149409016]
+        )
+
+    # normal synch of new contracts, mode my_corporation
+    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE)
+    @patch('freight.tasks.send_contract_notifications')
+    @patch('freight.tasks.esi_client_factory')
+    def test_sync_corp_in_alliance_contracts_only(
+            self, 
+            mock_esi_client_factory, 
+            mock_send_contract_notifications
+        ):
+        # create mocks
+        def get_contracts_page(*args, **kwargs):
+            """returns single page for operation.result(), first with header"""
+            page_size = 2
+            mock_calls_count = len(mock_operation.mock_calls)
+            start = (mock_calls_count - 1) * page_size
+            stop = start + page_size
+            pages_count = int(math.ceil(len(self.contracts) / page_size))
+            if mock_calls_count == 1:
+                mock_response = Mock()
+                mock_response.headers = {'x-pages': pages_count}
+                return [self.contracts[start:stop], mock_response]
+            else:
+                return self.contracts[start:stop]
+        
+        mock_client = Mock()
+        mock_operation = Mock()
+        mock_operation.result.side_effect = get_contracts_page        
+        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
+            return_value=mock_operation
+        )
+        mock_esi_client_factory.return_value = mock_client        
+        mock_send_contract_notifications.delay = Mock()        
+
+        # create test data
+        p = Permission.objects.filter(            
+            codename='setup_contract_handler'
+        ).first()
+        self.user.user_permissions.add(p)
+        self.user.save()
+        handler = ContractHandler.objects.create(
+            organization=self.corporation,
+            character=self.main_ownership,
+            operation_mode=FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
+        )
+        
+        # run manager sync
+        self.assertTrue(
+            tasks.run_contracts_sync()
+        )
+
+        handler.refresh_from_db()
         self.assertEqual(
-            Contract.objects.filter(handler=handler).count(),
-            1
+            handler.last_error, 
+            ContractHandler.ERROR_NONE            
+        )
+        
+        # should have tried to fetch contracts
+        self.assertEqual(mock_operation.result.call_count, 4)
+
+        # should only contain the right contract
+        contract_ids = [
+            x['contract_id'] for x in Contract.objects.values('contract_id')
+        ]
+        self.assertCountEqual(
+            contract_ids,
+            [149409016, 149409017]
         )
 
 

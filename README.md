@@ -149,14 +149,17 @@ Name | Description | Default
 
 ## Operation Mode
 
-The operation mode defines which class of contracts are handled by the Alliance Freight.
+The operation mode defines which contracts are processed by the Alliance Freight. For example you can define that only contracts assigned to your alliance are processed. Any courier contract that are not in scope of the current operation mode will be ignored by the freight app and e.g. not show up in the contract list.
 
 The following operation modes are available:
 
 Name | Description
 -- | -- | --
-`'my_alliance'`| contracts available to members of my own alliance only
-`'my_corporation'`| contracts available to members of my own corporation only
+`'my_alliance'`| contracts assigned to my alliance by an alliance member
+`'my_corporation'`| contracts assigned to my corporation by a corp member
+`'corp_in_alliance'`| contracts assigned to designated corporation within the alliance by an alliance member
+
+Note that changing the operation mode later will require you to remove the current contract handler with all its contracts and setup a new contract handler.
 
 ## Permissions
 

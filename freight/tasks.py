@@ -156,10 +156,21 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                     issuer = EveCharacter.objects.create_character(
                         character_id=contract['issuer_id']
                     )
+                
+                assignee_id = int(contract['assignee_id'])
+                issuer_corporation_id = int(issuer.corporation_id)
+                issuer_alliance_id = int(issuer.alliance_id) if issuer.alliance_id else None
+                
                 if handler.operation_mode == FREIGHT_OPERATION_MODE_MY_CORPORATION:
-                    in_scope = (int(issuer.corporation_id) == handler.organization_id)
+                    in_scope = assignee_id == issuer_corporation_id
+                
                 elif handler.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
-                    in_scope = (int(issuer.alliance_id) == handler.organization_id)                        
+                    in_scope = issuer_alliance_id == assignee_id
+                
+                elif handler.operation_mode == FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE:
+                    in_scope = (issuer_alliance_id ==
+                        int(handler.character.character.alliance_id))
+                
                 else:
                     raise NotImplementedError(
                         'Unsupported operation mode: {}'.format(

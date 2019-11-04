@@ -32,10 +32,12 @@ FREIGHT_DISCORD_PING_TYPE = getattr(
 # modes of operation for Alliance Freight
 FREIGHT_OPERATION_MODE_MY_ALLIANCE = 'my_alliance'
 FREIGHT_OPERATION_MODE_MY_CORPORATION = 'my_corporation'
+FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE = 'corp_in_alliance'
 
 FREIGHT_OPERATION_MODES = [
     (FREIGHT_OPERATION_MODE_MY_ALLIANCE, 'My Alliance'),
-    (FREIGHT_OPERATION_MODE_MY_CORPORATION, 'My Corporation'),        
+    (FREIGHT_OPERATION_MODE_MY_CORPORATION, 'My Corporation'),
+    (FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE, 'Corporation in my Alliance'),
 ]
 
 if (hasattr(settings, 'FREIGHT_OPERATION_MODE') 

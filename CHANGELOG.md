@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Here we write notes for upcoming releases.
 
+## [0.7.0] - 2019-11-04
+
+### Added
+
+- New operation mode: "Corporation in my Alliance": all contracts assigned to designated corporation within the alliance by an alliance member
+
 ## [0.6.0] - 2019-11-01
 
 ### Added

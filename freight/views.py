@@ -234,7 +234,8 @@ def setup_contract_handler(request, token):
     success = True
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
-    if (FREIGHT_OPERATION_MODE in [FREIGHT_OPERATION_MODE_MY_ALLIANCE]
+    if ((EveOrganization.get_category_for_operation_mode(FREIGHT_OPERATION_MODE)
+        == EveOrganization.CATEGORY_ALLIANCE)
             and token_char.alliance_id is None):
         messages_plus.error(
             request, 
@@ -305,7 +306,7 @@ def setup_contract_handler(request, token):
         )        
         messages_plus.success(
             request, 
-            'Contract Handler setup completed for '
+            'Contract Handler setup started for '
             + '<strong>{}</strong> organization '.format(organization.name)
             + 'with <strong>{}</strong> as sync character. '.format(
                     handler.character.character.character_name, 

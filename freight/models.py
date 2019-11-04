@@ -357,10 +357,10 @@ class EveOrganization(models.Model):
     @classmethod
     def get_category_for_operation_mode(cls, mode):
         """return organization category related to given operation mode"""
-        if mode in [FREIGHT_OPERATION_MODE_MY_CORPORATION]:
-            return cls.CATEGORY_CORPORATION
-        else:
+        if mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
             return cls.CATEGORY_ALLIANCE
+        else:
+            return cls.CATEGORY_CORPORATION
 
 
 class ContractHandler(models.Model):
