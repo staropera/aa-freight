@@ -403,34 +403,34 @@ def statistics_routes_data(request):
 
     cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
         - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
-    subfilter = Q(contract__status__exact=Contract.STATUS_FINISHED) & Q(contract__date_accepted__gte=cutoff_date)
-    pricing_data = Pricing.objects.select_related() \
-        .annotate(contracts=Count('contract', filter=subfilter)) \
-        .annotate(rewards=Sum('contract__reward', filter=subfilter)) \
-        .annotate(collaterals=Sum('contract__collateral', filter=subfilter)) \
-        .annotate(pilots=Count('contract__issuer', distinct=True, filter=subfilter)) \
-        .annotate(customers=Count('contract__acceptor', distinct=True, filter=subfilter))
+    finished_contracts = Q(contract__status__exact=Contract.STATUS_FINISHED) & Q(contract__date_completed__gte=cutoff_date)
+    route_totals = Pricing.objects.select_related() \
+        .annotate(contracts_count=Count('contract', filter=finished_contracts)) \
+        .annotate(rewards=Sum('contract__reward', filter=finished_contracts)) \
+        .annotate(collaterals=Sum('contract__collateral', filter=finished_contracts)) \
+        .annotate(pilots=Count('contract__issuer', distinct=True, filter=finished_contracts)) \
+        .annotate(customers=Count('contract__acceptor', distinct=True, filter=finished_contracts))
 
     totals = list()
-    for pricing in pricing_data:
+    for route in route_totals:
         
-        if pricing.rewards:
-            rewards = pricing.rewards / 1000000
+        if route.rewards:
+            rewards = route.rewards / 1000000
         else:
             rewards = 0
 
-        if pricing.collaterals:
-            collaterals = pricing.collaterals / 1000000
+        if route.collaterals:
+            collaterals = route.collaterals / 1000000
         else:
             collaterals = 0
         
         totals.append({
-            'name': pricing.name,
-            'contracts': '{:,}'.format(pricing.contracts),
-            'rewards': '{:,.1f}'.format(rewards),
-            'collaterals': '{:,.1f}'.format(collaterals),
-            'pilots': '{:,}'.format(pricing.pilots),
-            'customers': '{:,}'.format(pricing.customers),
+            'name': route.name,
+            'contracts': '{:,}'.format(route.contracts_count),
+            'rewards': '{:,.0f}'.format(rewards),
+            'collaterals': '{:,.0f}'.format(collaterals),
+            'pilots': '{:,}'.format(route.pilots),
+            'customers': '{:,}'.format(route.customers),
         })
 
     return JsonResponse(totals, safe=False)
@@ -443,30 +443,30 @@ def statistics_pilots_data(request):
 
     cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
         - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
-    subfilter = Q(contract_acceptor__status__exact=Contract.STATUS_FINISHED) & Q(contract_acceptor__date_accepted__gte=cutoff_date)
-    pricing_data = EveCharacter.objects.exclude(contract_acceptor__exact=None).select_related() \
-        .annotate(contracts=Count('contract_acceptor', filter=subfilter)) \
-        .annotate(rewards=Sum('contract_acceptor__reward', filter=subfilter)) \
-        .annotate(collaterals=Sum('contract_acceptor__collateral', filter=subfilter))        
+    finished_contracts = Q(contract_acceptor__status__exact=Contract.STATUS_FINISHED) & Q(contract_acceptor__date_completed__gte=cutoff_date)
+    pilot_totals = EveCharacter.objects.exclude(contract_acceptor__exact=None).select_related() \
+        .annotate(contracts=Count('contract_acceptor', filter=finished_contracts)) \
+        .annotate(rewards=Sum('contract_acceptor__reward', filter=finished_contracts)) \
+        .annotate(collaterals=Sum('contract_acceptor__collateral', filter=finished_contracts))        
 
     totals = list()
-    for pricing in pricing_data:
+    for pilot in pilot_totals:
         
-        if pricing.rewards:
-            rewards = pricing.rewards / 1000000
+        if pilot.rewards:
+            rewards = pilot.rewards / 1000000
         else:
             rewards = 0
 
-        if pricing.collaterals:
-            collaterals = pricing.collaterals / 1000000
+        if pilot.collaterals:
+            collaterals = pilot.collaterals / 1000000
         else:
             collaterals = 0
         
         totals.append({
-            'name': pricing.character_name,
-            'contracts': '{:,}'.format(pricing.contracts),
-            'rewards': '{:,.1f}'.format(rewards),
-            'collaterals': '{:,.1f}'.format(collaterals),            
+            'name': pilot.character_name,
+            'contracts': '{:,}'.format(pilot.contracts),
+            'rewards': '{:,.0f}'.format(rewards),
+            'collaterals': '{:,.0f}'.format(collaterals),            
         })
 
     return JsonResponse(totals, safe=False)
