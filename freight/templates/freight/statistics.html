@@ -1,0 +1,108 @@
+{% extends 'freight/base.html' %}
+{% load i18n %}
+{% load humanize %}
+{% load static %}
+{% load freight_filters %}
+
+{% block details %}
+    
+    <div class="panel panel-primary">   
+        <div class="panel-heading">
+            <h3 class="panel-title">Routes</h3>
+        </div>
+        <div class="panel-body">        
+            <table class="table table-striped" id="tab_routes">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Contracts</th>
+                        <th>Rewards</th>
+                        <th>Collaterals</th>
+                        <th>Pilots</th>
+                        <th>Customers</th>
+                    </tr>
+                </thead>
+                <tbody>                   
+                </tbody>                
+            </table>
+        </div>
+    </div>
+
+    <div class="panel panel-primary">   
+        <div class="panel-heading">
+            <h3 class="panel-title">Pilots</h3>
+        </div>
+        <div class="panel-body">        
+            <table class="table table-striped" id="tab_pilots">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Contracts</th>
+                        <th>Rewards</th>
+                        <th>Collaterals</th>
+                        <th>Pilots</th>
+                        <th>Customers</th>
+                    </tr>
+                </thead>
+                <tbody>                   
+                </tbody>                
+            </table>
+        </div>
+    </div>
+    
+{% endblock %}
+
+{% block extra_javascript %}
+    {% include 'bundles/datatables-js.html' %}    
+        
+{% endblock %}
+
+{% block extra_css %}
+    {% include 'bundles/datatables-css.html' %}    
+
+    <link href="{% static 'freight/contracts.css' %}" type="text/css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_script %}
+    $(document).ready(function(){
+        $('#tab_routes').DataTable({
+            ajax: {
+                url: '{% url 'freight:statistics_routes_data' %}',
+                dataSrc: '',
+                cache: false
+            },
+
+            columns: [
+                { data: 'name' },
+                { data: 'contracts' },
+                { data: 'rewards' },
+                { data: 'collaterals' },
+                { data: 'pilots' },
+                { data: 'customers' }                
+            ],
+
+            order: [ [ 0, "desc" ] ]
+
+        });
+
+        $('#tab_pilots').DataTable({
+            ajax: {
+                url: '{% url 'freight:statistics_pilots_data' %}',
+                dataSrc: '',
+                cache: false
+            },
+
+            columns: [
+                { data: 'name' },
+                { data: 'contracts' },
+                { data: 'rewards' },
+                { data: 'collaterals' },
+                { data: 'pilots' },
+                { data: 'customers' }                
+            ],
+
+            order: [ [ 0, "desc" ] ]
+
+        });
+    });
+{% endblock %}

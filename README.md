@@ -154,12 +154,10 @@ The operation mode defines which contracts are processed by the Alliance Freight
 The following operation modes are available:
 
 Name | Description
--- | -- 
+-- | --
 `'my_alliance'`| contracts assigned to my alliance by an alliance member
 `'my_corporation'`| contracts assigned to my corporation by a corp member
 `'corp_in_alliance'`| contracts assigned to designated corporation within the alliance by an alliance member
-
-Note that changing the operation mode later will require you to remove the current contract handler with all its contracts and setup a new contract handler.
 
 ## Permissions
 

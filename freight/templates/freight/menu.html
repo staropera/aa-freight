@@ -32,6 +32,13 @@
                         </a> 
                     </li>
                 {% endif %}
+                {% if perms.freight.view_contracts %}
+                    <li class="{% navactive request 'freight:statistics' %}">
+                        <a href="{% url 'freight:statistics' %}">
+                            Statistics
+                        </a> 
+                    </li>
+                {% endif %}
             </ul>
             <ul class="nav navbar-nav navbar-right"> 
                 {% if perms.freight.add_location %}

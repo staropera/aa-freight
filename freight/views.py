@@ -6,6 +6,7 @@ from django.forms import HiddenInput
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse, Http404, JsonResponse
+from django.db.models import Count, Sum
 from django.shortcuts import render, redirect
 from django.template import loader
 
@@ -381,3 +382,76 @@ def add_location_2(request):
             'token_char_name': token.character_name
         }
     )
+
+@login_required
+@permission_required('freight.view_contracts')
+def statistics(request):
+
+    context = {
+        'page_title': 'Statistics'
+    }        
+    return render(request, 'freight/statistics.html', context)
+
+
+@login_required
+@permission_required('freight.view_contracts')
+def statistics_routes_data(request):
+    """returns totals for statistics as JSON"""
+
+    pricing_data = Pricing.objects.select_related().annotate(Count('contract')).annotate(Sum('contract__reward')).annotate(Sum('contract__collateral')).annotate(Count('contract__issuer', distinct=True)).annotate(Count('contract__acceptor', distinct=True))
+
+    totals = list()
+    for pricing in pricing_data:
+        
+        if pricing.contract__reward__sum:
+            rewards = pricing.contract__reward__sum / 1000000000
+        else:
+            rewards = 0
+
+        if pricing.contract__collateral__sum:
+            collaterals = pricing.contract__collateral__sum / 1000000000
+        else:
+            collaterals = 0
+        
+        totals.append({
+            'name': pricing.name,
+            'contracts': '{:,}'.format(pricing.contract__count),
+            'rewards': '{:,.1f}'.format(rewards),
+            'collaterals': '{:,.1f}'.format(collaterals),
+            'pilots': '{:,}'.format(pricing.contract__acceptor__count),
+            'customers': '{:,}'.format(pricing.contract__issuer__count),
+        })
+
+    return JsonResponse(totals, safe=False)
+
+
+@login_required
+@permission_required('freight.view_contracts')
+def statistics_pilots_data(request):
+    """returns totals for statistics as JSON"""
+
+    pricing_data = Pricing.objects.select_related().annotate(Count('contract')).annotate(Sum('contract__reward')).annotate(Sum('contract__collateral')).annotate(Count('contract__issuer', distinct=True)).annotate(Count('contract__acceptor', distinct=True))
+
+    totals = list()
+    for pricing in pricing_data:
+        
+        if pricing.contract__reward__sum:
+            rewards = pricing.contract__reward__sum / 1000000000
+        else:
+            rewards = 0
+
+        if pricing.contract__collateral__sum:
+            collaterals = pricing.contract__collateral__sum / 1000000000
+        else:
+            collaterals = 0
+        
+        totals.append({
+            'name': pricing.name,
+            'contracts': '{:,}'.format(pricing.contract__count),
+            'rewards': '{:,.1f}'.format(rewards),
+            'collaterals': '{:,.1f}'.format(collaterals),
+            'pilots': '{:,}'.format(pricing.contract__acceptor__count),
+            'customers': '{:,}'.format(pricing.contract__issuer__count),
+        })
+
+    return JsonResponse(totals, safe=False)
