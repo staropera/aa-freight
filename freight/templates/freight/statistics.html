@@ -16,8 +16,8 @@
                     <tr>
                         <th>Name</th>
                         <th>Contracts</th>
-                        <th>Rewards</th>
-                        <th>Collaterals</th>
+                        <th>Rewards<br>M&nbsp;ISK</th>
+                        <th>Collaterals<br>M&nbsp;ISK</th>
                         <th>Pilots</th>
                         <th>Customers</th>
                     </tr>
@@ -38,10 +38,8 @@
                     <tr>
                         <th>Name</th>
                         <th>Contracts</th>
-                        <th>Rewards</th>
-                        <th>Collaterals</th>
-                        <th>Pilots</th>
-                        <th>Customers</th>
+                        <th>Rewards<br>M&nbsp;ISK</th>
+                        <th>Collaterals<br>M&nbsp;ISK</th>                     
                     </tr>
                 </thead>
                 <tbody>                   
@@ -49,6 +47,10 @@
             </table>
         </div>
     </div>
+
+    <p class="text-muted">
+        Statistics calculated for all finished contracts not older than {{ max_days }} days
+    </p>  
     
 {% endblock %}
 
@@ -81,7 +83,7 @@
                 { data: 'customers' }                
             ],
 
-            order: [ [ 0, "desc" ] ]
+            order: [ [ 1, "desc" ], [ 2, "desc" ] ]
 
         });
 
@@ -96,12 +98,10 @@
                 { data: 'name' },
                 { data: 'contracts' },
                 { data: 'rewards' },
-                { data: 'collaterals' },
-                { data: 'pilots' },
-                { data: 'customers' }                
+                { data: 'collaterals' }              
             ],
 
-            order: [ [ 0, "desc" ] ]
+            order: [ [ 1, "desc" ], [ 2, "desc" ] ]
 
         });
     });

@@ -7,7 +7,9 @@ import sys
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User, Permission 
+from django.urls import reverse
 from django.test import TestCase
+from django.test.client import Client
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.authentication.models import CharacterOwnership
@@ -18,7 +20,7 @@ from . import tasks
 from .app_settings import *
 from .models import *
 from .templatetags.freight_filters import power10, formatnumber
-
+from .views import statistics_routes_data
 
 # reconfigure logger so we get logging from tasks to console during test
 c_handler = logging.StreamHandler(sys.stdout)
@@ -200,6 +202,8 @@ class TestRunContractsSync(TestCase):
             )
 
         # setup test data
+        cls.client = Client()
+
         # 1 user
         cls.character = EveCharacter.objects.get(character_id=90000001)
         
@@ -213,7 +217,11 @@ class TestRunContractsSync(TestCase):
             category = EveOrganization.CATEGORY_CORPORATION,
             name = cls.character.corporation_name
         )
-        cls.user = User.objects.create_user(cls.character.character_name)
+        cls.user = User.objects.create_user(
+            cls.character.character_name,
+            'abc@example.com',
+            'password'
+        )
 
         cls.main_ownership = CharacterOwnership.objects.create(
             character=cls.character,
@@ -397,11 +405,11 @@ class TestRunContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 4)
+        self.assertEqual(mock_operation.result.call_count, 6)
 
         # should only contain the right contract
         self.assertCountEqual(
-            [x['contract_id'] for x in Contract.objects.values('contract_id')],
+            [x['contract_id'] for x in Contract.objects.filter(status__exact=Contract.STATUS_OUTSTANDING).values('contract_id')],
             [149409005, 149409014, 149409006, 149409015]
         )
 
@@ -462,11 +470,11 @@ class TestRunContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 4)
+        self.assertEqual(mock_operation.result.call_count, 6)
 
         # should only contain the right contract
         self.assertCountEqual(
-            [x['contract_id'] for x in Contract.objects.values('contract_id')],
+            [x['contract_id'] for x in Contract.objects.filter(status__exact=Contract.STATUS_OUTSTANDING).values('contract_id')],
             [149409016]
         )
 
@@ -527,17 +535,86 @@ class TestRunContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 4)
+        self.assertEqual(mock_operation.result.call_count, 6)
 
         # should only contain the right contract
         contract_ids = [
-            x['contract_id'] for x in Contract.objects.values('contract_id')
+            x['contract_id'] for x in Contract.objects.filter(status__exact=Contract.STATUS_OUTSTANDING).values('contract_id')
         ]
         self.assertCountEqual(
             contract_ids,
             [149409016, 149409017]
         )
 
+    """
+    # freight.tests.TestRunContractsSync.test_statistics_calculation
+    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE)
+    @patch('freight.tasks.send_contract_notifications')
+    @patch('freight.tasks.esi_client_factory')
+    def test_statistics_calculation(
+            self, 
+            mock_esi_client_factory, 
+            mock_send_contract_notifications
+        ):
+        # create mocks
+        def get_contracts_page(*args, **kwargs):
+            #returns single page for operation.result(), first with header
+            page_size = 2
+            mock_calls_count = len(mock_operation.mock_calls)
+            start = (mock_calls_count - 1) * page_size
+            stop = start + page_size
+            pages_count = int(math.ceil(len(self.contracts) / page_size))
+            if mock_calls_count == 1:
+                mock_response = Mock()
+                mock_response.headers = {'x-pages': pages_count}
+                return [self.contracts[start:stop], mock_response]
+            else:
+                return self.contracts[start:stop]
+        
+        mock_client = Mock()
+        mock_operation = Mock()
+        mock_operation.result.side_effect = get_contracts_page        
+        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
+            return_value=mock_operation
+        )
+        mock_esi_client_factory.return_value = mock_client        
+        mock_send_contract_notifications.delay = Mock()        
+
+        # create test data
+        p = Permission.objects.filter(codename='basic_access').first()
+        self.user.user_permissions.add(p)
+        p = Permission.objects.filter(codename='setup_contract_handler').first()
+        self.user.user_permissions.add(p)
+        p = Permission.objects.filter(codename='view_contract').first()
+        self.user.user_permissions.add(p)
+
+        self.user.save()
+        handler = ContractHandler.objects.create(
+            organization=self.corporation,
+            character=self.main_ownership,
+            operation_mode=FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
+        )
+        
+        # run manager sync
+        self.assertTrue(
+            tasks.run_contracts_sync()
+        )
+
+        handler.refresh_from_db()
+        self.assertEqual(
+            handler.last_error, 
+            ContractHandler.ERROR_NONE            
+        )
+        
+        result = self.client.login(
+            username=self.character.character_name, 
+            password='password'
+        )
+
+        response = self.client.get(reverse('freight:index'))
+        
+        print('hi')
+    """
 
 class TestFilters(TestCase):
 

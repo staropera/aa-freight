@@ -2,14 +2,15 @@ import datetime
 import json
 import math
 
+import pytz
+
 from django.forms import HiddenInput
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse, Http404, JsonResponse
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
 from django.shortcuts import render, redirect
 from django.template import loader
-
 from django.utils.html import mark_safe
 
 from allianceauth.authentication.models import CharacterOwnership
@@ -19,7 +20,7 @@ from esi.models import Token
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 
 from . import tasks
-from .app_settings import get_freight_operation_mode_friendly
+from .app_settings import get_freight_operation_mode_friendly, FREIGHT_STATISTICS_MAX_DAYS
 from .models import *
 from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
@@ -27,6 +28,7 @@ from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 ADD_LOCATION_TOKEN_TAG = 'freight_add_location_token'
 CONTRACT_LIST_USER = 'user'
 CONTRACT_LIST_ACTIVE = 'active'
+
 
 @login_required
 @permission_required('freight.basic_access')
@@ -388,7 +390,8 @@ def add_location_2(request):
 def statistics(request):
 
     context = {
-        'page_title': 'Statistics'
+        'page_title': 'Statistics',
+        'max_days': FREIGHT_STATISTICS_MAX_DAYS
     }        
     return render(request, 'freight/statistics.html', context)
 
@@ -398,28 +401,36 @@ def statistics(request):
 def statistics_routes_data(request):
     """returns totals for statistics as JSON"""
 
-    pricing_data = Pricing.objects.select_related().annotate(Count('contract')).annotate(Sum('contract__reward')).annotate(Sum('contract__collateral')).annotate(Count('contract__issuer', distinct=True)).annotate(Count('contract__acceptor', distinct=True))
+    cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
+        - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
+    subfilter = Q(contract__status__exact=Contract.STATUS_FINISHED) & Q(contract__date_accepted__gte=cutoff_date)
+    pricing_data = Pricing.objects.select_related() \
+        .annotate(contracts=Count('contract', filter=subfilter)) \
+        .annotate(rewards=Sum('contract__reward', filter=subfilter)) \
+        .annotate(collaterals=Sum('contract__collateral', filter=subfilter)) \
+        .annotate(pilots=Count('contract__issuer', distinct=True, filter=subfilter)) \
+        .annotate(customers=Count('contract__acceptor', distinct=True, filter=subfilter))
 
     totals = list()
     for pricing in pricing_data:
         
-        if pricing.contract__reward__sum:
-            rewards = pricing.contract__reward__sum / 1000000000
+        if pricing.rewards:
+            rewards = pricing.rewards / 1000000
         else:
             rewards = 0
 
-        if pricing.contract__collateral__sum:
-            collaterals = pricing.contract__collateral__sum / 1000000000
+        if pricing.collaterals:
+            collaterals = pricing.collaterals / 1000000
         else:
             collaterals = 0
         
         totals.append({
             'name': pricing.name,
-            'contracts': '{:,}'.format(pricing.contract__count),
+            'contracts': '{:,}'.format(pricing.contracts),
             'rewards': '{:,.1f}'.format(rewards),
             'collaterals': '{:,.1f}'.format(collaterals),
-            'pilots': '{:,}'.format(pricing.contract__acceptor__count),
-            'customers': '{:,}'.format(pricing.contract__issuer__count),
+            'pilots': '{:,}'.format(pricing.pilots),
+            'customers': '{:,}'.format(pricing.customers),
         })
 
     return JsonResponse(totals, safe=False)
@@ -430,28 +441,32 @@ def statistics_routes_data(request):
 def statistics_pilots_data(request):
     """returns totals for statistics as JSON"""
 
-    pricing_data = Pricing.objects.select_related().annotate(Count('contract')).annotate(Sum('contract__reward')).annotate(Sum('contract__collateral')).annotate(Count('contract__issuer', distinct=True)).annotate(Count('contract__acceptor', distinct=True))
+    cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
+        - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
+    subfilter = Q(contract_acceptor__status__exact=Contract.STATUS_FINISHED) & Q(contract_acceptor__date_accepted__gte=cutoff_date)
+    pricing_data = EveCharacter.objects.exclude(contract_acceptor__exact=None).select_related() \
+        .annotate(contracts=Count('contract_acceptor', filter=subfilter)) \
+        .annotate(rewards=Sum('contract_acceptor__reward', filter=subfilter)) \
+        .annotate(collaterals=Sum('contract_acceptor__collateral', filter=subfilter))        
 
     totals = list()
     for pricing in pricing_data:
         
-        if pricing.contract__reward__sum:
-            rewards = pricing.contract__reward__sum / 1000000000
+        if pricing.rewards:
+            rewards = pricing.rewards / 1000000
         else:
             rewards = 0
 
-        if pricing.contract__collateral__sum:
-            collaterals = pricing.contract__collateral__sum / 1000000000
+        if pricing.collaterals:
+            collaterals = pricing.collaterals / 1000000
         else:
             collaterals = 0
         
         totals.append({
-            'name': pricing.name,
-            'contracts': '{:,}'.format(pricing.contract__count),
+            'name': pricing.character_name,
+            'contracts': '{:,}'.format(pricing.contracts),
             'rewards': '{:,.1f}'.format(rewards),
-            'collaterals': '{:,.1f}'.format(collaterals),
-            'pilots': '{:,}'.format(pricing.contract__acceptor__count),
-            'customers': '{:,}'.format(pricing.contract__issuer__count),
+            'collaterals': '{:,.1f}'.format(collaterals),            
         })
 
     return JsonResponse(totals, safe=False)

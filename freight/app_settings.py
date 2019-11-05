@@ -29,6 +29,13 @@ FREIGHT_DISCORD_PING_TYPE = getattr(
     None
 )
 
+# max days back considered when calculating statistics
+FREIGHT_STATISTICS_MAX_DAYS = getattr(
+    settings, 
+    'FREIGHT_STATISTICS_MAX_DAYS', 
+    90
+)
+
 # modes of operation for Alliance Freight
 FREIGHT_OPERATION_MODE_MY_ALLIANCE = 'my_alliance'
 FREIGHT_OPERATION_MODE_MY_CORPORATION = 'my_corporation'

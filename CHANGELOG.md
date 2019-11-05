@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-Here we write notes for upcoming releases.
+## [0.8.0] - 2019-11-05
+
+### Added
+
+- New statistics page showing KPIs for routes and pilots
 
 ## [0.7.0] - 2019-11-04
 
