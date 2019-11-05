@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
-- New statistics page showing KPIs for routes and pilots
+- New statistics page showing KPIs for routes and pilots ([#7](https://gitlab.com/ErikKalkoken/aa-freight/issues/7))
 
 ## [0.7.0] - 2019-11-04
 

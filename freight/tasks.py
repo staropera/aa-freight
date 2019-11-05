@@ -224,9 +224,9 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                                 corp_id=contract['issuer_corporation_id']
                             )
                         
-                        date_accepted = getattr(contract, 'date_accepted', None)
-                        date_completed = getattr(contract, 'date_completed', None)
-                        title = getattr(contract, 'title', None)
+                        date_accepted = contract['date_accepted'] if 'date_accepted' in contract else None
+                        date_completed = contract['date_completed'] if 'date_completed' in contract else None
+                        title = contract['title'] if 'title' in contract else None
 
                         start_location, _ = Location.objects.get_or_create_esi(
                             client,
