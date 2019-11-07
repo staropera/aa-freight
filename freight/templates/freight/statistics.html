@@ -24,7 +24,17 @@
                         </tr>
                     </thead>
                     <tbody>                   
-                    </tbody>                
+                    </tbody> 
+                    <tfoot>
+                        <tr class="success">
+                            <th>Totals</th>
+                            <th></th>
+                            <th></th>
+                            <th></th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+				</tfoot>              
                 </table>
             </div>
         </div>
@@ -41,13 +51,23 @@
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>Corporation</th>
                             <th>Contracts</th>
                             <th>Rewards<br>M&nbsp;ISK</th>
                             <th>Collaterals<br>M&nbsp;ISK</th>                     
                         </tr>
                     </thead>
                     <tbody>                   
-                    </tbody>                
+                    </tbody>  
+                     <tfoot>
+                        <tr class="success">
+                            <th>Totals</th>
+                            <th></th>
+                            <th></th>                           
+                            <th></th>
+                            <th></th>
+                        </tr>
+				    </tfoot>                 
                 </table>
             </div>
         </div>
@@ -64,13 +84,23 @@
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>Corporation</th>
                             <th>Contracts</th>
                             <th>Rewards<br>M&nbsp;ISK</th>
                             <th>Collaterals<br>M&nbsp;ISK</th>                     
                         </tr>
                     </thead>
                     <tbody>                   
-                    </tbody>                
+                    </tbody>
+                    <tfoot>
+                    <tr class="success">
+                        <th>Totals</th>
+                        <th></th>
+                        <th></th>                           
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </tfoot>                
                 </table>
             </div>
         </div>
@@ -83,18 +113,28 @@
 {% endblock %}
 
 {% block extra_javascript %}
-    {% include 'bundles/datatables-js.html' %}    
-        
+    {% include 'bundles/datatables-js.html' %}        
 {% endblock %}
 
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}    
 
-    <link href="{% static 'freight/contracts.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'freight/statistics.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_script %}
-    $(document).ready(function(){
+    
+    // Remove the formatting to get integer data for summation
+    function intVal(i) 
+    {
+        return typeof i === 'string' 
+            ? i.replace(/[\$,]/g, '')*1 
+            : typeof i === 'number' 
+                ? i 
+                : 0;
+    };
+
+    $(document).ready(function(){        
         $('#tab_routes').DataTable({
             ajax: {
                 url: '{% url 'freight:statistics_routes_data' %}',
@@ -111,7 +151,28 @@
                 { data: 'customers' }                
             ],
 
-            order: [ [ 1, "desc" ], [ 2, "desc" ] ]
+            order: [ [ 1, "desc" ], [ 2, "desc" ] ],
+
+            footerCallback: function ( row, data, start, end, display )
+            {
+                var api = this.api(), data;
+                        
+                var total = [];
+                for (i = 1; i < 6; i++)
+                {
+                    total[i] = api
+                        .column( i )
+                        .data()
+                        .reduce( function (a, b) {
+                            return intVal(a) + intVal(b);
+                        }, 0 );
+                }
+                
+                for (i = 1; i < 6; i++)
+                {
+                    $( api.column( i ).footer() ).html(total[i]);
+                }
+            }
 
         });
 
@@ -124,12 +185,34 @@
 
             columns: [
                 { data: 'name' },
+                { data: 'corporation' },
                 { data: 'contracts' },
                 { data: 'rewards' },
                 { data: 'collaterals' }              
             ],
 
-            order: [ [ 1, "desc" ], [ 2, "desc" ] ]
+            order: [ [ 1, "desc" ], [ 2, "desc" ] ],
+
+            footerCallback: function ( row, data, start, end, display )
+            {
+                var api = this.api(), data;
+                        
+                var total = [];
+                for (i = 1; i < 5; i++)
+                {
+                    total[i] = api
+                        .column( i )
+                        .data()
+                        .reduce( function (a, b) {
+                            return intVal(a) + intVal(b);
+                        }, 0 );
+                }
+                
+                for (i = 1; i < 5; i++)
+                {
+                    $( api.column( i ).footer() ).html(total[i]);
+                }
+            }
 
         });
 
@@ -143,12 +226,34 @@
 
             columns: [
                 { data: 'name' },
+                { data: 'corporation' },
                 { data: 'contracts' },
                 { data: 'rewards' },
                 { data: 'collaterals' }              
             ],
 
-            order: [ [ 1, "desc" ], [ 2, "desc" ] ]
+            order: [ [ 1, "desc" ], [ 2, "desc" ] ],
+
+            footerCallback: function ( row, data, start, end, display )
+            {
+                var api = this.api(), data;
+                        
+                var total = [];
+                for (i = 1; i < 5; i++)
+                {
+                    total[i] = api
+                        .column( i )
+                        .data()
+                        .reduce( function (a, b) {
+                            return intVal(a) + intVal(b);
+                        }, 0 );
+                }
+                
+                for (i = 1; i < 5; i++)
+                {
+                    $( api.column( i ).footer() ).html(total[i]);
+                }
+            }
 
         });
     });

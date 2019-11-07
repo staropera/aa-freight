@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.forms import HiddenInput
 from django.http import HttpResponse, Http404, JsonResponse
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum, Q, Avg
 from django.shortcuts import render, redirect
 from django.template import loader
 from django.utils.html import mark_safe
@@ -390,7 +390,7 @@ def add_location_2(request):
     )
 
 @login_required
-@permission_required('freight.view_contracts')
+@permission_required('freight.view_statistics')
 def statistics(request):
 
     context = {
@@ -401,7 +401,7 @@ def statistics(request):
 
 
 @login_required
-@permission_required('freight.view_contracts')
+@permission_required('freight.view_statistics')
 def statistics_routes_data(request):
     """returns totals for statistics as JSON"""
 
@@ -413,7 +413,7 @@ def statistics_routes_data(request):
         .annotate(rewards=Sum('contract__reward', filter=finished_contracts)) \
         .annotate(collaterals=Sum('contract__collateral', filter=finished_contracts)) \
         .annotate(pilots=Count('contract__issuer', distinct=True, filter=finished_contracts)) \
-        .annotate(customers=Count('contract__acceptor', distinct=True, filter=finished_contracts))
+        .annotate(customers=Count('contract__acceptor', distinct=True, filter=finished_contracts)) 
 
     totals = list()
     for route in route_totals:
@@ -434,14 +434,14 @@ def statistics_routes_data(request):
                 'rewards': '{:,.0f}'.format(rewards),
                 'collaterals': '{:,.0f}'.format(collaterals),
                 'pilots': '{:,}'.format(route.pilots),
-                'customers': '{:,}'.format(route.customers),
+                'customers': '{:,}'.format(route.customers),                
             })
 
     return JsonResponse(totals, safe=False)
 
 
 @login_required
-@permission_required('freight.view_contracts')
+@permission_required('freight.view_statistics')
 def statistics_pilots_data(request):
     """returns totals for statistics as JSON"""
 
@@ -468,6 +468,7 @@ def statistics_pilots_data(request):
             
             totals.append({
                 'name': pilot.character_name,
+                'corporation': pilot.corporation_name,
                 'contracts': '{:,}'.format(pilot.contracts_count),
                 'rewards': '{:,.0f}'.format(rewards),
                 'collaterals': '{:,.0f}'.format(collaterals),            
@@ -477,7 +478,7 @@ def statistics_pilots_data(request):
 
 
 @login_required
-@permission_required('freight.view_contracts')
+@permission_required('freight.view_statistics')
 def statistics_customer_data(request):
     """returns totals for statistics as JSON"""
 
@@ -504,6 +505,7 @@ def statistics_customer_data(request):
             
             totals.append({
                 'name': customer.character_name,
+                'corporation': customer.corporation_name,
                 'contracts': '{:,}'.format(customer.contracts_count),
                 'rewards': '{:,.0f}'.format(rewards),
                 'collaterals': '{:,.0f}'.format(collaterals),            

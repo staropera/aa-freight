@@ -32,7 +32,7 @@
                         </a> 
                     </li>
                 {% endif %}
-                {% if perms.freight.view_contracts %}
+                {% if perms.freight.view_statistics %}
                     <li class="{% navactive request 'freight:statistics' %}">
                         <a href="{% url 'freight:statistics' %}">
                             Statistics

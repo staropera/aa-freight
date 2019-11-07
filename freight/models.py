@@ -581,6 +581,14 @@ class Contract(models.Model):
     def has_pricing_errors(self) -> bool:
         return bool(self.issues)
 
+    @property
+    def hours_issued_2_completed(self) -> float:
+        if self.date_completed:
+            td = (self.date_completed - self.date_issued)
+            return td.days * 24 + (td.seconds / 3600 )
+        else:
+            return None
+
     def __str__(self) -> str:
         return '{}: {} -> {}'.format(
             self.contract_id,

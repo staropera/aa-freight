@@ -1,0 +1,13 @@
+#tab_routes thead tr th,
+#tab_routes tbody tr td, 
+#tab_routes tfoot tr th,
+#tab_pilots thead tr th,
+#tab_pilots tbody tr td,
+#tab_pilots tfoot tr th,
+#tab_customers thead tr th,
+#tab_customers tbody tr td,
+#tab_customers tfoot tr th
+{
+        text-align: center; 
+        vertical-align: middle;
+}

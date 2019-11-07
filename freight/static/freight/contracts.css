@@ -1,2 +1,6 @@
-#tab_contracts thead tr th { text-align: center; vertical-align: middle;}
-#tab_contracts tbody tr td { text-align: center; vertical-align: middle;}
+#tab_contracts thead tr th,
+#tab_contracts tbody tr td
+{
+    text-align: center; 
+    vertical-align: middle;
+}

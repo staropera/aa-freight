@@ -173,6 +173,7 @@ Can access this app |Enabling the app for a user. This permission should be enab
 Can setup contract handler | Add or updates the character for syncing contracts. This should be limited to users with admins / leadership privileges. |  `setup_contract_handler`
 Can use the calculator | Enables using the calculator page and the "My Contracts" page. This permission is usually enabled for every user with the member state. |  `use_calculator`
 Can view the contracts list | Enables viewing the page with all outstanding courier contracts  |  `view_contracts`
+Can see statistics | User with this permission can view the statistics page  |  `view_statistics`
 
 ## Pricing
 
