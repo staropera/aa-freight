@@ -39,6 +39,8 @@ To support this concept Alliance Freight offers the following main features:
 
 - User can check the current status of his courier contracts
 
+- Statistics page showing key performance metrics for routes, pilots, customers
+
 ## Screenshots
 
 ### Reward Calculator

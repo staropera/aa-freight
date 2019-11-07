@@ -23,4 +23,5 @@ urlpatterns = [
     url(r'^statistics/$', views.statistics, name='statistics'),
     url(r'^statistics_routes_data/$', views.statistics_routes_data, name='statistics_routes_data'),
     url(r'^statistics_pilots_data/$', views.statistics_pilots_data, name='statistics_pilots_data'),
+    url(r'^statistics_customer_data/$', views.statistics_customer_data, name='statistics_customer_data'),
 ]

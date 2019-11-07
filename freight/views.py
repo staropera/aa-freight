@@ -4,9 +4,10 @@ import math
 
 import pytz
 
-from django.forms import HiddenInput
+from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
+from django.forms import HiddenInput
 from django.http import HttpResponse, Http404, JsonResponse
 from django.db.models import Count, Sum, Q
 from django.shortcuts import render, redirect
@@ -14,10 +15,10 @@ from django.template import loader
 from django.utils.html import mark_safe
 
 from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 from esi.decorators import token_required
 from esi.clients import esi_client_factory
 from esi.models import Token
-from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
 
 from . import tasks
 from .app_settings import get_freight_operation_mode_friendly, FREIGHT_STATISTICS_MAX_DAYS
@@ -119,6 +120,9 @@ def contract_list_data(request, category):
             notes = create_glyph_html('envelope', contract.title)
         else:
             notes = ''
+
+        if settings.DEBUG:
+            notes += ' {}'.format(contract.contract_id)
         
         contracts_data.append({
             'status': contract.status,
@@ -413,25 +417,25 @@ def statistics_routes_data(request):
 
     totals = list()
     for route in route_totals:
-        
-        if route.rewards:
-            rewards = route.rewards / 1000000
-        else:
-            rewards = 0
+        if route.contracts_count > 0:
+            if route.rewards:
+                rewards = route.rewards / 1000000
+            else:
+                rewards = 0
 
-        if route.collaterals:
-            collaterals = route.collaterals / 1000000
-        else:
-            collaterals = 0
-        
-        totals.append({
-            'name': route.name,
-            'contracts': '{:,}'.format(route.contracts_count),
-            'rewards': '{:,.0f}'.format(rewards),
-            'collaterals': '{:,.0f}'.format(collaterals),
-            'pilots': '{:,}'.format(route.pilots),
-            'customers': '{:,}'.format(route.customers),
-        })
+            if route.collaterals:
+                collaterals = route.collaterals / 1000000
+            else:
+                collaterals = 0
+            
+            totals.append({
+                'name': route.name,
+                'contracts': '{:,}'.format(route.contracts_count),
+                'rewards': '{:,.0f}'.format(rewards),
+                'collaterals': '{:,.0f}'.format(collaterals),
+                'pilots': '{:,}'.format(route.pilots),
+                'customers': '{:,}'.format(route.customers),
+            })
 
     return JsonResponse(totals, safe=False)
 
@@ -445,28 +449,64 @@ def statistics_pilots_data(request):
         - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
     finished_contracts = Q(contract_acceptor__status__exact=Contract.STATUS_FINISHED) & Q(contract_acceptor__date_completed__gte=cutoff_date)
     pilot_totals = EveCharacter.objects.exclude(contract_acceptor__exact=None).select_related() \
-        .annotate(contracts=Count('contract_acceptor', filter=finished_contracts)) \
+        .annotate(contracts_count=Count('contract_acceptor', filter=finished_contracts)) \
         .annotate(rewards=Sum('contract_acceptor__reward', filter=finished_contracts)) \
         .annotate(collaterals=Sum('contract_acceptor__collateral', filter=finished_contracts))        
 
     totals = list()
     for pilot in pilot_totals:
-        
-        if pilot.rewards:
-            rewards = pilot.rewards / 1000000
-        else:
-            rewards = 0
+        if pilot.contracts_count > 0:
+            if pilot.rewards:
+                rewards = pilot.rewards / 1000000
+            else:
+                rewards = 0
 
-        if pilot.collaterals:
-            collaterals = pilot.collaterals / 1000000
-        else:
-            collaterals = 0
-        
-        totals.append({
-            'name': pilot.character_name,
-            'contracts': '{:,}'.format(pilot.contracts),
-            'rewards': '{:,.0f}'.format(rewards),
-            'collaterals': '{:,.0f}'.format(collaterals),            
-        })
+            if pilot.collaterals:
+                collaterals = pilot.collaterals / 1000000
+            else:
+                collaterals = 0
+            
+            totals.append({
+                'name': pilot.character_name,
+                'contracts': '{:,}'.format(pilot.contracts_count),
+                'rewards': '{:,.0f}'.format(rewards),
+                'collaterals': '{:,.0f}'.format(collaterals),            
+            })
+
+    return JsonResponse(totals, safe=False)
+
+
+@login_required
+@permission_required('freight.view_contracts')
+def statistics_customer_data(request):
+    """returns totals for statistics as JSON"""
+
+    cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
+        - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
+    finished_contracts = Q(contract_issuer__status__exact=Contract.STATUS_FINISHED) & Q(contract_issuer__date_completed__gte=cutoff_date)
+    customer_totals = EveCharacter.objects.exclude(contract_issuer__exact=None).select_related() \
+        .annotate(contracts_count=Count('contract_issuer', filter=finished_contracts)) \
+        .annotate(rewards=Sum('contract_issuer__reward', filter=finished_contracts)) \
+        .annotate(collaterals=Sum('contract_issuer__collateral', filter=finished_contracts))        
+
+    totals = list()
+    for customer in customer_totals:        
+        if customer.contracts_count > 0:
+            if customer.rewards:
+                rewards = customer.rewards / 1000000
+            else:
+                rewards = 0
+
+            if customer.collaterals:
+                collaterals = customer.collaterals / 1000000
+            else:
+                collaterals = 0
+            
+            totals.append({
+                'name': customer.character_name,
+                'contracts': '{:,}'.format(customer.contracts_count),
+                'rewards': '{:,.0f}'.format(rewards),
+                'collaterals': '{:,.0f}'.format(collaterals),            
+            })
 
     return JsonResponse(totals, safe=False)

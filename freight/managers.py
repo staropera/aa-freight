@@ -219,24 +219,24 @@ class ContractManager(models.Manager):
         }
 
         for contract in self.all():
-            with transaction.atomic():
-                pricing = None
-                issues = None
-                if contract.status==Contract.STATUS_OUTSTANDING:
-                    route_key = _make_route_key(
-                        contract.start_location_id, 
-                        contract.end_location_id
-                    )        
-                    if route_key in pricings:
-                        pricing = pricings[route_key]
-                        issues = contract.get_price_check_issues(pricing)
-                        if issues:
-                            contract.issues = json.dumps(issues)
-                        else:
-                            contract.issues = None
+            with transaction.atomic():                
+                route_key = _make_route_key(
+                    contract.start_location_id, 
+                    contract.end_location_id
+                )        
+                if route_key in pricings:
+                    pricing = pricings[route_key]
+                    issues_list = contract.get_price_check_issues(pricing)
+                    if issues_list:
+                        issues = json.dumps(issues_list)
+                    else:
+                        issues = None
+                else:
+                    pricing = None
+                    issues = None            
                     
                 contract.pricing = pricing
-
+                contract.issues = issues
                 contract.save()
 
     def send_notifications(self, force_sent = False):
