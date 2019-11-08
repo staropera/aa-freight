@@ -158,9 +158,10 @@ The following operation modes are available:
 
 Name | Description
 -- | --
-`'my_alliance'`| contracts assigned to my alliance by an alliance member
-`'my_corporation'`| contracts assigned to my corporation by a corp member
-`'corp_in_alliance'`| contracts assigned to designated corporation within the alliance by an alliance member
+`'my_alliance'`| courier contracts assigned to configured alliance by an alliance member
+`'my_corporation'`| courier contracts assigned to configured corporation by a corp member
+`'corp_in_alliance'`| courier contracts assigned to configured corporation by an alliance member
+`'corp_public'`| any courier contract assigned to the configured corporation
 
 ## Permissions
 

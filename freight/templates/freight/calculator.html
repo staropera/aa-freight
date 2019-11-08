@@ -120,7 +120,7 @@
                                     <dd>Courier</dd>
 
                                     <dt>Availability:</dt>
-                                    <dd>{{ availability }} ({{ organization_name }})</dd>
+                                    <dd>{{ availability }}</dd>
 
                                     <dt>Location:</dt>
                                     <dd>{{ pricing.start_location }}</dd>
@@ -130,7 +130,7 @@
                                         <dd>{{ expires_on|date:'Y-m-d' }} </dd>
                                     {% endif %}
 
-                                    <br>
+                                    <hr>
                                     
                                     <dt>Reward:</dt>
                                     <dd>{{ price|formatnumber:"0"|default_if_none:"???" }} ISK</dd>

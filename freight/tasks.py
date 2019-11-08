@@ -161,15 +161,18 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 issuer_corporation_id = int(issuer.corporation_id)
                 issuer_alliance_id = int(issuer.alliance_id) if issuer.alliance_id else None
                 
-                if handler.operation_mode == FREIGHT_OPERATION_MODE_MY_CORPORATION:
-                    in_scope = assignee_id == issuer_corporation_id
-                
-                elif handler.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
+                if handler.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
                     in_scope = issuer_alliance_id == assignee_id
+                
+                elif handler.operation_mode == FREIGHT_OPERATION_MODE_MY_CORPORATION:
+                    in_scope = assignee_id == issuer_corporation_id
                 
                 elif handler.operation_mode == FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE:
                     in_scope = (issuer_alliance_id ==
                         int(handler.character.character.alliance_id))
+
+                elif handler.operation_mode == FREIGHT_OPERATION_MODE_CORP_PUBLIC:
+                    in_scope = True
                 
                 else:
                     raise NotImplementedError(

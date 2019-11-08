@@ -428,8 +428,13 @@ class ContractHandler(models.Model):
         return str(self.organization.name)
 
     @property
-    def operation_mode_friendly(self) -> str:
-        return get_freight_operation_mode_friendly(self.operation_mode)
+    def operation_mode_friendly(self) -> str:        
+        """returns user friendly description of operation mode"""    
+        msg = [(x, y) for x, y in FREIGHT_OPERATION_MODES if x == self.operation_mode]
+        if len(msg) != 1:
+            raise ValueError('Undefined mode')
+        else:
+            return msg[0][1]
     
     @property
     def last_error_message_friendly(self) -> str:
@@ -442,6 +447,21 @@ class ContractHandler(models.Model):
             'esi-contracts.read_corporation_contracts.v1',
             'esi-universe.read_structures.v1'
         ]
+
+    def get_availability_text_for_contracts(self):
+        """returns a text detailing the availability choice for this setup"""
+        
+        if self.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
+            extra_text = '[My Alliance]'
+        
+        elif self.operation_mode == FREIGHT_OPERATION_MODE_MY_CORPORATION:
+            extra_text = '[My Corporation]'
+                
+        else:
+            extra_text = ''
+
+        return 'Private ({}) {}'. format(self.organization.name, extra_text)
+
     
     class Meta:
         verbose_name_plural = verbose_name = 'Contract Handler'        

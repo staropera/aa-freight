@@ -219,25 +219,26 @@ class ContractManager(models.Manager):
         }
 
         for contract in self.all():
-            with transaction.atomic():                
-                route_key = _make_route_key(
-                    contract.start_location_id, 
-                    contract.end_location_id
-                )        
-                if route_key in pricings:
-                    pricing = pricings[route_key]
-                    issues_list = contract.get_price_check_issues(pricing)
-                    if issues_list:
-                        issues = json.dumps(issues_list)
+            if contract.status == Contract.STATUS_OUTSTANDING or not contract.pricing:
+                with transaction.atomic():
+                    route_key = _make_route_key(
+                        contract.start_location_id, 
+                        contract.end_location_id
+                    )        
+                    if route_key in pricings:
+                        pricing = pricings[route_key]
+                        issues_list = contract.get_price_check_issues(pricing)
+                        if issues_list:
+                            issues = json.dumps(issues_list)
+                        else:
+                            issues = None
                     else:
-                        issues = None
-                else:
-                    pricing = None
-                    issues = None            
-                    
-                contract.pricing = pricing
-                contract.issues = issues
-                contract.save()
+                        pricing = None
+                        issues = None            
+                        
+                    contract.pricing = pricing
+                    contract.issues = issues
+                    contract.save()
 
     def send_notifications(self, force_sent = False):
         """Send notification about outstanding contracts that have pricing"""

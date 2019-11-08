@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-## [0.8.0] - 2019-11-05
+## [0.8.0] - 2019-11-08
 
 ### Added
 
+- Add new operation mode "Corporation public" for processing any courier contract assigned to a corporation ([#3](https://gitlab.com/ErikKalkoken/aa-freight/issues/3))
 - New statistics page showing KPIs for routes, pilots and customers ([#7](https://gitlab.com/ErikKalkoken/aa-freight/issues/7))
 - Improved view on mobile devices for all tables
 

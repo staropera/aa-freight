@@ -21,7 +21,7 @@ from esi.clients import esi_client_factory
 from esi.models import Token
 
 from . import tasks
-from .app_settings import get_freight_operation_mode_friendly, FREIGHT_STATISTICS_MAX_DAYS
+from .app_settings import FREIGHT_STATISTICS_MAX_DAYS
 from .models import *
 from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
 
@@ -78,7 +78,10 @@ def contract_list_data(request, category):
         if not request.user.has_perm('freight.use_calculator'):
             raise RuntimeError('Insufficient permissions')
         else:
-            user_characters = [x.character for x in request.user.character_ownerships.select_related().all()]
+            user_characters = [
+                x.character 
+                for x in request.user.character_ownerships.select_related().all()
+            ]
             contracts = Contract.objects.filter(
                 issuer__in=user_characters
             ).select_related()
@@ -156,7 +159,9 @@ def calculator(request, pricing_pk = None):
     if request.method != 'POST':
         if pricing_pk:
             try:
-                pricing = Pricing.objects.filter(active__exact=True).get(pk=pricing_pk)
+                pricing = Pricing.objects \
+                    .filter(active__exact=True) \
+                    .get(pk=pricing_pk)
             except Pricing.DoesNotExist:
                 pricing = Pricing.objects.filter(active__exact=True).first()
         else:            
@@ -169,7 +174,9 @@ def calculator(request, pricing_pk = None):
         request.POST._mutable = True
 
         try:
-            pricing = Pricing.objects.filter(active__exact=True).get(pk=form.data['pricing'])
+            pricing = Pricing.objects \
+                .filter(active__exact=True) \
+                .get(pk=form.data['pricing'])
         except Pricing.DoesNotExist:
             pricing = Pricing.objects.filter(active__exact=True).first()
         
@@ -213,7 +220,7 @@ def calculator(request, pricing_pk = None):
     handler = ContractHandler.objects.first()
     if handler:
         organization_name = handler.organization.name
-        availability = get_freight_operation_mode_friendly(handler.operation_mode)
+        availability = handler.get_availability_text_for_contracts()
     else:
         organization_name = None
         availability = None
@@ -318,7 +325,9 @@ def setup_contract_handler(request, token):
             + 'with <strong>{}</strong> as sync character. '.format(
                     handler.character.character.character_name, 
                 )
-            + 'Operation mode: <strong>{}</strong>. '.format(handler.operation_mode_friendly)
+            + 'Operation mode: <strong>{}</strong>. '.format(
+                    handler.operation_mode_friendly
+                )
             + 'Started syncing of courier contracts. '
             + 'You will receive a report once it is completed.'
         )
@@ -374,7 +383,9 @@ def add_location_2(request):
             except Exception as ex:
                 messages_plus.error(
                     request,
-                    'Failed to add location with token from {}'.format(token.character_name)
+                    'Failed to add location with token from {}'.format(
+                            token.character_name
+                        )
                     + ' for location ID {}: '. format(location_id)
                     + '{}'.format(type(ex).__name__)
                 )
@@ -407,7 +418,8 @@ def statistics_routes_data(request):
 
     cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
         - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
-    finished_contracts = Q(contract__status__exact=Contract.STATUS_FINISHED) & Q(contract__date_completed__gte=cutoff_date)
+    finished_contracts = Q(contract__status__exact=Contract.STATUS_FINISHED) \
+        & Q(contract__date_completed__gte=cutoff_date)
     route_totals = Pricing.objects.select_related() \
         .annotate(contracts_count=Count('contract', filter=finished_contracts)) \
         .annotate(rewards=Sum('contract__reward', filter=finished_contracts)) \
@@ -447,7 +459,8 @@ def statistics_pilots_data(request):
 
     cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
         - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
-    finished_contracts = Q(contract_acceptor__status__exact=Contract.STATUS_FINISHED) & Q(contract_acceptor__date_completed__gte=cutoff_date)
+    finished_contracts = Q(contract_acceptor__status__exact=Contract.STATUS_FINISHED) \
+        & Q(contract_acceptor__date_completed__gte=cutoff_date)
     pilot_totals = EveCharacter.objects.exclude(contract_acceptor__exact=None).select_related() \
         .annotate(contracts_count=Count('contract_acceptor', filter=finished_contracts)) \
         .annotate(rewards=Sum('contract_acceptor__reward', filter=finished_contracts)) \
@@ -484,7 +497,8 @@ def statistics_customer_data(request):
 
     cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
         - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
-    finished_contracts = Q(contract_issuer__status__exact=Contract.STATUS_FINISHED) & Q(contract_issuer__date_completed__gte=cutoff_date)
+    finished_contracts = Q(contract_issuer__status__exact=Contract.STATUS_FINISHED) \
+        & Q(contract_issuer__date_completed__gte=cutoff_date)
     customer_totals = EveCharacter.objects.exclude(contract_issuer__exact=None).select_related() \
         .annotate(contracts_count=Count('contract_issuer', filter=finished_contracts)) \
         .annotate(rewards=Sum('contract_issuer__reward', filter=finished_contracts)) \

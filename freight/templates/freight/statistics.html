@@ -198,7 +198,7 @@
                 var api = this.api(), data;
                         
                 var total = [];
-                for (i = 1; i < 5; i++)
+                for (i = 2; i < 5; i++)
                 {
                     total[i] = api
                         .column( i )
@@ -208,7 +208,7 @@
                         }, 0 );
                 }
                 
-                for (i = 1; i < 5; i++)
+                for (i = 2; i < 5; i++)
                 {
                     $( api.column( i ).footer() ).html(total[i].toLocaleString());
                 }
@@ -239,7 +239,7 @@
                 var api = this.api(), data;
                         
                 var total = [];
-                for (i = 1; i < 5; i++)
+                for (i = 2; i < 5; i++)
                 {
                     total[i] = api
                         .column( i )
@@ -249,7 +249,7 @@
                         }, 0 );
                 }
                 
-                for (i = 1; i < 5; i++)
+                for (i = 2; i < 5; i++)
                 {
                     $( api.column( i ).footer() ).html(total[i].toLocaleString());
                 }
