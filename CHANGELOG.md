@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - List of routes in drop-down on calculator now sorted alphabetically by its name ([#11](https://gitlab.com/ErikKalkoken/aa-freight/issues/11))
+- Technical update to model to fix "missing migrations" ([#12](https://gitlab.com/ErikKalkoken/aa-freight/issues/12))
 
 ## [0.7.0] - 2019-11-04
 

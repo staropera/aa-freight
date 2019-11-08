@@ -400,8 +400,7 @@ class ContractHandler(models.Model):
         help_text='character used for syncing contracts'
     )
     operation_mode = models.CharField(
-        max_length=32, 
-        choices=FREIGHT_OPERATION_MODES, 
+        max_length=32,         
         default=FREIGHT_OPERATION_MODE_MY_ALLIANCE,        
         help_text='defines what kind of contracts are synced'
     )
