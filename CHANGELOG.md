@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - New statistics page showing KPIs for routes, pilots and customers ([#7](https://gitlab.com/ErikKalkoken/aa-freight/issues/7))
 - Improved view on mobile devices for all tables
 
+### Fixed
+
+- List of routes in drop-down on calculator now sorted alphabetically by its name ([#11](https://gitlab.com/ErikKalkoken/aa-freight/issues/11))
+
 ## [0.7.0] - 2019-11-04
 
 ### Added

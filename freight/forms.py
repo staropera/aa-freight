@@ -7,7 +7,9 @@ from .models import Pricing
 
 class CalculatorForm(forms.Form):             
     pricing = forms.ModelChoiceField(
-        queryset=Pricing.objects.filter(active__exact=True),        
+        queryset=Pricing.objects\
+            .filter(active__exact=True)\
+            .order_by('start_location__name', 'end_location__name'),
         label='Route',
         help_text='Pick a route for your courier contract',
         empty_label=None

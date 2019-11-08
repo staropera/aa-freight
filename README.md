@@ -17,19 +17,13 @@ This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianc
 
 ## Overview
 
-This app helps running a central freight service for an alliance or corporation. The main concept of such a freight service is as follows:
-
-- Every member can create courier contracts for defined routes
-
-- Courier contracts have a reward according to the official pricing for that route and sufficient collateral to prevent scamming
-
-- Every interested member can pick up and deliver existing courier contracts
+This app helps running a central freight service for an alliance or corporation. It allows different modes of operation that support the most common approaches a central freight service is setup. (e.g. for alliance members only or run by a corporation outside the alliance)
 
 ## Key Features
 
-To support this concept Alliance Freight offers the following main features:
+Alliance Freight offers the following main features:
 
-- Reward calculator allowing  members to easily calculate the correct reward for their a courier contract
+- Reward calculator allowing members to easily calculate the correct reward for their a courier contract
 
 - Page showing the list of currently outstanding courier contracts incl. an indicator  if the contract is compliant with the pricing for the respective route
 
@@ -152,7 +146,7 @@ Name | Description | Default
 
 ## Operation Mode
 
-The operation mode defines which contracts are processed by the Alliance Freight. For example you can define that only contracts assigned to your alliance are processed. Any courier contract that are not in scope of the current operation mode will be ignored by the freight app and e.g. not show up in the contract list.
+The operation mode defines which contracts are processed by the Alliance Freight. For example you can define that only contracts assigned to your alliance are processed. Any courier contract that is  not in scope of the configured operation mode will be ignored by the freight app and e.g. not show up in the contract list or generate notifications.
 
 The following operation modes are available:
 
