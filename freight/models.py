@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from .discordhook import Webhook, Embed
+from dhooks_lite import Webhook, Embed, Thumbnail
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -643,8 +643,8 @@ class Contract(models.Model):
                     'Trying to sent notification about contract {}'.format(
                         self.contract_id
                     ) + ' to {}'.format(FREIGHT_DISCORD_WEBHOOK_URL))
-                if FREIGHT_DISCORD_PING_TYPE in ['@here', '@everyone']:
-                    contents = FREIGHT_DISCORD_PING_TYPE + ' '
+                if FREIGHT_DISCORD_MENTIONS:
+                    contents = str(FREIGHT_DISCORD_MENTIONS) + ' '
                 else:
                     contents = ''
 
@@ -686,10 +686,10 @@ class Contract(models.Model):
                     description=desc,
                     timestamp=self.date_issued,
                     color=color,
-                    thumbnail_url=self.issuer.portrait_url()
+                    thumbnail=Thumbnail(self.issuer.portrait_url())
                 )                
                                                 
-                hook.send(content=contents, embeds=[embed]) 
+                hook.execute(content=contents, embeds=[embed]) 
                 self.date_notified = datetime.datetime.now(
                     datetime.timezone.utc
                 )

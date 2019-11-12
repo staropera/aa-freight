@@ -2,8 +2,6 @@ import datetime
 import json
 import math
 
-import pytz
-
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
@@ -13,6 +11,7 @@ from django.db.models import Count, Sum, Q, Avg
 from django.shortcuts import render, redirect
 from django.template import loader
 from django.utils.html import mark_safe
+from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
@@ -416,8 +415,7 @@ def statistics(request):
 def statistics_routes_data(request):
     """returns totals for statistics as JSON"""
 
-    cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
-        - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
+    cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
     finished_contracts = Q(contract__status__exact=Contract.STATUS_FINISHED) \
         & Q(contract__date_completed__gte=cutoff_date)
     route_totals = Pricing.objects.select_related() \
@@ -457,8 +455,7 @@ def statistics_routes_data(request):
 def statistics_pilots_data(request):
     """returns totals for statistics as JSON"""
 
-    cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
-        - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
+    cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
     finished_contracts = Q(contract_acceptor__status__exact=Contract.STATUS_FINISHED) \
         & Q(contract_acceptor__date_completed__gte=cutoff_date)
     pilot_totals = EveCharacter.objects.exclude(contract_acceptor__exact=None).select_related() \
@@ -495,8 +492,7 @@ def statistics_pilots_data(request):
 def statistics_customer_data(request):
     """returns totals for statistics as JSON"""
 
-    cutoff_date = (pytz.utc.localize(datetime.datetime.utcnow()) 
-        - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS))
+    cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
     finished_contracts = Q(contract_issuer__status__exact=Contract.STATUS_FINISHED) \
         & Q(contract_issuer__date_completed__gte=cutoff_date)
     customer_totals = EveCharacter.objects.exclude(contract_issuer__exact=None).select_related() \

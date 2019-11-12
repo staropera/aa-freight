@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.9.0] - 2019-11-12
+
+### Changed
+
+- Renamed setting `FREIGHT_DISCORD_PING_TYPE` to `FREIGHT_DISCORD_MENTIONS`. This setting now accepts any kind of mentions incl. role and user mentions. Make sure to update your `local.py` accordingly if you use pings!
+
+- Now using a different library for communicating with Discord
+
+### Added
+
 ## [0.8.0] - 2019-11-08
 
 ### Added

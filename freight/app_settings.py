@@ -21,11 +21,11 @@ FREIGHT_DISCORD_DISABLE_BRANDING = getattr(
     None
 )
 
-# If and how notifications are pinging on Discord
-# Valid values are: None, '@here' and '@everyone'.
-FREIGHT_DISCORD_PING_TYPE = getattr(
+# Menions to appear upfront to any notification
+# Typical values are: None, '@here' and '@everyone'.
+FREIGHT_DISCORD_MENTIONS = getattr(
     settings, 
-    'FREIGHT_DISCORD_PING_TYPE', 
+    'FREIGHT_DISCORD_MENTIONS', 
     None
 )
 
