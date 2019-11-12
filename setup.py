@@ -35,7 +35,7 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],
     install_requires=[ 
-        'requests',
+        'dhooks-lite',
         'django-navhelper',        
     ]
 )
