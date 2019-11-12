@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- Renamed setting `FREIGHT_DISCORD_PING_TYPE` to `FREIGHT_DISCORD_MENTIONS`. This setting now accepts any kind of mentions incl. role and user mentions. Make sure to update your `local.py` accordingly if you use pings!
+- Renamed setting `FREIGHT_DISCORD_PING_TYPE` to `FREIGHT_DISCORD_MENTIONS`. This setting now accepts any kind of mentions incl. role and user mentions. Make sure to update your `local.py` accordingly if you use pings! ([#13](https://gitlab.com/ErikKalkoken/aa-freight/issues/13))
 
 - Now using a different library for communicating with Discord
 
