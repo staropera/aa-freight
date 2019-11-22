@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.9.1] - 2019-11-22
+
+### Added
+
+- Show full location names of start and destination for selected route in calculator ([#14](https://gitlab.com/ErikKalkoken/aa-freight/issues/14))
+
 ## [0.9.0] - 2019-11-12
 
 ### Changed
