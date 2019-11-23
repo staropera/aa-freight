@@ -199,10 +199,17 @@ class Pricing(models.Model):
     
     @property
     def name(self):
-        return '{} <-> {}'.format(
-            self.start_location.solar_system_name,
-            self.end_location.solar_system_name
-        )
+        if FREIGHT_FULL_ROUTE_NAMES:
+            route_name = '{} <-> {}'.format(
+                self.start_location.name,
+                self.end_location.name
+            )
+        else:
+            route_name = '{} <-> {}'.format(
+                self.start_location.solar_system_name,
+                self.end_location.solar_system_name
+            )
+        return route_name
 
     def __str__(self):
         return self.name

@@ -36,6 +36,13 @@ FREIGHT_STATISTICS_MAX_DAYS = getattr(
     90
 )
 
+# Whether to show full location names in the route dropdown of the calculator
+FREIGHT_FULL_ROUTE_NAMES = getattr(
+    settings, 
+    'FREIGHT_FULL_ROUTE_NAMES', 
+    False
+)
+
 # modes of operation for Alliance Freight
 FREIGHT_OPERATION_MODE_MY_ALLIANCE = 'my_alliance'
 FREIGHT_OPERATION_MODE_MY_CORPORATION = 'my_corporation'

@@ -143,6 +143,7 @@ Name | Description | Default
 `FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications should appear. | Deactivated
 `FREIGHT_OPERATION_MODE`| See section [Operation Mode](#operation-mode) for details.<br> Note that switching operation modes requires you to remove the existing contract handler with all its contracts and then setup a new contract handler | `'my_alliance'`
 `FREIGHT_STATISTICS_MAX_DAYS`| Sets the number of days that are considered for creating the statistics  | 90
+`FREIGHT_FULL_ROUTE_NAMES`| Show full name of locations in route, e.g on calculator drop down  | False
 
 ## Operation Mode
 
