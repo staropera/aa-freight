@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.9.2] - 2019-11-23
+
+### Added
+
+- Add setting to enable full location names on calculator route down  ([#14](https://gitlab.com/ErikKalkoken/aa-freight/issues/14))
+
 ## [0.9.1] - 2019-11-22
 
 ### Added
