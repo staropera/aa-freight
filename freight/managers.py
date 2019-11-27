@@ -260,7 +260,7 @@ class ContractManager(models.Manager):
                 ))
                 
                 for contract in q:
-                    contract.send_notification()
+                    contract.send_default_notification()
                     sleep(1)
             else:
                 logger.info('No new contracts to notify about')

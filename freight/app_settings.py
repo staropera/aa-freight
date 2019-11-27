@@ -36,6 +36,21 @@ FREIGHT_STATISTICS_MAX_DAYS = getattr(
     90
 )
 
+# defines after how many hours a contract state becomes stale
+# app will not sent our customer notifications for stale contract states
+FREIGHT_HOURS_UNTIL_STALE_CONTRACT_STATE = getattr(
+    settings, 
+    'FREIGHT_HOURS_UNTIL_STALE_CONTRACT_STATE', 
+    24
+)
+
+# Webhook URL used for notifications to customers if defined
+FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL = getattr(
+    settings, 
+    'FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 
+    None
+)
+
 # Whether to show full location names in the route dropdown of the calculator
 FREIGHT_FULL_ROUTE_NAMES = getattr(
     settings, 

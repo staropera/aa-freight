@@ -1,21 +1,24 @@
+import json
 import datetime
 import logging
 
 from dhooks_lite import Webhook, Embed, Thumbnail
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import Q
 from django.urls import reverse
+from django.utils.timezone import now
 
-from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.authentication.models import CharacterOwnership, User
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo
 from allianceauth.eveonline.models import EveCharacter
 
 from .app_settings import *
 from .managers import LocationManager, EveOrganizationManager, ContractManager
-from .utils import LoggerAddTag, DATETIME_FORMAT
+from .utils import LoggerAddTag, DATETIME_FORMAT, make_logger_prefix
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -498,6 +501,15 @@ class Contract(models.Model):
         (STATUS_DELETED, 'deleted'),
         (STATUS_REVERSED, 'reversed'),
     ]
+    STATUS_FOR_CUSTOMER_NOTIFICATION = [
+        STATUS_OUTSTANDING,
+        STATUS_IN_PROGRESS,
+        STATUS_FINISHED,
+        STATUS_FAILED
+    ]
+
+    EMBED_COLOR_PASSED =  0x008000
+    EMBED_COLOR_FAILED = 0xFF0000                
 
     handler = models.ForeignKey(
         ContractHandler, 
@@ -568,7 +580,7 @@ class Contract(models.Model):
         blank=True,
         help_text='List or price check issues as JSON array of strings or None'
     )
-
+    
     objects = ContractManager()
 
     class Meta:
@@ -629,8 +641,55 @@ class Contract(models.Model):
             self.reward
         )
 
-    def send_notification(self):
-        """sends notification about this contract to the DISCORD webhook"""
+    def get_issue_list(self) -> list:
+        """returns current pricing issues as list of strings"""
+        if self.issues:
+            return json.loads(self.issues)
+        else:
+            return []
+
+    def _generate_embed(self) -> Embed:
+        """generates a Discord embed for this contract"""
+        desc = ''
+        desc += '**Route**: {} → {}\n'.format(
+            self.start_location.solar_system_name,
+            self.end_location.solar_system_name
+        )                
+        desc += '**Reward**: {:,.0f} M ISK\n'.format(
+            self.reward / 1000000
+        )
+        desc += '**Collateral**: {:,.0f} M ISK\n'.format(
+            self.collateral / 1000000
+        )
+        desc += '**Volume**: {:,.0f} K m3\n'.format(
+            self.volume / 1000
+        )
+        desc += '**Status**: {}\n'.format(self.status)
+        if self.pricing:            
+            if not self.has_pricing_errors:                        
+                check_text = 'passed'
+                color = self.EMBED_COLOR_PASSED
+            else:
+                check_text = 'FAILED'
+                color = self.EMBED_COLOR_FAILED
+        else:
+            check_text = 'N/A'
+            color = None
+        desc += '**Price Check**: {}\n'.format(check_text)
+        desc += '**Expires on**: {}\n'.format(
+            self.date_expired.strftime(DATETIME_FORMAT)
+        )
+        desc += '**Issued by**: {}\n'.format(self.issuer)
+        
+        return Embed(
+            description=desc,
+            timestamp=self.date_issued,
+            color=color,
+            thumbnail=Thumbnail(self.issuer.portrait_url())
+        )        
+
+    def send_default_notification(self):
+        """sends default notification about this contract to the DISCORD webhook"""
         if FREIGHT_DISCORD_WEBHOOK_URL:                        
             if FREIGHT_DISCORD_DISABLE_BRANDING:
                 username = None
@@ -646,10 +705,9 @@ class Contract(models.Model):
             )            
             # reverse('freight:contract_list')
             with transaction.atomic():
-                logger.info(
-                    'Trying to sent notification about contract {}'.format(
-                        self.contract_id
-                    ) + ' to {}'.format(FREIGHT_DISCORD_WEBHOOK_URL))
+                logger.info('Trying to sent default notification about '
+                    + 'contract {}'.format(self.contract_id) 
+                    + ' to {}'.format(FREIGHT_DISCORD_WEBHOOK_URL))
                 if FREIGHT_DISCORD_MENTIONS:
                     contents = str(FREIGHT_DISCORD_MENTIONS) + ' '
                 else:
@@ -658,46 +716,130 @@ class Contract(models.Model):
                 contents += 'There is a new courier contract from {} '.format(
                         self.issuer) + 'looking to be picked up:'
                
-                desc = ''
-                desc += '**Route**: {} → {}\n'.format(
-                    self.start_location.solar_system_name,
-                    self.end_location.solar_system_name
-                )                
-                desc += '**Reward**: {:,.0f} M ISK\n'.format(
-                    self.reward / 1000000
-                )
-                desc += '**Collateral**: {:,.0f} M ISK\n'.format(
-                    self.collateral / 1000000
-                )
-                desc += '**Volume**: {:,.0f} K m3\n'.format(
-                    self.volume / 1000
-                )
-                if self.pricing:
-                    issues = self.get_price_check_issues(self.pricing)
-                    if not issues:                        
-                        check_text = 'passed'
-                        color = 0x008000
-                    else:
-                        check_text = 'FAILED'
-                        color = 0xFF0000
-                else:
-                    check_text = 'N/A'
-                    color = None
-                desc += '**Price Check**: {}\n'.format(check_text)
-                desc += '**Expires on**: {}\n'.format(
-                    self.date_expired.strftime(DATETIME_FORMAT)
-                )
-                desc += '**Issued by**: {}\n'.format(self.issuer)
-                
-                embed = Embed(
-                    description=desc,
-                    timestamp=self.date_issued,
-                    color=color,
-                    thumbnail=Thumbnail(self.issuer.portrait_url())
-                )                
-                                                
+                embed = self._generate_embed()
                 hook.execute(content=contents, embeds=[embed]) 
-                self.date_notified = datetime.datetime.now(
-                    datetime.timezone.utc
-                )
+                self.date_notified = now()
                 self.save()
+
+    def send_customer_notification(self, send_again = False):
+        """sends customer notification about this contract to Discord
+        send_again: send notification even if one has already been sent
+        """
+        add_tag = make_logger_prefix('contract:{}'.format(self.contract_id))
+        if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL \
+            and 'allianceauth.services.modules.discord' \
+                in settings.INSTALLED_APPS:
+            from allianceauth.services.modules.discord.models import DiscordUser
+            
+            status_to_report = None
+            for status in self.STATUS_FOR_CUSTOMER_NOTIFICATION:
+                if self.status == status \
+                    and (send_again or not self.contractcustomernotification_set\
+                        .filter(status__exact=status)
+                    ):
+                    status_to_report = status
+                    break
+
+            if status_to_report:
+                issuer_user = User.objects\
+                    .filter(character_ownerships__character__exact=self.issuer) \
+                    .first()
+
+                if not issuer_user:
+                    logger.warning(add_tag(
+                        'Could not find matching user for issuer'
+                    ))
+                    return
+
+                try:
+                    discord_user = DiscordUser.objects.get(user=issuer_user)
+                    discord_user_id = discord_user.uid
+                except DiscordUser.DoesNotExist:
+                    logger.warning(add_tag(
+                        'Could not find Discord user for issuer'
+                    ))
+                    return
+                
+                if FREIGHT_DISCORD_DISABLE_BRANDING:
+                    username = None
+                    avatar_url = None
+                else:
+                    username = 'Alliance Freight'
+                    avatar_url = self.handler.organization.avatar_url
+
+                hook = Webhook(
+                    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL, 
+                    username=username,
+                    avatar_url=avatar_url
+                )                        
+                with transaction.atomic():            
+                    logger.info(add_tag('Trying to sent customer notification'
+                        + ' about contract {} on status {}'.format(
+                                self.contract_id, 
+                                status_to_report
+                            ) 
+                        + ' to {}'.format(FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL)))
+                    embed = self._generate_embed()
+                                        
+                    contents = '<@{}>\n'.format(
+                        discord_user_id
+                    )
+                    if status_to_report == self.STATUS_OUTSTANDING:
+                        contents += 'We have received your contract'                                                
+                        if self.has_pricing_errors:
+                            issues = self.get_issue_list()
+                            contents += ', but we found some issues.\n' \
+                                + 'Please create a new courier contract ' \
+                                + 'and correct the following issues:\n'
+                            for issue in issues:
+                                contents += '• {}\n'.format(issue)
+                        else:                        
+                            contents += ' and it will be picked up by ' \
+                                    + 'one of our pilots shortly.'
+                    
+                    elif status_to_report == self.STATUS_IN_PROGRESS:
+                        contents += 'Your contract has been picked up by ' \
+                            + '{}'.format(self.acceptor) \
+                            + ' and will be delivered to you shortly.'
+                    
+                    elif status_to_report == self.STATUS_FINISHED:
+                        contents += 'Your contract has been **delivered**.\n' \
+                            + 'Thank you for using our freight service.'
+
+                    elif status_to_report == self.STATUS_FAILED:
+                        contents += 'Your contract has been **failed** by ' \
+                            + '{}.\n'.format(self.acceptor) \
+                            + 'Thank you for using our freight service.'
+                            
+                    else:
+                        raise NotImplementedError()
+                        
+                    hook.execute(content=contents, embeds=[embed]) 
+                    ContractCustomerNotification.objects.update_or_create(
+                        contract = self,
+                        status = status_to_report,
+                        defaults={
+                            "date_notified": now()
+                        }
+                    )
+        
+
+class ContractCustomerNotification(models.Model):
+    """record of contract notification to customer about state"""
+    contract = models.ForeignKey(
+        Contract, 
+        on_delete=models.CASCADE
+    )
+    status = models.CharField(
+        max_length=32, 
+        choices=Contract.STATUS_CHOICES
+    )
+    date_notified = models.DateTimeField(            
+        help_text='datetime of notification'
+    )
+    
+    class Meta:
+        unique_together = (('contract', 'status'),)
+
+    def __str__(self):
+        return '{}-{}'.format(self.contract.contract_id, self.status)

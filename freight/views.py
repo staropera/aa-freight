@@ -1,5 +1,4 @@
 import datetime
-import json
 import math
 
 from django.conf import settings
@@ -111,7 +110,7 @@ def contract_list_data(request, category):
                 color = 'red'                
                 tooltip_text = '{}\n{}'.format(
                     route_name, 
-                    '\n'.join(json.loads(contract.issues))
+                    '\n'.join(contract.get_issue_list())
                 )
             pricing_check = create_glyph_html(glyph, tooltip_text, color)
         else:

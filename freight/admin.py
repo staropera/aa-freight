@@ -67,7 +67,8 @@ class ContractHandlerAdmin(admin.ModelAdmin):
                 text
             )
     
-    send_notifications.short_description = "Send notifications for outstanding contracts"
+    send_notifications.short_description = \
+        "Send notifications for outstanding contracts"
 
     def update_pricing(self, request, queryset):
                         
@@ -104,6 +105,36 @@ class ContractAdmin(admin.ModelAdmin):
 
     list_select_related = True
 
+    actions = ['send_default_notification', 'send_customer_notification']
+
+    def send_default_notification(self, request, queryset):
+                        
+        for obj in queryset:            
+            obj.send_default_notification()
+            self.message_user(
+                request, 
+                'Sent default notification for contract {} to Discord'.format(
+                    obj.contract_id
+                )
+            )
+    
+    send_default_notification.short_description = \
+        "Sent default notification for contracts to Discord"
+
+    def send_customer_notification(self, request, queryset):
+                        
+        for obj in queryset:            
+            obj.send_customer_notification(send_again=True)
+            self.message_user(
+                request, 
+                'Sent customer notification for contract {} to Discord'.format(
+                    obj.contract_id
+                )
+            )
+    
+    send_customer_notification.short_description = \
+        "Sent customer notification for contracts to Discord"
+
     # This will help you to disbale add functionality
     def has_add_permission(self, request):
         if settings.DEBUG:
@@ -117,3 +148,7 @@ class ContractAdmin(admin.ModelAdmin):
         else:
             return False
 
+
+@admin.register(ContractCustomerNotification)
+class ContractCustomerNotificationAdmin(admin.ModelAdmin):
+    pass
