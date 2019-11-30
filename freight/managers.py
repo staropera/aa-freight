@@ -8,7 +8,7 @@ from django.db import models, transaction
 from esi.clients import esi_client_factory
 from allianceauth.eveonline.models import EveCharacter
 
-from .app_settings import FREIGHT_DISCORD_WEBHOOK_URL
+from .app_settings import *
 from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 
 
@@ -244,6 +244,7 @@ class ContractManager(models.Manager):
         """Send notification about outstanding contracts that have pricing"""
         from .models import Contract
 
+        # send default notifications
         if FREIGHT_DISCORD_WEBHOOK_URL:
             q = Contract.objects.filter(                
                 status__exact=Contract.STATUS_OUTSTANDING,                
@@ -255,16 +256,29 @@ class ContractManager(models.Manager):
             q = q.select_related()
 
             if q.count() > 0:
-                logger.info('Trying to send notifications for {} contracts'.format(
-                    q.count()
-                ))
+                logger.info(
+                    'Trying to send default notifications for'
+                    + ' {} contracts'.format(q.count())
+                )
                 
                 for contract in q:
                     contract.send_default_notification()
                     sleep(1)
-            else:
-                logger.info('No new contracts to notify about')
         
-        else:
-            logger.info('Discord webhook not configured - skipping sending notifications')
+        # send customer notifications        
+        if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
+            q = Contract.objects.filter(
+                status__in=Contract.STATUS_FOR_CUSTOMER_NOTIFICATION,
+            ).exclude(pricing__exact=None)
+            
+            q = q.select_related()
 
+            if q.count() > 0:
+                logger.info(
+                    'Checking {} constracts if '.format(q.count())
+                    + 'customer notifications need to be sent'
+                )                
+                for contract in q:
+                    contract.send_customer_notification(force_sent)
+                    sleep(1)
+        

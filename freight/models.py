@@ -721,9 +721,9 @@ class Contract(models.Model):
                 self.date_notified = now()
                 self.save()
 
-    def send_customer_notification(self, send_again = False):
+    def send_customer_notification(self, force_sent = False):
         """sends customer notification about this contract to Discord
-        send_again: send notification even if one has already been sent
+        force_sent: send notification even if one has already been sent
         """
         add_tag = make_logger_prefix('contract:{}'.format(self.contract_id))
         if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL \
@@ -734,7 +734,7 @@ class Contract(models.Model):
             status_to_report = None
             for status in self.STATUS_FOR_CUSTOMER_NOTIFICATION:
                 if self.status == status \
-                    and (send_again or not self.contractcustomernotification_set\
+                    and (force_sent or not self.contractcustomernotification_set\
                         .filter(status__exact=status)
                     ):
                     status_to_report = status
