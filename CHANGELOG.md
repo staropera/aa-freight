@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.9.3] - 2019-12-06
+
+### Fixed
+
+- On the calculator fields for volume and collateral would still show if a related pricing element was set to 0 ([#17](https://gitlab.com/ErikKalkoken/aa-freight/issues/17))
+
 ## [0.9.2] - 2019-11-23
 
 ### Added

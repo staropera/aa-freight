@@ -216,13 +216,25 @@ class Pricing(models.Model):
 
     def requires_volume(self) -> bool:
         """whether this pricing required volume to be specified"""
-        return (self.price_per_volume is not None 
-            or self.volume_min is not None)
+        return ((
+                self.price_per_volume is not None 
+                and self.price_per_volume != 0
+            )   
+            or (
+                self.volume_min is not None
+                and self.volume_min != 0
+            ))
 
     def requires_collateral(self) -> bool:
         """whether this pricing required collateral to be specified"""
-        return (self.price_per_collateral_percent is not None 
-            or self.collateral_min is not None)
+        return ((
+                self.price_per_collateral_percent is not None
+                and self.price_per_collateral_percent != 0
+            )
+            or (
+                self.collateral_min is not None
+                and self.collateral_min != 0
+            ))
 
     def is_fix_price(self) -> bool:
         """whether this pricing is a fix price"""
