@@ -16,6 +16,7 @@ from allianceauth.authentication.models import CharacterOwnership, User
 from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo
 from allianceauth.eveonline.models import EveCharacter
 
+from . import __title__
 from .app_settings import *
 from .managers import LocationManager, EveOrganizationManager, ContractManager
 from .utils import LoggerAddTag, DATETIME_FORMAT, make_logger_prefix
@@ -698,6 +699,9 @@ class Contract(models.Model):
             self.date_expired.strftime(DATETIME_FORMAT)
         )
         desc += '**Issued by**: {}\n'.format(self.issuer)
+        desc += '**Accepted by**: {}\n'.format(
+            self.acceptor if self.acceptor else ''
+        )
         
         return Embed(
             description=desc,
@@ -713,7 +717,7 @@ class Contract(models.Model):
                 username = None
                 avatar_url = None
             else:
-                username = 'Alliance Freight'
+                username = __title__
                 avatar_url = self.handler.organization.avatar_url
 
             hook = Webhook(
@@ -785,7 +789,7 @@ class Contract(models.Model):
                     username = None
                     avatar_url = None
                 else:
-                    username = 'Alliance Freight'
+                    username = __title__
                     avatar_url = self.handler.organization.avatar_url
 
                 hook = Webhook(

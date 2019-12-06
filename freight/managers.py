@@ -359,7 +359,7 @@ class ContractManager(models.Manager):
             q = q.select_related()
 
             if q.count() > 0:
-                logger.info(
+                logger.debug(
                     'Checking {} contracts if '.format(q.count())
                     + 'customer notifications need to be sent'
                 )                

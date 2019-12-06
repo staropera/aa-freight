@@ -18,7 +18,7 @@ from esi.decorators import token_required
 from esi.clients import esi_client_factory
 from esi.models import Token
 
-from . import tasks
+from . import tasks, __title__
 from .app_settings import FREIGHT_STATISTICS_MAX_DAYS
 from .models import *
 from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
@@ -40,6 +40,7 @@ def index(request):
 def contract_list_active(request):
         
     context = {
+        'app_title': __title__,
         'page_title': 'Active Contracts',
         'category': CONTRACT_LIST_ACTIVE
     }        
@@ -51,6 +52,7 @@ def contract_list_active(request):
 def contract_list_user(request):
         
     context = {
+        'app_title': __title__,
         'page_title': 'My Contracts',
         'category': CONTRACT_LIST_USER
     }        
@@ -128,6 +130,7 @@ def contract_list_data(request, category):
             notes += ' {}'.format(contract.contract_id)
         
         contracts_data.append({
+            'contract_id': contract.contract_id,
             'status': contract.status,
             'start_location': str(contract.start_location),
             'end_location': str(contract.end_location),
@@ -228,7 +231,8 @@ def calculator(request, pricing_pk = None):
     return render(
         request, 'freight/calculator.html', 
         {
-            'page_title': 'Reward Calculator',            
+            'app_title': __title__,
+            'page_title': 'Reward Calculator',
             'form': form,             
             'pricing': pricing,
             'price': price,
@@ -394,6 +398,7 @@ def add_location_2(request):
     return render(
         request, 'freight/add_location.html', 
         {            
+            'app_title': __title__,
             'page_title': 'Add / Update Location',
             'form': form,
             'token_char_name': token.character_name
@@ -405,6 +410,7 @@ def add_location_2(request):
 def statistics(request):
 
     context = {
+        'app_title': __title__,
         'page_title': 'Statistics',
         'max_days': FREIGHT_STATISTICS_MAX_DAYS
     }        

@@ -105,21 +105,21 @@ class ContractAdmin(admin.ModelAdmin):
 
     list_select_related = True
 
-    actions = ['send_pilot_notification', 'send_customer_notification']
+    actions = ['send_default_notification', 'send_customer_notification']
 
-    def send_pilot_notification(self, request, queryset):
+    def send_default_notification(self, request, queryset):
                         
         for obj in queryset:            
-            obj.send_pilot_notification()
+            obj.send_default_notification()
             self.message_user(
                 request, 
-                'Sent pilot notification for contract {} to Discord'.format(
+                'Sent default notification for contract {} to Discord'.format(
                     obj.contract_id
                 )
             )
     
-    send_pilot_notification.short_description = \
-        "Sent pilot notification for contracts to Discord"
+    send_default_notification.short_description = \
+        "Sent default notification for contracts to Discord"
 
     def send_customer_notification(self, request, queryset):
                         

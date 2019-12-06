@@ -30,19 +30,13 @@ FREIGHT_DISCORD_MENTIONS = getattr(
 )
 
 # max days back considered when calculating statistics
-FREIGHT_STATISTICS_MAX_DAYS = getattr(
-    settings, 
-    'FREIGHT_STATISTICS_MAX_DAYS', 
-    90
-)
+if (hasattr(settings, 'FREIGHT_STATISTICS_MAX_DAYS')
+    and settings.FREIGHT_STATISTICS_MAX_DAYS > 0
+):
+    FREIGHT_STATISTICS_MAX_DAYS = settings.FREIGHT_STATISTICS_MAX_DAYS
+else:
+    FREIGHT_STATISTICS_MAX_DAYS = 90
 
-# defines after how many hours a contract state becomes stale
-# app will not sent our customer notifications for stale contract states
-FREIGHT_HOURS_UNTIL_STALE_CONTRACT_STATE = getattr(
-    settings, 
-    'FREIGHT_HOURS_UNTIL_STALE_CONTRACT_STATE', 
-    24
-)
 
 # Webhook URL used for notifications to customers if defined
 FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL = getattr(
@@ -72,7 +66,9 @@ FREIGHT_OPERATION_MODES = [
 ]
 
 if (hasattr(settings, 'FREIGHT_OPERATION_MODE') 
-    and settings.FREIGHT_OPERATION_MODE in [x[0] for x in FREIGHT_OPERATION_MODES]):
+    and settings.FREIGHT_OPERATION_MODE in \
+        [x[0] for x in FREIGHT_OPERATION_MODES]
+):
     FREIGHT_OPERATION_MODE = settings.FREIGHT_OPERATION_MODE
 else:
     FREIGHT_OPERATION_MODE = FREIGHT_OPERATION_MODE_MY_ALLIANCE
