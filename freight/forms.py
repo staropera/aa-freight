@@ -15,7 +15,7 @@ class CalculatorForm(forms.Form):
         empty_label=None
     )    
     volume = forms.IntegerField(
-        help_text='Est. volume of your cargo in K x m3, e.g. "50" = 50.000 m3',
+        help_text='Est. volume of your cargo in K x m3, e.g. "50" = 50,000 m3',
         required = False,
         validators=[            
             MinValueValidator(0)

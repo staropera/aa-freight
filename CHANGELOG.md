@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.10.0] - 2019-12-06
+
+### Added
+
+- New feature: Automatically sends out messages to contract issuer informing him about the developing status of his contract (optional)
+
+### Changed
+
+- Will no longer show expired contracts on "Active Contracts" page
+
+### Fixed
+
+- Localization fix: ([#18](https://gitlab.com/ErikKalkoken/aa-freight/issues/18))
+
 ## [0.9.3] - 2019-12-06
 
 ### Fixed

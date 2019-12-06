@@ -6,7 +6,7 @@ from bravado.exception import *
 
 from django.db import models, transaction
 from esi.clients import esi_client_factory
-from allianceauth.eveonline.models import EveCharacter
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 from .app_settings import *
 from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
@@ -21,7 +21,7 @@ class LocationManager(models.Manager):
     
     def get_or_create_esi(
             self, 
-            client: object, 
+            esi_client: object, 
             location_id: int,
             add_unknown: bool = True
         ) -> list:
@@ -32,7 +32,7 @@ class LocationManager(models.Manager):
             created = False
         except Location.DoesNotExist:
             location, created = self.update_or_create_esi(
-                client, 
+                esi_client, 
                 location_id,
                 add_unknown
             )
@@ -42,7 +42,7 @@ class LocationManager(models.Manager):
 
     def update_or_create_esi(
             self, 
-            client: object, 
+            esi_client: object, 
             location_id: int, 
             add_unknown: bool = True
         ) -> list:
@@ -55,7 +55,7 @@ class LocationManager(models.Manager):
                 and location_id <= self.STATION_ID_END):
             logger.info(addPrefix('Fetching station from ESI'))
             try:
-                station = client.Universe.get_universe_stations_station_id(
+                station = esi_client.Universe.get_universe_stations_station_id(
                     station_id=location_id
                 ).result()
                 location, created = self.update_or_create(
@@ -76,7 +76,7 @@ class LocationManager(models.Manager):
         else:
             logger.info(addPrefix('Fetching structure from ESI'))
             try:
-                structure = client.Universe.get_universe_structures_structure_id(
+                structure = esi_client.Universe.get_universe_structures_structure_id(
                     structure_id=location_id
                 ).result()            
                 location, created = self.update_or_create(
@@ -139,8 +139,8 @@ class EveOrganizationManager(models.Manager):
         
         logger.info(addPrefix('Fetching organization from ESI'))
         try:
-            client = esi_client_factory(spec_file=get_swagger_spec_path())
-            response = client.Universe.post_universe_names(
+            esi_client = esi_client_factory(spec_file=get_swagger_spec_path())
+            response = esi_client.Universe.post_universe_names(
                 ids=[organization_id]
             ).result()
             if len(response) != 1:
@@ -206,6 +206,88 @@ class EveOrganizationManager(models.Manager):
 
 class ContractManager(models.Manager):
     
+    def update_or_create_from_dict(
+        self, 
+        handler: object, 
+        contract: dict, 
+        esi_client: object
+    ):
+        """updates or creates a contract from given dict"""
+
+        from .models import Contract, Location
+
+        if int(contract['acceptor_id']) != 0:
+            try:
+                acceptor = EveCharacter.objects.get(
+                    character_id=contract['acceptor_id']
+                )
+            except EveCharacter.DoesNotExist:
+                acceptor = EveCharacter.objects.create_character(
+                    character_id=contract['acceptor_id']
+                )
+        else:
+            acceptor = None
+
+        try:
+            issuer = EveCharacter.objects.get(
+                character_id=contract['issuer_id']
+            )
+        except EveCharacter.DoesNotExist:
+            issuer = EveCharacter.objects.create_character(
+                character_id=contract['issuer_id']
+            )
+
+        try:
+            issuer_corporation = EveCorporationInfo.objects.get(
+                corporation_id=contract['issuer_corporation_id']
+            )
+        except EveCorporationInfo.DoesNotExist:
+            issuer_corporation = EveCorporationInfo.objects.create_corporation(
+                corp_id=contract['issuer_corporation_id']
+            )
+        
+        date_accepted = contract['date_accepted'] \
+            if 'date_accepted' in contract else None
+        date_completed = contract['date_completed'] \
+            if 'date_completed' in contract else None
+        title = contract['title'] if 'title' in contract else None
+
+        start_location, _ = Location.objects.get_or_create_esi(
+            esi_client,
+            contract['start_location_id']
+        )
+        end_location, _ = Location.objects.get_or_create_esi(
+            esi_client,
+            contract['end_location_id']
+        )
+        
+        obj, created = Contract.objects.update_or_create(
+            handler=handler,
+            contract_id=contract['contract_id'],
+            defaults={
+                'acceptor': acceptor,
+                'collateral': contract['collateral'],
+                'date_accepted': date_accepted,
+                'date_completed': date_completed,
+                'date_expired': contract['date_expired'],
+                'date_issued': contract['date_issued'],
+                'days_to_complete': contract['days_to_complete'],
+                'end_location': end_location,
+                'for_corporation': contract['for_corporation'],
+                'issuer_corporation': issuer_corporation,
+                'issuer': issuer,                                
+                'reward': contract['reward'],
+                'start_location': start_location,
+                'status': contract['status'],
+                'title': title,
+                'volume': contract['volume'],
+                'pricing': None,
+                'issues': None
+            }                        
+        )
+        return obj, created
+
+    
     def update_pricing(self):
         """Updates pricing relation for all contracts"""
         from .models import Pricing, Contract
@@ -240,11 +322,12 @@ class ContractManager(models.Manager):
                     contract.issues = issues
                     contract.save()
 
-    def send_notifications(self, force_sent = False):
+
+    def send_notifications(self, force_sent = False, rate_limted = True):
         """Send notification about outstanding contracts that have pricing"""
         from .models import Contract
 
-        # send default notifications
+        # send pilot notifications
         if FREIGHT_DISCORD_WEBHOOK_URL:
             q = Contract.objects.filter(                
                 status__exact=Contract.STATUS_OUTSTANDING,                
@@ -257,13 +340,15 @@ class ContractManager(models.Manager):
 
             if q.count() > 0:
                 logger.info(
-                    'Trying to send default notifications for'
+                    'Trying to send pilot notifications for'
                     + ' {} contracts'.format(q.count())
                 )
                 
                 for contract in q:
-                    contract.send_default_notification()
-                    sleep(1)
+                    if not contract.has_expired:
+                        contract.send_pilot_notification()
+                        if rate_limted:
+                            sleep(1)
         
         # send customer notifications        
         if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
@@ -275,10 +360,12 @@ class ContractManager(models.Manager):
 
             if q.count() > 0:
                 logger.info(
-                    'Checking {} constracts if '.format(q.count())
+                    'Checking {} contracts if '.format(q.count())
                     + 'customer notifications need to be sent'
                 )                
                 for contract in q:
-                    contract.send_customer_notification(force_sent)
-                    sleep(1)
+                    if not contract.has_expired:
+                        contract.send_customer_notification(force_sent)
+                        if rate_limted:
+                            sleep(1)
         

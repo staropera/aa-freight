@@ -25,12 +25,6 @@ from .models import *
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 
 
-"""
-Swagger Operations:
-get_corporations_corporation_id_contracts
-"""
-
-
 @shared_task
 def run_contracts_sync(force_sync = False, user_pk = None):
     
@@ -104,13 +98,13 @@ def run_contracts_sync(force_sync = False, user_pk = None):
         try:
             # fetching data from ESI
             logger.info(add_prefix('Fetching contracts from ESI - page 1'))
-            client = esi_client_factory(
+            esi_client = esi_client_factory(
                 token=token, 
                 spec_file=get_swagger_spec_path()
             )
 
             # get contracts from first page
-            operation = client.Contracts.get_corporations_corporation_id_contracts(
+            operation = esi_client.Contracts.get_corporations_corporation_id_contracts(
                 corporation_id=handler.character.character.corporation_id
             )
             operation.also_return_response = True
@@ -122,7 +116,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 logger.info(add_prefix(
                     'Fetching contracts from ESI - page {}'.format(page)
                 ))
-                contracts_all += client.Contracts.get_corporations_corporation_id_contracts(
+                contracts_all += esi_client.Contracts.get_corporations_corporation_id_contracts(
                     corporation_id=handler.character.character.corporation_id,
                     page=page
                 ).result()
@@ -197,72 +191,10 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 # update contracts in local DB
                 with transaction.atomic():                
                     for contract in contracts:                    
-                        if int(contract['acceptor_id']) != 0:
-                            try:
-                                acceptor = EveCharacter.objects.get(
-                                    character_id=contract['acceptor_id']
-                                )
-                            except EveCharacter.DoesNotExist:
-                                acceptor = EveCharacter.objects.create_character(
-                                    character_id=contract['acceptor_id']
-                                )
-                        else:
-                            acceptor = None
-
-                        try:
-                            issuer = EveCharacter.objects.get(
-                                character_id=contract['issuer_id']
-                            )
-                        except EveCharacter.DoesNotExist:
-                            issuer = EveCharacter.objects.create_character(
-                                character_id=contract['issuer_id']
-                            )
-
-                        try:
-                            issuer_corporation = EveCorporationInfo.objects.get(
-                                corporation_id=contract['issuer_corporation_id']
-                            )
-                        except EveCorporationInfo.DoesNotExist:
-                            issuer_corporation = EveCorporationInfo.objects.create_corporation(
-                                corp_id=contract['issuer_corporation_id']
-                            )
-                        
-                        date_accepted = contract['date_accepted'] if 'date_accepted' in contract else None
-                        date_completed = contract['date_completed'] if 'date_completed' in contract else None
-                        title = contract['title'] if 'title' in contract else None
-
-                        start_location, _ = Location.objects.get_or_create_esi(
-                            client,
-                            contract['start_location_id']
-                        )
-                        end_location, _ = Location.objects.get_or_create_esi(
-                            client,
-                            contract['end_location_id']
-                        )
-                        
-                        Contract.objects.update_or_create(
+                        Contract.objects.update_or_create_from_dict(
                             handler=handler,
-                            contract_id=contract['contract_id'],
-                            defaults={
-                                'acceptor': acceptor,
-                                'collateral': contract['collateral'],
-                                'date_accepted': date_accepted,
-                                'date_completed': date_completed,
-                                'date_expired': contract['date_expired'],
-                                'date_issued': contract['date_issued'],
-                                'days_to_complete': contract['days_to_complete'],
-                                'end_location': end_location,
-                                'for_corporation': contract['for_corporation'],
-                                'issuer_corporation': issuer_corporation,
-                                'issuer': issuer,                                
-                                'reward': contract['reward'],
-                                'start_location': start_location,
-                                'status': contract['status'],
-                                'title': title,
-                                'volume': contract['volume'],
-                                'pricing': None,
-                                'issues': None
-                            }                        
+                            contract=contract,
+                            esi_client=esi_client
                         )
                     handler.version_hash = new_version_hash                
                     handler.save()
@@ -327,11 +259,11 @@ def run_contracts_sync(force_sync = False, user_pk = None):
 
 
 @shared_task
-def send_contract_notifications(force_sent = False):
+def send_contract_notifications(force_sent = False, rate_limted = True):
     """Send notification about outstanding contracts that have pricing"""
       
     try:
-        Contract.objects.send_notifications(force_sent)
+        Contract.objects.send_notifications(force_sent, rate_limted)
         success = True
 
     except Exception as ex:

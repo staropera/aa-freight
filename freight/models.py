@@ -624,6 +624,11 @@ class Contract(models.Model):
         return self.status == self.STATUS_FAILED
 
     @property
+    def has_expired(self) -> bool:
+        """returns true if this contract is expired"""
+        return self.date_expired < now()
+
+    @property
     def has_pricing(self) -> bool:
         return bool(self.pricing)
 
@@ -638,6 +643,7 @@ class Contract(models.Model):
             return td.days * 24 + (td.seconds / 3600 )
         else:
             return None
+
 
     def __str__(self) -> str:
         return '{}: {} -> {}'.format(
@@ -700,8 +706,8 @@ class Contract(models.Model):
             thumbnail=Thumbnail(self.issuer.portrait_url())
         )        
 
-    def send_default_notification(self):
-        """sends default notification about this contract to the DISCORD webhook"""
+    def send_pilot_notification(self):
+        """sends pilot notification about this contract to the DISCORD webhook"""
         if FREIGHT_DISCORD_WEBHOOK_URL:                        
             if FREIGHT_DISCORD_DISABLE_BRANDING:
                 username = None
@@ -717,7 +723,7 @@ class Contract(models.Model):
             )            
             # reverse('freight:contract_list')
             with transaction.atomic():
-                logger.info('Trying to sent default notification about '
+                logger.info('Trying to sent pilot notification about '
                     + 'contract {}'.format(self.contract_id) 
                     + ' to {}'.format(FREIGHT_DISCORD_WEBHOOK_URL))
                 if FREIGHT_DISCORD_MENTIONS:
@@ -746,15 +752,18 @@ class Contract(models.Model):
             status_to_report = None
             for status in self.STATUS_FOR_CUSTOMER_NOTIFICATION:
                 if self.status == status \
-                    and (force_sent or not self.contractcustomernotification_set\
-                        .filter(status__exact=status)
+                    and (force_sent 
+                        or not self.contractcustomernotification_set\
+                            .filter(status__exact=status)
                     ):
                     status_to_report = status
                     break
 
             if status_to_report:
                 issuer_user = User.objects\
-                    .filter(character_ownerships__character__exact=self.issuer) \
+                    .filter(
+                        character_ownerships__character__exact=self.issuer
+                    )\
                     .first()
 
                 if not issuer_user:

@@ -29,9 +29,11 @@ Alliance Freight offers the following main features:
 
 - Multiple routes can be defined, each with its own pricing
 
-- Automatic notification to a Discord channel about new courier contracts
+- Automatic notification to alliance pilots on Discord informing them about new courier contracts
 
-- User can check the current status of his courier contracts
+- Automatic notification to contract issuer on Discord informing him about the developing status of his contract
+
+- Contract issuer can always check the current status of his courier contracts
 
 - Statistics page showing key performance metrics for routes, pilots, customers
 
