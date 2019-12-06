@@ -20,7 +20,7 @@ from . import tasks
 from .app_settings import *
 from .models import *
 from .templatetags.freight_filters import power10, formatnumber
-from .views import statistics_routes_data
+
 
 # reconfigure logger so we get logging from tasks to console during test
 c_handler = logging.StreamHandler(sys.stdout)
@@ -158,6 +158,18 @@ class TestPricing(TestCase):
         with self.assertRaises(ValueError):            
             p.get_contract_price_check_issues(50, 5, -5)
         
+
+    def test_pricing_collateral_min_zero(self):
+        p = Pricing()
+        p.price_base = 500
+        p.collateral_min = 0
+        self.assertIsNone(p.get_contract_price_check_issues(350, 0))
+
+    def test_pricing_collateral_min_none(self):
+        p = Pricing()
+        p.price_base = 500        
+        self.assertIsNone(p.get_contract_price_check_issues(350, 0))
+
 
 class TestRunContractsSync(TestCase):
     

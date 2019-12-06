@@ -7,3 +7,7 @@ __pycache__
 dist/
 build/
 *.egg-info/
+update_coverage.sh
+coverage.xml
+.coverage
+
