@@ -694,18 +694,24 @@ class Contract(models.Model):
         else:
             check_text = 'N/A'
             color = None
-        desc += '**Price Check**: {}\n'.format(check_text)
+        desc += '**Price Check**: {}\n'.format(check_text)        
+        desc += '**Issued on**: {}\n'.format(
+            self.date_issued.strftime(DATETIME_FORMAT)
+        )
+        desc += '**Issued by**: {}\n'.format(self.issuer)
         desc += '**Expires on**: {}\n'.format(
             self.date_expired.strftime(DATETIME_FORMAT)
         )
-        desc += '**Issued by**: {}\n'.format(self.issuer)
         desc += '**Accepted by**: {}\n'.format(
             self.acceptor if self.acceptor else ''
         )
+        desc += '**Accepted on**: {}\n'.format(
+            self.date_accepted.strftime(DATETIME_FORMAT) \
+                if self.date_accepted else ''
+        )
         
         return Embed(
-            description=desc,
-            timestamp=self.date_issued,
+            description=desc,            
             color=color,
             thumbnail=Thumbnail(self.issuer.portrait_url())
         )        
