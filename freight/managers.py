@@ -5,11 +5,14 @@ from time import sleep
 from bravado.exception import *
 
 from django.db import models, transaction
+from django.utils.timezone import now
+
 from esi.clients import esi_client_factory
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 from .app_settings import *
-from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
+from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path, \
+    make_logger_prefix
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -327,6 +330,9 @@ class ContractManager(models.Manager):
         """Send notification about outstanding contracts that have pricing"""
         from .models import Contract
 
+        add_tag = make_logger_prefix('send_notifications')
+        logger.debug(add_tag('start'))
+
         # send pilot notifications
         if FREIGHT_DISCORD_WEBHOOK_URL:
             q = Contract.objects.filter(                
@@ -339,17 +345,24 @@ class ContractManager(models.Manager):
             q = q.select_related()
 
             if q.count() > 0:
-                logger.info(
+                logger.info(add_tag(
                     'Trying to send pilot notifications for'
                     + ' {} contracts'.format(q.count())
-                )
+                ))
                 
                 for contract in q:
                     if not contract.has_expired:
                         contract.send_pilot_notification()
                         if rate_limted:
                             sleep(1)
-        
+                    else:
+                        logger.debug(add_tag(
+                            'contract {} has expired'.format(                                    
+                                contract.contract_id
+                        )))
+        else:
+            logger.debug(add_tag('FREIGHT_DISCORD_WEBHOOK_URL not configured'))
+
         # send customer notifications        
         if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
             q = Contract.objects.filter(
@@ -359,13 +372,22 @@ class ContractManager(models.Manager):
             q = q.select_related()
 
             if q.count() > 0:
-                logger.debug(
+                logger.debug(add_tag(
                     'Checking {} contracts if '.format(q.count())
                     + 'customer notifications need to be sent'
-                )                
+                ))
                 for contract in q:
                     if not contract.has_expired:
                         contract.send_customer_notification(force_sent)
                         if rate_limted:
                             sleep(1)
+                    else:
+                        logger.debug(add_tag(
+                            'contract {} has expired'.format(                                    
+                                contract.contract_id
+                        )))
         
+        else:
+            logger.debug(add_tag(
+                'FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured'
+            ))

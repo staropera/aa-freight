@@ -718,7 +718,10 @@ class Contract(models.Model):
 
     def send_pilot_notification(self):
         """sends pilot notification about this contract to the DISCORD webhook"""
-        if FREIGHT_DISCORD_WEBHOOK_URL:                        
+        add_tag = make_logger_prefix(
+            'send_pilot_notification for contract {}'.format(self.contract_id)
+        )        
+        if FREIGHT_DISCORD_WEBHOOK_URL:
             if FREIGHT_DISCORD_DISABLE_BRANDING:
                 username = None
                 avatar_url = None
@@ -733,9 +736,9 @@ class Contract(models.Model):
             )            
             # reverse('freight:contract_list')
             with transaction.atomic():
-                logger.info('Trying to sent pilot notification about '
+                logger.info(add_tag('Trying to sent pilot notification about '
                     + 'contract {}'.format(self.contract_id) 
-                    + ' to {}'.format(FREIGHT_DISCORD_WEBHOOK_URL))
+                    + ' to {}'.format(FREIGHT_DISCORD_WEBHOOK_URL)))
                 if FREIGHT_DISCORD_MENTIONS:
                     contents = str(FREIGHT_DISCORD_MENTIONS) + ' '
                 else:
@@ -745,9 +748,23 @@ class Contract(models.Model):
                         self.issuer) + 'looking to be picked up:'
                
                 embed = self._generate_embed()
-                hook.execute(content=contents, embeds=[embed]) 
-                self.date_notified = now()
-                self.save()
+                response = hook.execute(
+                    content=contents, 
+                    embeds=[embed], 
+                    wait_for_response=True
+                )
+                if response.status_ok:
+                    self.date_notified = now()
+                    self.save()
+                    success = True
+                else:
+                    logger.warn(add_tag(
+                        'Failed to send message. HTTP code: {}'.format(
+                            response.status_code
+                    )))
+        else:
+            logger.debug(add_tag('FREIGHT_DISCORD_WEBHOOK_URL not configured'))
+
 
     def send_customer_notification(self, force_sent = False):
         """sends customer notification about this contract to Discord
@@ -845,14 +862,30 @@ class Contract(models.Model):
                     else:
                         raise NotImplementedError()
                         
-                    hook.execute(content=contents, embeds=[embed]) 
-                    ContractCustomerNotification.objects.update_or_create(
-                        contract = self,
-                        status = status_to_report,
-                        defaults={
-                            "date_notified": now()
-                        }
+                    response = hook.execute(
+                        content=contents, 
+                        embeds=[embed], 
+                        wait_for_response=True
                     )
+                    if response.status_ok:
+                        ContractCustomerNotification.objects.update_or_create(
+                            contract = self,
+                            status = status_to_report,
+                            defaults={
+                                "date_notified": now()
+                            }
+                        )
+
+                    else:
+                        logger.warn(add_tag(
+                            'Failed to send message. HTTP code: {}'.format(
+                                response.status_code
+                        )))
+        else:
+            logger.debug(add_tag(
+                'FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured or ' \
+                    + 'Discord services not installed'
+            ))
         
 
 class ContractCustomerNotification(models.Model):

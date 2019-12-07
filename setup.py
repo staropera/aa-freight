@@ -10,6 +10,16 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 # allow setup.py to be run from any path
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
+install_requires = [         
+    'dhooks-lite>=0.3.0',
+    'django-navhelper',        
+]
+
+testing_extras = [
+    'allianceauth',
+    'coverage',    
+]
+
 setup(
     name='aa-freight',
     version=__version__,
@@ -33,9 +43,9 @@ setup(
         'Programming Language :: Python :: 3.5',        
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
-    ],
-    install_requires=[ 
-        'dhooks-lite>=0.3.0',
-        'django-navhelper',        
-    ]
+    ],    
+    install_requires=install_requires,    
+    extras_require={
+        'testing': testing_extras
+    },
 )

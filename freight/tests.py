@@ -28,7 +28,9 @@ from . import views
 
 
 # reconfigure logger so we get logging from tasks to console during test
+c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
 c_handler = logging.StreamHandler(sys.stdout)
+c_handler.setFormatter(c_format)
 logger = logging.getLogger('freight.managers')
 logger.level = logging.DEBUG
 logger.addHandler(c_handler)
@@ -976,6 +978,8 @@ class TestNotifications(TestCase):
 
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_send_pilot_notifications_normal(
         self, 
@@ -986,7 +990,9 @@ class TestNotifications(TestCase):
 
 
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
-    @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
+    @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_send_customer_notifications_normal(
         self, 
@@ -998,6 +1004,8 @@ class TestNotifications(TestCase):
     
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_dont_send_pilot_notifications_for_expired_contracts(
         self, 
@@ -1013,6 +1021,8 @@ class TestNotifications(TestCase):
 
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_dont_send_customer_notifications_for_expired_contracts(
         self, 
@@ -1028,6 +1038,8 @@ class TestNotifications(TestCase):
 
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_send_pilot_notifications_only_once(
         self, 
@@ -1047,6 +1059,8 @@ class TestNotifications(TestCase):
 
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_send_customer_notifications_only_once_per_state(
         self, 
@@ -1066,6 +1080,8 @@ class TestNotifications(TestCase):
 
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_dont_send_any_notifications_when_no_url_if_set(
         self, 
