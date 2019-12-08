@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.10.1] - 2019-12-07
+
+### Added
+
+- Add new testing tools (tox) to enable CI
+
+- Improve error handling when posting messages on Discord
+
 ## [0.10.0] - 2019-12-06
 
 ### Added
