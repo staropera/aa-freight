@@ -35,7 +35,16 @@ class EveOrganizationAdmin(admin.ModelAdmin):
 @admin.register(ContractHandler)
 class ContractHandlerAdmin(admin.ModelAdmin):
     list_display = ('organization', 'character', 'operation_mode', 'last_sync')
-    actions = ['send_notifications', 'start_sync', 'update_pricing']
+    actions = ('send_notifications', 'start_sync', 'update_pricing')
+
+    readonly_fields=(
+        'organization', 
+        'character', 
+        'operation_mode', 
+        'version_hash', 
+        'last_sync', 
+        'last_error', 
+    )
 
     def start_sync(self, request, queryset):
                         
@@ -80,14 +89,11 @@ class ContractHandlerAdmin(admin.ModelAdmin):
             )
     
     update_pricing.short_description = "Update pricing info for all contracts"
-
-    # This will help you to disbale add functionality
+    
     def has_add_permission(self, request):
         return False
 
-    def has_change_permission(self, request, obj=None):
-        return False
-
+    
 
 @admin.register(Contract)
 class ContractAdmin(admin.ModelAdmin):

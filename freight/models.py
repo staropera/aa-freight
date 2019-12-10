@@ -142,6 +142,10 @@ class Pricing(models.Model):
         validators=[MinValueValidator(0)],
         help_text='Add-on price per m3 volume in ISK'
     )
+    use_price_per_volume_modifier = models.BooleanField(
+        default=False, 
+        help_text='Whether the global price per volume modifier is used'
+    )
     price_per_collateral_percent = models.FloatField(
         default=None, 
         null=True,
@@ -214,6 +218,35 @@ class Pricing(models.Model):
                 self.end_location.solar_system_name
             )
         return route_name
+    
+    def price_per_volume_modifier(self):
+        """returns the effective price per volume modifier or None """
+        if not self.use_price_per_volume_modifier:
+            modifier = None
+        else:
+            try:
+                handler = ContractHandler.objects.first()
+                modifier = handler.price_per_volume_modifier
+
+            except ContractManager.DoesNotExist:
+                modifier = None
+        
+        return modifier
+    
+    def price_per_volume_eff(self):
+        """"returns price per volume incl. potential modifier or None"""
+        if not self.price_per_volume:
+            price_per_volume = None
+        else:
+            price_per_volume = self.price_per_volume
+            modifier = self.price_per_volume_modifier()
+            if modifier:
+                price_per_volume = max(
+                    0, 
+                    price_per_volume + (price_per_volume * modifier / 100)
+                )
+
+        return price_per_volume
 
     def __str__(self):
         return self.name
@@ -275,8 +308,13 @@ class Pricing(models.Model):
 
         price_base = 0 if not self.price_base else self.price_base
         price_min = 0 if not self.price_min else self.price_min
-        price_per_volume = 0 \
-            if not self.price_per_volume else self.price_per_volume
+        
+        price_per_volume_eff = self.price_per_volume_eff()
+        if not price_per_volume_eff:
+            price_per_volume = 0
+        else:
+            price_per_volume = price_per_volume_eff
+        
         price_per_collateral_percent = 0 \
             if not self.price_per_collateral_percent \
             else self.price_per_collateral_percent
@@ -427,6 +465,13 @@ class ContractHandler(models.Model):
         default=FREIGHT_OPERATION_MODE_MY_ALLIANCE,        
         help_text='defines what kind of contracts are synced'
     )
+    price_per_volume_modifier = models.FloatField(
+        default=None,
+        null=True,
+        blank=True,        
+        help_text=\
+            'global modifier for price per volume in percent, e.g. 2.5 = +2.5%'
+    )
     version_hash = models.CharField(
         max_length=32, 
         null=True, 
@@ -470,7 +515,7 @@ class ContractHandler(models.Model):
             'esi-universe.read_structures.v1'
         ]
 
-    def get_availability_text_for_contracts(self):
+    def get_availability_text_for_contracts(self) -> str:
         """returns a text detailing the availability choice for this setup"""
         
         if self.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:

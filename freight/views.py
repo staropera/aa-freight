@@ -203,10 +203,13 @@ def calculator(request, pricing_pk = None):
             price = None            
 
     if pricing:
+        price_per_volume_eff = pricing.price_per_volume_eff()
         if not pricing.requires_volume():
             form.fields['volume'].widget = HiddenInput()
         if not pricing.requires_collateral():
             form.fields['collateral'].widget = HiddenInput()
+    else:
+        price_per_volume_eff = None
     
     if price:
         if pricing.days_to_expire:
@@ -241,6 +244,7 @@ def calculator(request, pricing_pk = None):
             'volume': volume * 1000 if volume else None,
             'expires_on': expires_on,
             'availability': availability,
+            'pricing_price_per_volume_eff': price_per_volume_eff
         }
     )
 

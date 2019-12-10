@@ -63,9 +63,9 @@
                                         <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>
                                     {% endif %}
                                     
-                                    {% if pricing.price_per_volume != None %}
+                                    {% if pricing_price_per_volume_eff != None %}
                                         <dt>Price add-on per m3:</dt>
-                                        <dd>{{ pricing.price_per_volume|formatnumber:"0" }} ISK</dd>
+                                        <dd>{{ pricing_price_per_volume_eff|formatnumber:"0" }} ISK</dd>
                                     {% endif %}
 
                                     {% if pricing.price_per_collateral_percent != None %}

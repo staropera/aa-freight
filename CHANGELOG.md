@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.11.0] - 2019-12-10
+
+### Added
+
+- Add global "price per volume" optional modifier ([#15](https://gitlab.com/ErikKalkoken/aa-freight/issues/15))
+
 ## [0.10.1] - 2019-12-07
 
 ### Added

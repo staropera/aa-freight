@@ -36,7 +36,51 @@ logger.level = logging.DEBUG
 logger.addHandler(c_handler)
 
 
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
+    inspect.currentframe()
+)))
+
+
 class TestPricing(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestPricing, cls).setUpClass()
+
+        # Eve characters
+        with open(
+            currentdir + '/testdata/characters.json', 
+            'r', 
+            encoding='utf-8'
+        ) as f:
+            cls.characters_data = json.load(f)
+
+    def setUp(self):
+        for character in self.characters_data:
+            EveCharacter.objects.create(**character)
+            EveCorporationInfo.objects.get_or_create(
+                corporation_id=character['corporation_id'],
+                defaults={
+                    'corporation_name': character['corporation_name'],
+                    'corporation_ticker': character['corporation_ticker'],
+                    'member_count': 42
+                }
+            )
+        
+        # 1 user
+        character = EveCharacter.objects.get(character_id=90000001)
+        
+        alliance = EveOrganization.objects.create(
+            id = character.alliance_id,
+            category = EveOrganization.CATEGORY_ALLIANCE,
+            name = character.alliance_name
+        )
+        
+        self.handler = ContractHandler.objects.create(
+            organization=alliance,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE
+        )
+
 
     def test_get_calculated_price(self):
         p = Pricing()
@@ -177,21 +221,86 @@ class TestPricing(TestCase):
         p.price_base = 500        
         self.assertIsNone(p.get_contract_price_check_issues(350, 0))
 
+    def test_price_per_volume_modifier_none_if_not_set(self):
+        p = Pricing()
+        self.assertIsNone(p.price_per_volume_modifier())
+        self.assertIsNone(p.price_per_volume_eff())
+
+    def test_price_per_volume_modifier_ignored_if_not_set(self):
+        p = Pricing()
+        p.price_per_volume = 50
+        self.assertEqual(
+            p.get_calculated_price(10, None),
+            500
+        )
+
+    def test_price_per_volume_modifier_not_used(self):
+        self.handler.price_per_volume_modifier = 10
+        self.handler.save()
+
+        p = Pricing()
+        p.price_per_volume = 50
+
+        self.assertIsNone(
+            p.price_per_volume_modifier()
+        )
+
+    def test_price_per_volume_modifier_normal_calc(self):
+        self.handler.price_per_volume_modifier = 10
+        self.handler.save()
+
+        p = Pricing()
+        p.price_per_volume = 50
+        p.use_price_per_volume_modifier = True
+
+        self.assertEqual(
+            p.price_per_volume_eff(),
+            55
+        )
+
+        self.assertEqual(
+            p.get_calculated_price(10, None),
+            550
+        )
+
+    def test_price_per_volume_modifier_normal_calc_2(self):
+        self.handler.price_per_volume_modifier = -10
+        self.handler.save()
+
+        p = Pricing()
+        p.price_per_volume = 50
+        p.use_price_per_volume_modifier = True
+
+        self.assertEqual(
+            p.price_per_volume_eff(),
+            45
+        )
+
+        self.assertEqual(
+            p.get_calculated_price(10, None),
+            450
+        )
+
+    def test_price_per_volume_modifier_price_never_negative(self):
+        self.handler.price_per_volume_modifier = -200
+        self.handler.save()
+
+        p = Pricing()
+        p.price_per_volume = 50
+        p.use_price_per_volume_modifier = True
+
+        self.assertEqual(
+            p.price_per_volume_eff(),
+            0
+        )
+
+
 
 class TestRunContractsSync(TestCase):
-    
-    # note: setup is making calls to ESI to get full info for entities
-    # all ESI calls in the tested module are mocked though
-
-
+   
     @classmethod
     def setUpClass(cls):
         super(TestRunContractsSync, cls).setUpClass()
-
-        # load test data
-        currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-            inspect.currentframe()
-        )))
 
         # ESI contracts        
         with open(
@@ -826,11 +935,6 @@ class TestNotifications(TestCase):
     def setUpClass(cls):
         super(TestNotifications, cls).setUpClass()
 
-        # load test data
-        currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-            inspect.currentframe()
-        )))
-
         # ESI contracts        
         with open(
             currentdir + '/testdata/contracts.json', 
@@ -1101,11 +1205,6 @@ class TestViews(TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestViews, cls).setUpClass()
-
-        # load test data
-        currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-            inspect.currentframe()
-        )))
 
         # ESI contracts        
         with open(

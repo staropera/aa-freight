@@ -184,6 +184,8 @@ Pricings are defined in the admin section of AA, so you need staff permissions t
 
 Most parameters of a pricing are optional, but you need to define at least one of the four pricing components to create a valid pricing. It's also possible to define a route that does not require a reward by setting "Price base" to 0 and not setting any other pricing components.
 
+All pricing parameters can be found on the admin panel under Pricing, with the exception of the "price per volume modifier", which is a global pricing parameter and therefore property of the ContractHandler.
+
 Parameter | Description | Pricing Functionality
 -- | -- | --
 Start Location | Starting station or structure for courier route | -
@@ -192,6 +194,8 @@ Active | Non active pricings will not be used or shown | -
 Price base | Base price in ISK. If this is the only defined pricing component it will be shown as "Fix price" in the calculator. | Pricing component
 Price min | Minimum total price in ISK | Pricing component
 Price per volume | Add-on price per m3 volume in ISK | Pricing component
+Use price per volume modifier | Switch defining if the global price per volume modifier should be used for pricing | Pricing flag
+Price per volume modifier | Global modifier for price per volume in percent. When used it will be added to the price per volume. It can be positive and negative, but the resulting price per volume can never be negative.<br>(defined for ContractHandler) | Pricing modifier
 Price per collateral_percent | Add-on price in % of collateral | Pricing component
 Collateral min | Minimum required collateral in ISK | Validation check
 Collateral max | Maximum allowed collateral in ISK | Validation check
@@ -200,5 +204,6 @@ Volume max | Maximum allowed volume in m3 | Validation check
 Days to expire | Recommended days for contracts to expire | Info
 Days to complete | Recommended days for contract completion | Info
 Details | Text with additional instructions for using this pricing | Info
+
 
 > **How to add new locations**:<br>If you are creating a pricing for a new route you may need to first add the locations (stations and/or structures).<br>The easiest way is to create a courier contract between those locations in game and then run contract sync. Those locations will then be added automatically.<br>Alternatively you can use the "Add Location" feature on the main page of the app. This will require you to provide the respective station or structure eve ID.
