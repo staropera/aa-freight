@@ -690,6 +690,24 @@ class Contract(models.Model):
         else:
             return None
 
+    @property
+    def date_latest(self) -> bool:
+        """latest status related date of this contract"""                
+        if self.date_completed:
+            date = self.date_completed
+        elif self.date_accepted:
+            date = self.date_accepted
+        else:
+            date = self.date_issued
+
+        return date
+
+    @property
+    def has_stale_status(self) -> bool:
+        """whether the status of this contract has become stale"""
+        return self.date_latest < now() - datetime.timedelta(
+            hours=FREIGHT_HOURS_UNTIL_STALE_STATUS
+        )
 
     def __str__(self) -> str:
         return '{}: {} -> {}'.format(

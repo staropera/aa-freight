@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.11.1] - 2019-12-11
+
+### Added
+
+- Will no longer send out customer notifications for outdated contracts, e.g. when first turning on the customer notification feature. See also related new setting `FREIGHT_HOURS_UNTIL_STALE_STATUS`. ([#19](https://gitlab.com/ErikKalkoken/aa-freight/issues/19))
+
 ## [0.11.0] - 2019-12-10
 
 ### Added

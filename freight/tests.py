@@ -40,7 +40,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
     inspect.currentframe()
 )))
 
-
+    
 class TestPricing(TestCase):
 
     @classmethod
@@ -926,11 +926,7 @@ class TestFilters(TestCase):
 
 
 class TestNotifications(TestCase):
-    
-    # note: setup is making calls to ESI to get full info for entities
-    # all ESI calls in the tested module are mocked though
-
-
+        
     @classmethod
     def setUpClass(cls):
         super(TestNotifications, cls).setUpClass()
@@ -946,7 +942,7 @@ class TestNotifications(TestCase):
         # update dates to something current, so won't be treated as stale
         for contract in cls.contracts:
             date_issued = now() - datetime.timedelta(
-                days=randrange(5), 
+                days=randrange(1), 
                 hours=randrange(10)
             )
             date_accepted = date_issued + datetime.timedelta(
@@ -1080,6 +1076,7 @@ class TestNotifications(TestCase):
             )
 
 
+    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
@@ -1093,6 +1090,7 @@ class TestNotifications(TestCase):
         self.assertEqual(mock_webhook_execute.call_count, 7)
 
 
+    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
@@ -1106,6 +1104,7 @@ class TestNotifications(TestCase):
         self.assertEqual(mock_webhook_execute.call_count, 9)
 
     
+    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
@@ -1123,6 +1122,7 @@ class TestNotifications(TestCase):
         self.assertEqual(mock_webhook_execute.call_count, 0)
 
 
+    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)    
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
@@ -1140,6 +1140,7 @@ class TestNotifications(TestCase):
         self.assertEqual(mock_webhook_execute.call_count, 0)
 
 
+    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
@@ -1161,6 +1162,7 @@ class TestNotifications(TestCase):
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
 
+    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
@@ -1182,6 +1184,7 @@ class TestNotifications(TestCase):
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
 
+    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
@@ -1503,3 +1506,135 @@ class TestViews(TestCase):
                 149419318,              
             }
         )
+
+class TestModelContract(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestModelContract, cls).setUpClass()
+        
+        # Eve characters
+        with open(
+            currentdir + '/testdata/characters.json', 
+            'r', 
+            encoding='utf-8'
+        ) as f:
+            cls.characters_data = json.load(f)
+
+    
+    def setUp(self):
+
+        for character in self.characters_data:
+            EveCharacter.objects.create(**character)
+            EveCorporationInfo.objects.get_or_create(
+                corporation_id=character['corporation_id'],
+                defaults={
+                    'corporation_name': character['corporation_name'],
+                    'corporation_ticker': character['corporation_ticker'],
+                    'member_count': 42
+                }
+            )
+        
+        # 1 user
+        self.character = EveCharacter.objects.get(character_id=90000001)
+        self.corporation = EveCorporationInfo.objects.get(
+            corporation_id=self.character.corporation_id
+        )
+        
+        self.organization = EveOrganization.objects.create(
+            id = self.character.alliance_id,
+            category = EveOrganization.CATEGORY_ALLIANCE,
+            name = self.character.alliance_name
+        )
+        
+        self.user = User.objects.create_user(
+            self.character.character_name,
+            'abc@example.com',
+            'password'
+        )
+
+        self.main_ownership = CharacterOwnership.objects.create(
+            character=self.character,
+            owner_hash='x1',
+            user=self.user
+        )        
+
+        # Locations
+        self.location_1 = Location.objects.create(
+            id=60003760,
+            name='Jita IV - Moon 4 - Caldari Navy Assembly Plant',
+            solar_system_id=30000142,
+            type_id=52678,
+            category_id=3
+        )
+        self.location_2 = Location.objects.create(
+            id=1022167642188,
+            name='Amamake - 3 Time Nearly AT Winners',
+            solar_system_id=30002537,
+            type_id=35834,
+            category_id=65
+        )      
+
+        # create contracts
+        self.pricing = Pricing.objects.create(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=500000000
+        )
+        
+        self.handler = ContractHandler.objects.create(
+            organization=self.organization,
+            character=self.main_ownership            
+        )
+        self.contract = Contract.objects.create(
+            handler=self.handler,
+            contract_id=1,
+            collateral=0,
+            date_issued=now(),
+            date_expired=now() + datetime.timedelta(days=5),
+            days_to_complete=3,
+            end_location=self.location_2,
+            for_corporation=False,
+            issuer_corporation=self.corporation,
+            issuer=self.character,
+            reward=50000000,
+            start_location=self.location_1,
+            status=Contract.STATUS_OUTSTANDING,
+            volume=50000
+        )
+        
+            
+    def test_date_latest(self):
+        # initial contract only had date_issued
+        self.assertEqual(
+            self.contract.date_issued, 
+            self.contract.date_latest
+        )
+
+        # adding date_accepted to contract
+        self.contract.date_accepted = \
+            self.contract.date_issued + datetime.timedelta(days=1)
+        self.assertEqual(
+            self.contract.date_accepted, 
+            self.contract.date_latest
+        )
+
+        # adding date_completed to contract
+        self.contract.date_completed = \
+            self.contract.date_accepted + datetime.timedelta(days=1)
+        self.assertEqual(
+            self.contract.date_completed, 
+            self.contract.date_latest
+        )
+
+
+    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 24)
+    def test_has_stale_status(self):
+        # initial contract only had date_issued
+        # date_issued is now
+        self.assertFalse(self.contract.has_stale_status)
+
+        # date_issued is 30 hours ago
+        self.contract.date_issued = \
+            self.contract.date_issued - datetime.timedelta(hours=30)
+        self.assertTrue(self.contract.has_stale_status)

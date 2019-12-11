@@ -45,6 +45,15 @@ FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL = getattr(
     None
 )
 
+# defines after how many hours a status becomes stale
+# a stale status will not be reported to customers
+if (hasattr(settings, 'FREIGHT_HOURS_UNTIL_STALE_STATUS')
+    and settings.FREIGHT_HOURS_UNTIL_STALE_STATUS > 0
+):
+    FREIGHT_HOURS_UNTIL_STALE_STATUS = settings.FREIGHT_HOURS_UNTIL_STALE_STATUS
+else:
+    FREIGHT_HOURS_UNTIL_STALE_STATUS = 24
+
 # Whether to show full location names in the route dropdown of the calculator
 FREIGHT_FULL_ROUTE_NAMES = getattr(
     settings, 

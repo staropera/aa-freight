@@ -5,7 +5,7 @@ before_script:
 - python -V
 - pip install tox
     
-freight:
+tests:
     image: python:3.6-stretch
     script:
     - tox

@@ -377,15 +377,20 @@ class ContractManager(models.Manager):
                     + 'customer notifications need to be sent'
                 ))
                 for contract in q:
-                    if not contract.has_expired:
-                        contract.send_customer_notification(force_sent)
-                        if rate_limted:
-                            sleep(1)
-                    else:
+                    if contract.has_expired:
                         logger.debug(add_tag(
                             'contract {} has expired'.format(                                    
                                 contract.contract_id
                         )))
+                    elif contract.has_stale_status:
+                        logger.debug(add_tag(
+                            'contract {} has stale status'.format(                                    
+                                contract.contract_id
+                        )))
+                    else:
+                        contract.send_customer_notification(force_sent)
+                        if rate_limted:
+                            sleep(1)
         
         else:
             logger.debug(add_tag(
