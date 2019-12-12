@@ -210,16 +210,27 @@ class TestPricing(TestCase):
             p.get_contract_price_check_issues(50, 5, -5)
         
 
-    def test_pricing_collateral_min_zero(self):
+    def test_collateral_min_allows_zero(self):
         p = Pricing()
         p.price_base = 500
         p.collateral_min = 0
         self.assertIsNone(p.get_contract_price_check_issues(350, 0))
 
-    def test_pricing_collateral_min_none(self):
+    def test_collateral_min_allows_none(self):
         p = Pricing()
         p.price_base = 500        
         self.assertIsNone(p.get_contract_price_check_issues(350, 0))
+
+    def test_zero_collateral_allowed_for_collateral_pricing(self):
+        p = Pricing()        
+        p.collateral_min = 0
+        p.price_base = 500
+        p.price_per_collateral_percent = 2
+        self.assertIsNone(p.get_contract_price_check_issues(350, 0))
+        self.assertEqual(
+            p.get_calculated_price(350, 0),
+            500
+        )
 
     def test_price_per_volume_modifier_none_if_not_set(self):
         p = Pricing()
@@ -296,11 +307,11 @@ class TestPricing(TestCase):
 
 
 
-class TestRunContractsSync(TestCase):
+class TestContractsSync(TestCase):
    
     @classmethod
     def setUpClass(cls):
-        super(TestRunContractsSync, cls).setUpClass()
+        super(TestContractsSync, cls).setUpClass()
 
         # ESI contracts        
         with open(
@@ -781,6 +792,47 @@ class TestRunContractsSync(TestCase):
         self.assertCountEqual(
             contract_ids,
             [149409016, 149409017, 149409018]
+        )
+        
+    def test_operation_mode_friendly(self):
+        handler = ContractHandler.objects.create(
+            organization=self.alliance,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+            character=self.main_ownership,
+        )
+        self.assertEqual(
+            handler.operation_mode_friendly,
+            FREIGHT_OPERATION_MODES[0][1]
+        )
+
+        handler.operation_mode = FREIGHT_OPERATION_MODE_MY_CORPORATION
+        self.assertEqual(
+            handler.operation_mode_friendly,
+            FREIGHT_OPERATION_MODES[1][1]
+        )
+
+        handler.operation_mode = FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
+        self.assertEqual(
+            handler.operation_mode_friendly,
+            FREIGHT_OPERATION_MODES[2][1]
+        )
+
+        handler.operation_mode = FREIGHT_OPERATION_MODE_CORP_PUBLIC
+        self.assertEqual(
+            handler.operation_mode_friendly,
+            FREIGHT_OPERATION_MODES[3][1]
+        )
+
+    def test_last_error_message_friendly(self):
+        handler = ContractHandler.objects.create(
+            organization=self.alliance,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+            character=self.main_ownership,
+            last_error=ContractHandler.ERROR_UNKNOWN
+        )
+        self.assertEqual(
+            handler.last_error_message_friendly,
+            ContractHandler.ERRORS_LIST[7][1]
         )
 
     """
@@ -1324,14 +1376,14 @@ class TestViews(TestCase):
             price_base=500000000
         )
         
-        handler = ContractHandler.objects.create(
+        self.handler = ContractHandler.objects.create(
             organization=self.organization,
             character=self.main_ownership            
         )
         
         for contract in self.contracts:
             Contract.objects.update_or_create_from_dict(
-                handler=handler,
+                handler=self.handler,
                 contract=contract,
                 esi_client=Mock()
             )
@@ -1463,6 +1515,27 @@ class TestViews(TestCase):
         )
 
 
+    def test_contract_list_user_no_access_without_permission(self):
+        request = self.factory.get(reverse('freight:contract_list_user'))
+        request.user = self.user
+        response = views.contract_list_user(request)
+        self.assertNotEqual(response.status_code, 200)
+
+
+    def test_contract_list_user_access_with_permission(self):
+        p = Permission.objects.get(
+            codename='use_calculator', 
+            content_type__app_label=__package__
+        )
+        self.user.user_permissions.add(p)
+        self.user.save()
+
+        request = self.factory.get(reverse('freight:contract_list_user'))
+        request.user = self.user
+        
+        response = views.contract_list_user(request)
+        self.assertEqual(response.status_code, 200)
+
     def test_contract_list_data_user_no_access_without_permission(self):
         request = self.factory.get(reverse(
             'freight:contract_list_data', 
@@ -1506,6 +1579,45 @@ class TestViews(TestCase):
                 149419318,              
             }
         )
+    
+    @patch(
+        'freight.views.FREIGHT_OPERATION_MODE', 
+        FREIGHT_OPERATION_MODE_MY_ALLIANCE
+    )
+    @patch('freight.views.messages_plus', autospec=True)
+    @patch('freight.views.tasks.run_contracts_sync.delay', autospec=True)
+    def test_setup_contract_handler(
+        self,         
+        mock_run_contracts_sync,
+        mock_message_plus
+    ):
+        p = Permission.objects.get(
+            codename='setup_contract_handler', 
+            content_type__app_label=__package__
+        )
+        self.user.user_permissions.add(p)
+        self.user.save()
+
+        ContractHandler.objects.all().delete()
+
+        token = Mock(spec=Token)
+        token.character_id = self.character.character_id
+        request = self.factory.post(
+            reverse('freight:setup_contract_handler'),
+            data={
+                '_token': 1
+            }
+        )
+        request.user = self.user
+        request.token = token
+        request.token_char = self.character
+
+        orig_view  = views.setup_contract_handler\
+            .__wrapped__.__wrapped__.__wrapped__ 
+        
+        response = orig_view(request, token)
+        self.assertEqual(mock_run_contracts_sync.call_count, 1)
+
 
 class TestModelContract(TestCase):
 
@@ -1602,7 +1714,15 @@ class TestModelContract(TestCase):
             status=Contract.STATUS_OUTSTANDING,
             volume=50000
         )
-        
+    
+    def test_hours_issued_2_completed(self):
+        self.contract.date_completed = \
+            self.contract.date_issued + datetime.timedelta(hours=9)
+
+        self.assertEqual(
+            self.contract.hours_issued_2_completed,
+            9
+        )
             
     def test_date_latest(self):
         # initial contract only had date_issued
@@ -1638,3 +1758,7 @@ class TestModelContract(TestCase):
         self.contract.date_issued = \
             self.contract.date_issued - datetime.timedelta(hours=30)
         self.assertTrue(self.contract.has_stale_status)
+
+
+    def test_task_update_pricing(self):
+        self.assertTrue(tasks.update_contracts_pricing())

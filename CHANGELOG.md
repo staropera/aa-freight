@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.11.2] - 2019-12-12
+
+### Added
+
+- Improve test coverage
+
+### Fixed
+
+- Entering 0 collateral or 0 volume is treated by the calculator as not having entered any value ([#17](https://gitlab.com/ErikKalkoken/aa-freight/issues/17))
+
 ## [0.11.1] - 2019-12-11
 
 ### Added

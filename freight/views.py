@@ -240,8 +240,8 @@ def calculator(request, pricing_pk = None):
             'pricing': pricing,
             'price': price,
             'organization_name': organization_name,
-            'collateral': collateral * 1000000 if collateral else 0,
-            'volume': volume * 1000 if volume else None,
+            'collateral': collateral * 1000000 if collateral is not None else 0,
+            'volume': volume * 1000 if volume is not None else None,
             'expires_on': expires_on,
             'availability': availability,
             'pricing_price_per_volume_eff': price_per_volume_eff
@@ -256,9 +256,10 @@ def setup_contract_handler(request, token):
     success = True
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
-    if ((EveOrganization.get_category_for_operation_mode(FREIGHT_OPERATION_MODE)
-        == EveOrganization.CATEGORY_ALLIANCE)
-            and token_char.alliance_id is None):
+    if ( (EveOrganization.get_category_for_operation_mode(
+        FREIGHT_OPERATION_MODE) == EveOrganization.CATEGORY_ALLIANCE)
+        and token_char.alliance_id is None
+    ):
         messages_plus.error(
             request, 
             'Can not setup contract handler, '

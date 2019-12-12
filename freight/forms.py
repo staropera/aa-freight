@@ -34,12 +34,16 @@ class CalculatorForm(forms.Form):
         pricing = self.cleaned_data['pricing']
         issue_prefix = '⚠ Issues:'
         
-        if pricing.requires_volume() and not self.cleaned_data['volume']:
+        if (pricing.requires_volume() 
+            and self.cleaned_data['volume'] is None
+        ):
             raise ValidationError(
                 '{} volume is required'.format(issue_prefix)
             )
 
-        if pricing.requires_collateral() and not self.cleaned_data['collateral']:
+        if (pricing.requires_collateral() 
+            and self.cleaned_data['collateral'] is None
+        ):
             raise ValidationError(
                 '{} collateral is required'.format(issue_prefix)
             )
