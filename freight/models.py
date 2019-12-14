@@ -371,13 +371,16 @@ class Pricing(models.Model):
 
 
 class EveOrganization(models.Model):
-    """An Eve corporation or alliance"""
+    """An Eve entity like a corporation or a character"""
 
+    # entity categories supported by this class
     CATEGORY_ALLIANCE = 'alliance'
     CATEGORY_CORPORATION = 'corporation'
+    CATEGORY_CHARACTER = 'character'
     CATEGORIES_DEF = [
         (CATEGORY_ALLIANCE, 'Alliance'),
         (CATEGORY_CORPORATION, 'Corporation'),
+        (CATEGORY_CHARACTER, 'Character'),
     ]
 
     EVE_IMAGE_SERVER_BASE_URL = 'https://imageserver.eveonline.com'
@@ -402,10 +405,14 @@ class EveOrganization(models.Model):
     @property
     def is_alliance(self) -> bool:
         return self.category == self.CATEGORY_ALLIANCE
-
+    
     @property
     def is_corporation(self) -> bool:
         return self.category == self.CATEGORY_CORPORATION
+
+    @property
+    def is_character(self) -> bool:
+        return self.category == self.CATEGORY_CHARACTER
 
     @property
     def avatar_url(self) -> str:
@@ -413,10 +420,11 @@ class EveOrganization(models.Model):
         return '{}/{}/{}_128.png'.format(            
             self.EVE_IMAGE_SERVER_BASE_URL,
             self.category.title(), 
-            self.id)
+            self.id
+        )
 
     @classmethod
-    def get_category_for_operation_mode(cls, mode):
+    def get_category_for_operation_mode(cls, mode: str) -> str:
         """return organization category related to given operation mode"""
         if mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
             return cls.CATEGORY_ALLIANCE
@@ -585,7 +593,17 @@ class Contract(models.Model):
         default=None, 
         null=True,
         blank=True,
-        related_name='contract_acceptor'
+        related_name='contract_acceptor',
+        help_text='character of acceptor or None if accepted by corp'
+    )
+    acceptor_corporation = models.ForeignKey(
+        EveCorporationInfo, 
+        on_delete=models.CASCADE, 
+        default=None, 
+        null=True,
+        blank=True,
+        related_name='contract_acceptor_corporation',
+        help_text='corporation of acceptor'
     )
     collateral = models.FloatField()    
     date_accepted = models.DateTimeField(default=None, null=True, blank=True)
@@ -602,7 +620,7 @@ class Contract(models.Model):
     issuer_corporation = models.ForeignKey(
         EveCorporationInfo, 
         on_delete=models.CASCADE,
-        related_name='contract_issuer'
+        related_name='contract_issuer_corporation'
     )
     issuer = models.ForeignKey(
         EveCharacter, 
@@ -713,6 +731,19 @@ class Contract(models.Model):
             hours=FREIGHT_HOURS_UNTIL_STALE_STATUS
         )
 
+    @property
+    def acceptor_name(self) -> str:
+        'returns the name of the acceptor character or corporation or None'
+        
+        if self.acceptor:
+            name = self.acceptor.character_name
+        elif self.acceptor_corporation:
+            name = self.acceptor_corporation.corporation_name
+        else:
+            name = None
+        
+        return name
+
     def __str__(self) -> str:
         return '{}: {} -> {}'.format(
             self.contract_id,
@@ -768,9 +799,9 @@ class Contract(models.Model):
         desc += '**Issued by**: {}\n'.format(self.issuer)
         desc += '**Expires on**: {}\n'.format(
             self.date_expired.strftime(DATETIME_FORMAT)
-        )
+        )        
         desc += '**Accepted by**: {}\n'.format(
-            self.acceptor if self.acceptor else ''
+            self.acceptor_name if self.acceptor_name else ''
         )
         desc += '**Accepted on**: {}\n'.format(
             self.date_accepted.strftime(DATETIME_FORMAT) \
@@ -893,7 +924,9 @@ class Contract(models.Model):
                                 self.contract_id, 
                                 status_to_report
                             ) 
-                        + ' to {}'.format(FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL)))
+                        + ' to {}'.format(
+                                FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
+                            )))
                     embed = self._generate_embed()
                                         
                     contents = '<@{}>\n'.format(
@@ -913,23 +946,23 @@ class Contract(models.Model):
                                     + 'one of our pilots shortly.'
                     
                     elif status_to_report == self.STATUS_IN_PROGRESS:
-                        if self.acceptor:
-                            acceptor_text = 'by {} '.format(self.acceptor)
+                        if self.acceptor_name:
+                            acceptor_text = 'by {} '.format(self.acceptor_name)
                         else:
                             acceptor_text = ''
 
-                        contents += 'Your contract has been picked up {}'.format(                            
-                                acceptor_text
-                            ) + 'and will be delivered to you shortly.'
+                        contents += 'Your contract has been picked up {}'\
+                            .format(acceptor_text) \
+                            + 'and will be delivered to you shortly.'
                     
                     elif status_to_report == self.STATUS_FINISHED:
                         contents += 'Your contract has been **delivered**.\n' \
                             + 'Thank you for using our freight service.'
 
                     elif status_to_report == self.STATUS_FAILED:
-                        contents += 'Your contract has been **failed** {}'.format(                            
-                                acceptor_text
-                            ) + 'Thank you for using our freight service.'
+                        contents += 'Your contract has been **failed** {}'\
+                            .format(acceptor_text) \
+                            + 'Thank you for using our freight service.'
                             
                     else:
                         raise NotImplementedError()

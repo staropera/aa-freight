@@ -142,7 +142,7 @@ def contract_list_data(request, category):
             'issuer': character_format(contract.issuer),
             'notes': notes,
             'date_accepted': datetime_format(contract.date_accepted),
-            'acceptor': character_format(contract.acceptor),
+            'acceptor': contract.acceptor_name,
             'has_pricing': contract.has_pricing,
             'has_pricing_errors': contract.has_pricing_errors,
             'pricing_check': pricing_check,
@@ -297,7 +297,7 @@ def setup_contract_handler(request, token):
             success = False
 
     if success:        
-        organization, _ = EveOrganization.objects.update_or_create_from_evecharacter(
+        organization, _ = EveOrganization.objects.update_or_create_org_from_evecharacter(
             token_char,
             EveOrganization.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE
@@ -374,7 +374,7 @@ def add_location_2(request):
                     spec_file=get_swagger_spec_path()
                 )
             
-                location, created = Location.objects.update_or_create_esi(
+                location, created = Location.objects.update_or_create_from_esi(
                     client, 
                     location_id,
                     add_unknown=False

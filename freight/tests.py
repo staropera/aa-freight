@@ -343,19 +343,35 @@ class TestContractsSync(TestCase):
                     'member_count': 42
                 }
             )
+            EveOrganization.objects.create(
+                id=character['character_id'],
+                category=EveOrganization.CATEGORY_CHARACTER,
+                name=character['character_name'],
+            )
+            EveOrganization.objects.get_or_create(
+                id=character['corporation_id'],
+                defaults={
+                    'category': EveOrganization.CATEGORY_CORPORATION,
+                    'name': character['corporation_name'],
+                }
+            )
+            if character['alliance_id'] and character['alliance_id'] != 0:
+                EveOrganization.objects.get_or_create(
+                    id=character['alliance_id'],                
+                    defaults={
+                        'category': EveOrganization.CATEGORY_ALLIANCE,
+                        'name': character['alliance_name'],
+                    }
+                )
         
         # 1 user
         self.character = EveCharacter.objects.get(character_id=90000001)
         
-        self.alliance = EveOrganization.objects.create(
-            id = self.character.alliance_id,
-            category = EveOrganization.CATEGORY_ALLIANCE,
-            name = self.character.alliance_name
+        self.alliance = EveOrganization.objects.get(
+            id = self.character.alliance_id
         )
-        self.corporation = EveOrganization.objects.create(
-            id = self.character.corporation_id,
-            category = EveOrganization.CATEGORY_CORPORATION,
-            name = self.character.corporation_name
+        self.corporation = EveOrganization.objects.get(
+            id = self.character.corporation_id
         )
         self.user = User.objects.create_user(
             self.character.character_name,
@@ -1776,3 +1792,171 @@ class TestModelContract(TestCase):
 
     def test_task_update_pricing(self):
         self.assertTrue(tasks.update_contracts_pricing())
+
+
+    def test_acceptor_name(self):
+        
+        contract = self.contract        
+        self.assertIsNone(contract.acceptor_name)
+
+        contract.acceptor_corporation = self.corporation
+        self.assertEqual(
+            contract.acceptor_name,
+            self.corporation.corporation_name
+        )
+        
+        contract.acceptor = self.character
+        self.assertEqual(
+            contract.acceptor_name,
+            self.character.character_name
+        )
+
+
+
+class TestEveOrganization(TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        super(TestEveOrganization, cls).setUpClass()
+
+        # Eve characters
+        with open(
+            currentdir + '/testdata/characters.json', 
+            'r', 
+            encoding='utf-8'
+        ) as f:
+            characters_data = json.load(f)
+
+        esi_data = dict()
+        for character in characters_data:
+            esi_data[character['character_id']] = {
+                'id': character['character_id'],
+                'category': EveOrganization.CATEGORY_CHARACTER,
+                'name': character['character_name']
+            }
+            esi_data[character['corporation_id']] = {
+                'id': character['corporation_id'],
+                'category': EveOrganization.CATEGORY_CORPORATION,
+                'name': character['corporation_name']
+            }
+            esi_data[character['alliance_id']] = {
+                'id': character['alliance_id'],
+                'category': EveOrganization.CATEGORY_ALLIANCE,
+                'name': character['alliance_name']
+            }
+
+        cls.esi_data = esi_data
+
+    
+    @classmethod
+    def esi_post_universe_names(cls, *args, **kwargs) -> list:
+        response = list()
+        if 'ids' not in kwargs:
+            raise ValueError('missing parameter: ids')
+        for id in kwargs['ids']:
+            if id in cls.esi_data:
+                response.append(cls.esi_data[id])
+        
+        m = Mock()
+        m.result.return_value = response
+        return m
+
+    @patch('esi.clients.SwaggerClient')
+    def test_character_basics(self, SwaggerClient):
+        SwaggerClient.from_spec.return_value\
+            .Universe.post_universe_names.side_effect = \
+                TestEveOrganization.esi_post_universe_names
+
+        entity, created = EveOrganization.objects.get_or_create_from_esi(id=90000001)
+        self.assertTrue(created)
+        self.assertEqual(
+            str(entity),
+            'Bruce Wayne'
+        )
+        self.assertFalse(entity.is_alliance)
+        self.assertFalse(entity.is_corporation)
+        self.assertTrue(entity.is_character)
+        self.assertEqual(
+            entity.avatar_url,
+            'https://imageserver.eveonline.com/Character/90000001_128.png'
+        )
+
+        entity, created = EveOrganization.objects.get_or_create_from_esi(id=90000001)
+        self.assertFalse(created)
+
+    @patch('esi.clients.SwaggerClient')
+    def test_corporation_basics(self, SwaggerClient):
+        SwaggerClient.from_spec.return_value\
+            .Universe.post_universe_names.side_effect = \
+                TestEveOrganization.esi_post_universe_names
+
+        entity, _ = EveOrganization.objects.get_or_create_from_esi(id=92000001)
+        self.assertEqual(
+            str(entity),
+            'Wayne Enterprise'
+        )
+        self.assertFalse(entity.is_alliance)
+        self.assertTrue(entity.is_corporation)
+        self.assertFalse(entity.is_character)
+        self.assertEqual(
+            entity.avatar_url,
+            'https://imageserver.eveonline.com/Corporation/92000001_128.png'
+        )
+
+    @patch('esi.clients.SwaggerClient')
+    def test_alliance_basics(self, SwaggerClient):
+        SwaggerClient.from_spec.return_value\
+            .Universe.post_universe_names.side_effect = \
+                TestEveOrganization.esi_post_universe_names
+
+        entity, _ = EveOrganization.objects.get_or_create_from_esi(id=93000001)
+        self.assertEqual(
+            str(entity),
+            'Justice League'
+        )
+        self.assertTrue(entity.is_alliance)
+        self.assertFalse(entity.is_corporation)
+        self.assertFalse(entity.is_character)
+        self.assertEqual(
+            entity.avatar_url,
+            'https://imageserver.eveonline.com/Alliance/93000001_128.png'
+        )
+
+
+    @patch('esi.clients.SwaggerClient')
+    def test_alliance_basics(self, SwaggerClient):
+        SwaggerClient.from_spec.return_value\
+            .Universe.post_universe_names.side_effect = \
+                TestEveOrganization.esi_post_universe_names
+
+        with self.assertRaises(ObjectNotFound):
+            entity, _ = EveOrganization.objects.get_or_create_from_esi(id=666)
+        
+
+    def test_get_category_for_operation_mode(self):
+        self.assertEqual(
+            EveOrganization.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE_MY_ALLIANCE
+            ),
+            EveOrganization.CATEGORY_ALLIANCE
+        )
+        self.assertEqual(
+            EveOrganization.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE_MY_CORPORATION
+            ),
+            EveOrganization.CATEGORY_CORPORATION
+        )
+        self.assertEqual(
+            EveOrganization.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
+            ),
+            EveOrganization.CATEGORY_CORPORATION
+        )
+        self.assertEqual(
+            EveOrganization.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE_CORP_PUBLIC
+            ),
+            EveOrganization.CATEGORY_CORPORATION
+        )
+
+    

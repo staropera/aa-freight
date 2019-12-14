@@ -23,7 +23,7 @@ class LocationManager(models.Manager):
     STATION_ID_START = 60000000
     STATION_ID_END = 69999999
     
-    def get_or_create_esi(
+    def get_or_create_from_esi(
             self, 
             esi_client: object, 
             location_id: int,
@@ -35,7 +35,7 @@ class LocationManager(models.Manager):
             location = self.get(id=location_id)
             created = False
         except Location.DoesNotExist:
-            location, created = self.update_or_create_esi(
+            location, created = self.update_or_create_from_esi(
                 esi_client, 
                 location_id,
                 add_unknown
@@ -44,7 +44,7 @@ class LocationManager(models.Manager):
         return location, created
 
 
-    def update_or_create_esi(
+    def update_or_create_from_esi(
             self, 
             esi_client: object, 
             location_id: int, 
@@ -72,7 +72,7 @@ class LocationManager(models.Manager):
                     }
                 ) 
             except Exception as ex:
-                logger.warn(addPrefix(
+                logger.exception(addPrefix(
                     'Failed to load station: '.format(ex)
                 ))
                 raise ex
@@ -107,7 +107,7 @@ class LocationManager(models.Manager):
                 else:
                     raise ex
             except Exception as ex:
-                logger.warn(addPrefix(
+                logger.exception(addPrefix(
                     'Failed to load structure: '.format(ex)
                 ))      
                 raise ex
@@ -117,58 +117,63 @@ class LocationManager(models.Manager):
 
 class EveOrganizationManager(models.Manager):
     
-    def get_or_create_esi(
+    def get_or_create_from_esi(
             self,             
-            organization_id: int
+            id: int, 
+            esi_client: object = None
         ) -> list:
-        """gets or creates organization object with data fetched from ESI"""
+        """gets or creates entity object with data fetched from ESI"""
         from .models import EveOrganization
         try:
-            organization = self.get(id=organization_id)
+            entity = self.get(id=id)
             created = False
         except EveOrganization.DoesNotExist:
-            organization, created = self.update_or_create_esi(organization_id)
+            entity, created = self.update_or_create_from_esi(id, esi_client)
         
-        return organization, created
+        return entity, created
 
 
-    def update_or_create_esi(
+    def update_or_create_from_esi(
             self,             
-            organization_id: int
+            id: int, 
+            esi_client: object = None
         ) -> list:
-        """updates or creates organization object with data fetched from ESI"""
+        """updates or creates entity object with data fetched from ESI"""
         from .models import EveOrganization
 
-        addPrefix = make_logger_prefix(organization_id)
+        addPrefix = make_logger_prefix(id)
         
-        logger.info(addPrefix('Fetching organization from ESI'))
+        logger.info(addPrefix('Fetching entity from ESI'))
         try:
-            esi_client = esi_client_factory(spec_file=get_swagger_spec_path())
+            if not esi_client:
+                esi_client = esi_client_factory(
+                    spec_file=get_swagger_spec_path()
+                )
             response = esi_client.Universe.post_universe_names(
-                ids=[organization_id]
+                ids=[id]
             ).result()
             if len(response) != 1:
-                raise RuntimeError('ESI did not find any entity with this ID')            
+                raise ObjectNotFound(id, 'unknown_type')
             else:
-                organization_data = response[0]
-            organization, created = self.update_or_create(
-                id=organization_data['id'],
+                entity_data = response[0]
+            entity, created = self.update_or_create(
+                id=entity_data['id'],
                 defaults={
-                    'name': organization_data['name'],
-                    'category': organization_data['category'],
+                    'name': entity_data['name'],
+                    'category': entity_data['category'],
                 }
             ) 
         except Exception as ex:
-            logger.warn(addPrefix(
-                'Failed to load organization from ESI: '.format(ex)
+            logger.exception(addPrefix(
+                'Failed to load entity from ESI: '.format(ex)
             ))
             raise ex
         
        
-        return organization, created
+        return entity, created
 
 
-    def update_or_create_from_evecharacter(
+    def update_or_create_org_from_evecharacter(
             self,             
             character: EveCharacter,
             category: str
@@ -200,7 +205,7 @@ class EveOrganizationManager(models.Manager):
             else:
                 raise ValueError('Invalid category: {}'. format(category))
         except Exception as ex:
-            logger.warn(addPrefix(
+            logger.exception(addPrefix(
                 'Failed to load organization from ESI: '.format(ex)
             ))
             raise ex
@@ -217,32 +222,64 @@ class ContractManager(models.Manager):
         esi_client: object
     ):
         """updates or creates a contract from given dict"""
-        from .models import Contract, Location
+        from .models import Contract, Location, EveOrganization
         
         addPrefix = make_logger_prefix(contract['contract_id'])
 
         if int(contract['acceptor_id']) != 0:
             try:
-                acceptor = EveCharacter.objects.get(
-                    character_id=contract['acceptor_id']
+                entity, _ = EveOrganization.objects.get_or_create_from_esi(
+                    contract['acceptor_id'],
+                    esi_client
                 )
-            except EveCharacter.DoesNotExist:
-                try:
-                    acceptor = EveCharacter.objects.create_character(
-                        character_id=contract['acceptor_id']
-                    )
-                except ObjectNotFound:
-                    # temporary fix for mitigating error when acceptor is corp
-                    acceptor = None
-                    logger.info(addPrefix(
-                        'Unable for now to recognize corp with ID {} '.format(
-                            contract['acceptor_id']
+                if entity.is_character:
+                    try:
+                        acceptor = EveCharacter.objects.get(
+                            character_id=entity.id
                         )
-                        + 'as acceptor for this contract. Temporary fix'
-                    ))
+                    except EveCharacter.DoesNotExist:
+                        acceptor = EveCharacter.objects.create_character(
+                            character_id=entity.id
+                        )
+                    try:
+                        acceptor_corporation = EveCorporationInfo.objects.get(
+                            corporation_id=acceptor.corporation_id
+                        )
+                    except EveCorporationInfo.DoesNotExist:
+                        acceptor_corporation = \
+                            EveCorporationInfo.objects.create_corporation(
+                                corp_id=acceptor.corporation_id
+                        )
+                elif entity.is_corporation:
+                    acceptor = None
+                    try:
+                        acceptor_corporation = EveCorporationInfo.objects.get(
+                            corporation_id=entity.id
+                        )
+                    except EveCorporationInfo.DoesNotExist:
+                        acceptor_corporation = \
+                            EveCorporationInfo.objects.create_corporation(
+                                corp_id=entity.id
+                        )
+                else:
+                    raise ValueError(
+                        'Acceptor has invalid category: {}'.format(
+                            entity.category
+                        )
+                    )
+
+            except Exception as ex:
+                logger.exception(addPrefix(
+                    'Failed to identify acceptor for this contract: {}'.format(
+                        ex
+                    )
+                ))
+                acceptor = None
+                acceptor_corporation = None
 
         else:
             acceptor = None
+            acceptor_corporation = None
 
         try:
             issuer = EveCharacter.objects.get(
@@ -268,11 +305,11 @@ class ContractManager(models.Manager):
             if 'date_completed' in contract else None
         title = contract['title'] if 'title' in contract else None
 
-        start_location, _ = Location.objects.get_or_create_esi(
+        start_location, _ = Location.objects.get_or_create_from_esi(
             esi_client,
             contract['start_location_id']
         )
-        end_location, _ = Location.objects.get_or_create_esi(
+        end_location, _ = Location.objects.get_or_create_from_esi(
             esi_client,
             contract['end_location_id']
         )
@@ -282,6 +319,7 @@ class ContractManager(models.Manager):
             contract_id=contract['contract_id'],
             defaults={
                 'acceptor': acceptor,
+                'acceptor_corporation': acceptor_corporation,
                 'collateral': contract['collateral'],
                 'date_accepted': date_accepted,
                 'date_completed': date_completed,
