@@ -9,6 +9,7 @@ from django.utils.timezone import now
 
 from esi.clients import esi_client_factory
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.providers import ObjectNotFound
 
 from .app_settings import *
 from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path, \
@@ -216,8 +217,9 @@ class ContractManager(models.Manager):
         esi_client: object
     ):
         """updates or creates a contract from given dict"""
-
         from .models import Contract, Location
+        
+        addPrefix = make_logger_prefix(contract['contract_id'])
 
         if int(contract['acceptor_id']) != 0:
             try:
@@ -225,9 +227,20 @@ class ContractManager(models.Manager):
                     character_id=contract['acceptor_id']
                 )
             except EveCharacter.DoesNotExist:
-                acceptor = EveCharacter.objects.create_character(
-                    character_id=contract['acceptor_id']
-                )
+                try:
+                    acceptor = EveCharacter.objects.create_character(
+                        character_id=contract['acceptor_id']
+                    )
+                except ObjectNotFound:
+                    # temporary fix for mitigating error when acceptor is corp
+                    acceptor = None
+                    logger.info(addPrefix(
+                        'Unable for now to recognize corp with ID {} '.format(
+                            contract['acceptor_id']
+                        )
+                        + 'as acceptor for this contract. Temporary fix'
+                    ))
+
         else:
             acceptor = None
 

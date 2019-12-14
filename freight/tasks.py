@@ -153,7 +153,8 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 
                 assignee_id = int(contract['assignee_id'])
                 issuer_corporation_id = int(issuer.corporation_id)
-                issuer_alliance_id = int(issuer.alliance_id) if issuer.alliance_id else None
+                issuer_alliance_id = int(issuer.alliance_id) \
+                    if issuer.alliance_id else None
                 
                 if handler.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
                     in_scope = issuer_alliance_id == assignee_id
@@ -212,7 +213,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             send_contract_notifications.delay()
             
         except Exception as ex:
-                logger.error(add_prefix(
+                logger.exception(add_prefix(
                     'An unexpected error ocurred {}'. format(ex)
                 ))                                
                 handler.last_error = ContractHandler.ERROR_UNKNOWN
@@ -250,7 +251,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 level='success' if success else 'danger'
             )
         except Exception as ex:
-            logger.error(add_prefix(
+            logger.exception(add_prefix(
                 'An unexpected error ocurred while trying to '
                 + 'report to user: {}'. format(ex)
             ))
@@ -267,9 +268,8 @@ def send_contract_notifications(force_sent = False, rate_limted = True):
         success = True
 
     except Exception as ex:
-        logger.error('An unexpected error ocurred: {}'.format(ex))        
-        success = False
-        raise ex
+        logger.exception('An unexpected error ocurred: {}'.format(ex))        
+        success = False        
 
     return success
 
@@ -284,7 +284,7 @@ def update_contracts_pricing():
         success = True
 
     except Exception as ex:
-        logger.error('An unexpected error ocurred: {}'.format(ex))        
+        logger.exception('An unexpected error ocurred: {}'.format(ex))        
         success = False        
 
     return success

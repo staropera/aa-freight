@@ -913,18 +913,23 @@ class Contract(models.Model):
                                     + 'one of our pilots shortly.'
                     
                     elif status_to_report == self.STATUS_IN_PROGRESS:
-                        contents += 'Your contract has been picked up by ' \
-                            + '{}'.format(self.acceptor) \
-                            + ' and will be delivered to you shortly.'
+                        if self.acceptor:
+                            acceptor_text = 'by {} '.format(self.acceptor)
+                        else:
+                            acceptor_text = ''
+
+                        contents += 'Your contract has been picked up {}'.format(                            
+                                acceptor_text
+                            ) + 'and will be delivered to you shortly.'
                     
                     elif status_to_report == self.STATUS_FINISHED:
                         contents += 'Your contract has been **delivered**.\n' \
                             + 'Thank you for using our freight service.'
 
                     elif status_to_report == self.STATUS_FAILED:
-                        contents += 'Your contract has been **failed** by ' \
-                            + '{}.\n'.format(self.acceptor) \
-                            + 'Thank you for using our freight service.'
+                        contents += 'Your contract has been **failed** {}'.format(                            
+                                acceptor_text
+                            ) + 'Thank you for using our freight service.'
                             
                     else:
                         raise NotImplementedError()
