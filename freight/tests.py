@@ -32,7 +32,7 @@ from . import views
 c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
 c_handler = logging.StreamHandler(sys.stdout)
 c_handler.setFormatter(c_format)
-logger = logging.getLogger('freight.tasks')
+logger = logging.getLogger('freight.managers')
 logger.level = logging.DEBUG
 logger.addHandler(c_handler)
 
@@ -47,6 +47,9 @@ class TestPricing(TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestPricing, cls).setUpClass()
+        
+        print()
+        print('Running tests for class: {}'.format(cls))
 
         # Eve characters
         with open(
@@ -71,9 +74,9 @@ class TestPricing(TestCase):
         # 1 user
         character = EveCharacter.objects.get(character_id=90000001)
         
-        alliance = EveOrganization.objects.create(
+        alliance = EveEntity.objects.create(
             id = character.alliance_id,
-            category = EveOrganization.CATEGORY_ALLIANCE,
+            category = EveEntity.CATEGORY_ALLIANCE,
             name = character.alliance_name
         )
         
@@ -314,6 +317,9 @@ class TestContractsSync(TestCase):
     def setUpClass(cls):
         super(TestContractsSync, cls).setUpClass()
 
+        print()
+        print('Running tests for class: {}'.format(cls))
+
         # ESI contracts        
         with open(
             currentdir + '/testdata/contracts.json', 
@@ -343,23 +349,25 @@ class TestContractsSync(TestCase):
                     'member_count': 42
                 }
             )
-            EveOrganization.objects.create(
-                id=character['character_id'],
-                category=EveOrganization.CATEGORY_CHARACTER,
-                name=character['character_name'],
+            EveEntity.objects.get_or_create(
+                id=character['character_id'],                
+                defaults={
+                    'category': EveEntity.CATEGORY_CHARACTER,
+                    'name': character['character_name'],
+                }
             )
-            EveOrganization.objects.get_or_create(
+            EveEntity.objects.get_or_create(
                 id=character['corporation_id'],
                 defaults={
-                    'category': EveOrganization.CATEGORY_CORPORATION,
+                    'category': EveEntity.CATEGORY_CORPORATION,
                     'name': character['corporation_name'],
                 }
             )
             if character['alliance_id'] and character['alliance_id'] != 0:
-                EveOrganization.objects.get_or_create(
+                EveEntity.objects.get_or_create(
                     id=character['alliance_id'],                
                     defaults={
-                        'category': EveOrganization.CATEGORY_ALLIANCE,
+                        'category': EveEntity.CATEGORY_ALLIANCE,
                         'name': character['alliance_name'],
                     }
                 )
@@ -367,10 +375,10 @@ class TestContractsSync(TestCase):
         # 1 user
         self.character = EveCharacter.objects.get(character_id=90000001)
         
-        self.alliance = EveOrganization.objects.get(
+        self.alliance = EveEntity.objects.get(
             id = self.character.alliance_id
         )
-        self.corporation = EveOrganization.objects.get(
+        self.corporation = EveEntity.objects.get(
             id = self.character.corporation_id
         )
         self.user = User.objects.create_user(
@@ -935,6 +943,12 @@ class TestContractsSync(TestCase):
 
 class TestFilters(TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        print()
+        print('Running tests for class: {}'.format(cls))        
+        return super().setUpClass()
+
     def test_power10(self):
         self.assertEqual(
             power10(1),
@@ -1008,6 +1022,9 @@ class TestNotifications(TestCase):
         
     @classmethod
     def setUpClass(cls):
+        print()
+        print('Running tests for class: {}'.format(cls))
+
         super(TestNotifications, cls).setUpClass()
 
         # ESI contracts        
@@ -1070,14 +1087,34 @@ class TestNotifications(TestCase):
                     'member_count': 42
                 }
             )
+            EveEntity.objects.get_or_create(
+                id=character['character_id'],                
+                defaults={
+                    'category': EveEntity.CATEGORY_CHARACTER,
+                    'name': character['character_name'],
+                }
+            )
+            EveEntity.objects.get_or_create(
+                id=character['corporation_id'],
+                defaults={
+                    'category': EveEntity.CATEGORY_CORPORATION,
+                    'name': character['corporation_name'],
+                }
+            )
+            if character['alliance_id'] and character['alliance_id'] != 0:
+                EveEntity.objects.get_or_create(
+                    id=character['alliance_id'],                
+                    defaults={
+                        'category': EveEntity.CATEGORY_ALLIANCE,
+                        'name': character['alliance_name'],
+                    }
+                )
         
         # 1 user
         self.character = EveCharacter.objects.get(character_id=90000001)
         
-        self.organization = EveOrganization.objects.create(
-            id = self.character.alliance_id,
-            category = EveOrganization.CATEGORY_ALLIANCE,
-            name = self.character.alliance_name
+        self.organization = EveEntity.objects.get(
+            id = self.character.alliance_id
         )
         
         self.user = User.objects.create_user(
@@ -1288,6 +1325,9 @@ class TestViews(TestCase):
     def setUpClass(cls):
         super(TestViews, cls).setUpClass()
 
+        print()
+        print('Running tests for class: {}'.format(cls))
+
         # ESI contracts        
         with open(
             currentdir + '/testdata/contracts.json', 
@@ -1348,16 +1388,36 @@ class TestViews(TestCase):
                     'member_count': 42
                 }
             )
+            EveEntity.objects.get_or_create(
+                id=character['character_id'],                
+                defaults={
+                    'category': EveEntity.CATEGORY_CHARACTER,
+                    'name': character['character_name'],
+                }
+            )
+            EveEntity.objects.get_or_create(
+                id=character['corporation_id'],
+                defaults={
+                    'category': EveEntity.CATEGORY_CORPORATION,
+                    'name': character['corporation_name'],
+                }
+            )
+            if character['alliance_id'] and character['alliance_id'] != 0:
+                EveEntity.objects.get_or_create(
+                    id=character['alliance_id'],                
+                    defaults={
+                        'category': EveEntity.CATEGORY_ALLIANCE,
+                        'name': character['alliance_name'],
+                    }
+                )
         
         self.factory = RequestFactory()
 
         # 1 user
         self.character = EveCharacter.objects.get(character_id=90000001)
         
-        self.organization = EveOrganization.objects.create(
-            id = self.character.alliance_id,
-            category = EveOrganization.CATEGORY_ALLIANCE,
-            name = self.character.alliance_name
+        self.organization = EveEntity.objects.get(
+            id = self.character.alliance_id
         )
         
         self.user = User.objects.create_user(
@@ -1655,6 +1715,9 @@ class TestModelContract(TestCase):
     def setUpClass(cls):
         super(TestModelContract, cls).setUpClass()
         
+        print()
+        print('Running tests for class: {}'.format(cls))
+
         # Eve characters
         with open(
             currentdir + '/testdata/characters.json', 
@@ -1683,9 +1746,9 @@ class TestModelContract(TestCase):
             corporation_id=self.character.corporation_id
         )
         
-        self.organization = EveOrganization.objects.create(
+        self.organization = EveEntity.objects.create(
             id = self.character.alliance_id,
-            category = EveOrganization.CATEGORY_ALLIANCE,
+            category = EveEntity.CATEGORY_ALLIANCE,
             name = self.character.alliance_name
         )
         
@@ -1813,11 +1876,11 @@ class TestModelContract(TestCase):
 
 
 
-class TestEveOrganization(TestCase):
+class TestEveEntity(TestCase):
     
     @classmethod
     def setUpClass(cls):
-        super(TestEveOrganization, cls).setUpClass()
+        super(TestEveEntity, cls).setUpClass()
 
         # Eve characters
         with open(
@@ -1831,17 +1894,17 @@ class TestEveOrganization(TestCase):
         for character in characters_data:
             esi_data[character['character_id']] = {
                 'id': character['character_id'],
-                'category': EveOrganization.CATEGORY_CHARACTER,
+                'category': EveEntity.CATEGORY_CHARACTER,
                 'name': character['character_name']
             }
             esi_data[character['corporation_id']] = {
                 'id': character['corporation_id'],
-                'category': EveOrganization.CATEGORY_CORPORATION,
+                'category': EveEntity.CATEGORY_CORPORATION,
                 'name': character['corporation_name']
             }
             esi_data[character['alliance_id']] = {
                 'id': character['alliance_id'],
-                'category': EveOrganization.CATEGORY_ALLIANCE,
+                'category': EveEntity.CATEGORY_ALLIANCE,
                 'name': character['alliance_name']
             }
 
@@ -1865,9 +1928,9 @@ class TestEveOrganization(TestCase):
     def test_character_basics(self, SwaggerClient):
         SwaggerClient.from_spec.return_value\
             .Universe.post_universe_names.side_effect = \
-                TestEveOrganization.esi_post_universe_names
+                TestEveEntity.esi_post_universe_names
 
-        entity, created = EveOrganization.objects.get_or_create_from_esi(id=90000001)
+        entity, created = EveEntity.objects.get_or_create_from_esi(id=90000001)
         self.assertTrue(created)
         self.assertEqual(
             str(entity),
@@ -1881,16 +1944,16 @@ class TestEveOrganization(TestCase):
             'https://imageserver.eveonline.com/Character/90000001_128.png'
         )
 
-        entity, created = EveOrganization.objects.get_or_create_from_esi(id=90000001)
+        entity, created = EveEntity.objects.get_or_create_from_esi(id=90000001)
         self.assertFalse(created)
 
     @patch('esi.clients.SwaggerClient')
     def test_corporation_basics(self, SwaggerClient):
         SwaggerClient.from_spec.return_value\
             .Universe.post_universe_names.side_effect = \
-                TestEveOrganization.esi_post_universe_names
+                TestEveEntity.esi_post_universe_names
 
-        entity, _ = EveOrganization.objects.get_or_create_from_esi(id=92000001)
+        entity, _ = EveEntity.objects.get_or_create_from_esi(id=92000001)
         self.assertEqual(
             str(entity),
             'Wayne Enterprise'
@@ -1907,9 +1970,9 @@ class TestEveOrganization(TestCase):
     def test_alliance_basics(self, SwaggerClient):
         SwaggerClient.from_spec.return_value\
             .Universe.post_universe_names.side_effect = \
-                TestEveOrganization.esi_post_universe_names
+                TestEveEntity.esi_post_universe_names
 
-        entity, _ = EveOrganization.objects.get_or_create_from_esi(id=93000001)
+        entity, _ = EveEntity.objects.get_or_create_from_esi(id=93000001)
         self.assertEqual(
             str(entity),
             'Justice League'
@@ -1927,36 +1990,36 @@ class TestEveOrganization(TestCase):
     def test_alliance_basics(self, SwaggerClient):
         SwaggerClient.from_spec.return_value\
             .Universe.post_universe_names.side_effect = \
-                TestEveOrganization.esi_post_universe_names
+                TestEveEntity.esi_post_universe_names
 
         with self.assertRaises(ObjectNotFound):
-            entity, _ = EveOrganization.objects.get_or_create_from_esi(id=666)
+            entity, _ = EveEntity.objects.get_or_create_from_esi(id=666)
         
 
     def test_get_category_for_operation_mode(self):
         self.assertEqual(
-            EveOrganization.get_category_for_operation_mode(
+            EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE_MY_ALLIANCE
             ),
-            EveOrganization.CATEGORY_ALLIANCE
+            EveEntity.CATEGORY_ALLIANCE
         )
         self.assertEqual(
-            EveOrganization.get_category_for_operation_mode(
+            EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE_MY_CORPORATION
             ),
-            EveOrganization.CATEGORY_CORPORATION
+            EveEntity.CATEGORY_CORPORATION
         )
         self.assertEqual(
-            EveOrganization.get_category_for_operation_mode(
+            EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
             ),
-            EveOrganization.CATEGORY_CORPORATION
+            EveEntity.CATEGORY_CORPORATION
         )
         self.assertEqual(
-            EveOrganization.get_category_for_operation_mode(
+            EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE_CORP_PUBLIC
             ),
-            EveOrganization.CATEGORY_CORPORATION
+            EveEntity.CATEGORY_CORPORATION
         )
 
     

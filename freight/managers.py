@@ -115,7 +115,7 @@ class LocationManager(models.Manager):
         return location, created
 
 
-class EveOrganizationManager(models.Manager):
+class EveEntityManager(models.Manager):
     
     def get_or_create_from_esi(
             self,             
@@ -123,11 +123,11 @@ class EveOrganizationManager(models.Manager):
             esi_client: object = None
         ) -> list:
         """gets or creates entity object with data fetched from ESI"""
-        from .models import EveOrganization
+        from .models import EveEntity
         try:
             entity = self.get(id=id)
             created = False
-        except EveOrganization.DoesNotExist:
+        except EveEntity.DoesNotExist:
             entity, created = self.update_or_create_from_esi(id, esi_client)
         
         return entity, created
@@ -139,7 +139,7 @@ class EveOrganizationManager(models.Manager):
             esi_client: object = None
         ) -> list:
         """updates or creates entity object with data fetched from ESI"""
-        from .models import EveOrganization
+        from .models import EveEntity
 
         addPrefix = make_logger_prefix(id)
         
@@ -165,7 +165,7 @@ class EveOrganizationManager(models.Manager):
             ) 
         except Exception as ex:
             logger.exception(addPrefix(
-                'Failed to load entity from ESI: '.format(ex)
+                'Failed to load entity with id {} from ESI: '.format(id, ex)
             ))
             raise ex
         
@@ -179,27 +179,27 @@ class EveOrganizationManager(models.Manager):
             category: str
         ) -> list:
         """updates or creates organization object from an evecharacter object"""
-        from .models import EveOrganization
+        from .models import EveEntity
         
         addPrefix = make_logger_prefix(character.character_id)
 
         try:            
-            if category == EveOrganization.CATEGORY_ALLIANCE:            
+            if category == EveEntity.CATEGORY_ALLIANCE:            
                 if not character.alliance_id:
                     raise ValueError('character is not an alliance member')
                 organization, created = self.update_or_create(
                     id=character.alliance_id,
                     defaults={
                         'name': character.alliance_name,
-                        'category': EveOrganization.CATEGORY_ALLIANCE,
+                        'category': EveEntity.CATEGORY_ALLIANCE,
                     }
                 )
-            elif category == EveOrganization.CATEGORY_CORPORATION:
+            elif category == EveEntity.CATEGORY_CORPORATION:
                 organization, created = self.update_or_create(
                     id=character.corporation_id,
                     defaults={
                         'name': character.corporation_name,
-                        'category': EveOrganization.CATEGORY_CORPORATION,
+                        'category': EveEntity.CATEGORY_CORPORATION,
                     }
                 )
             else:
@@ -222,13 +222,13 @@ class ContractManager(models.Manager):
         esi_client: object
     ):
         """updates or creates a contract from given dict"""
-        from .models import Contract, Location, EveOrganization
+        from .models import Contract, Location, EveEntity
         
         addPrefix = make_logger_prefix(contract['contract_id'])
 
         if int(contract['acceptor_id']) != 0:
             try:
-                entity, _ = EveOrganization.objects.get_or_create_from_esi(
+                entity, _ = EveEntity.objects.get_or_create_from_esi(
                     contract['acceptor_id'],
                     esi_client
                 )

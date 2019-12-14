@@ -18,7 +18,7 @@ from allianceauth.eveonline.models import EveCharacter
 
 from . import __title__
 from .app_settings import *
-from .managers import LocationManager, EveOrganizationManager, ContractManager
+from .managers import LocationManager, EveEntityManager, ContractManager
 from .utils import LoggerAddTag, DATETIME_FORMAT, make_logger_prefix
 
 
@@ -370,7 +370,7 @@ class Pricing(models.Model):
             return issues
 
 
-class EveOrganization(models.Model):
+class EveEntity(models.Model):
     """An Eve entity like a corporation or a character"""
 
     # entity categories supported by this class
@@ -397,7 +397,7 @@ class EveOrganization(models.Model):
         max_length=254
     )
 
-    objects = EveOrganizationManager()
+    objects = EveEntityManager()
 
     def __str__(self):
         return self.name
@@ -457,7 +457,7 @@ class ContractHandler(models.Model):
     ]
   
     organization = models.OneToOneField(
-        EveOrganization, 
+        EveEntity, 
         on_delete=models.CASCADE, 
         primary_key=True
     )

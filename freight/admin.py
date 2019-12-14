@@ -26,8 +26,8 @@ class PricingAdmin(admin.ModelAdmin):
     list_select_related = True
 
 
-@admin.register(EveOrganization)
-class EveOrganizationAdmin(admin.ModelAdmin):
+@admin.register(EveEntity)
+class EveEntityAdmin(admin.ModelAdmin):
     list_display = ('name', 'category')
     list_filter = ('category', )
 

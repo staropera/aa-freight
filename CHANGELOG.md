@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
-- Contract sync fails when contract was accepted by corp instead of a character. (permament fix) ([#22](https://gitlab.com/ErikKalkoken/aa-freight/issues/22))
+- Contract sync fails when contract was accepted by corp instead of a character. (permanent fix) ([#22](https://gitlab.com/ErikKalkoken/aa-freight/issues/22))
 
 ## [0.11.3] - 2019-12-14
 
