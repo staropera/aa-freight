@@ -434,8 +434,8 @@ def statistics_routes_data(request):
         .annotate(contracts_count=Count('contract', filter=finished_contracts)) \
         .annotate(rewards=Sum('contract__reward', filter=finished_contracts)) \
         .annotate(collaterals=Sum('contract__collateral', filter=finished_contracts)) \
-        .annotate(pilots=Count('contract__issuer', distinct=True, filter=finished_contracts)) \
-        .annotate(customers=Count('contract__acceptor', distinct=True, filter=finished_contracts)) 
+        .annotate(pilots=Count('contract__acceptor', distinct=True, filter=finished_contracts)) \
+        .annotate(customers=Count('contract__issuer', distinct=True, filter=finished_contracts)) 
 
     totals = list()
     for route in route_totals:
@@ -468,12 +468,20 @@ def statistics_pilots_data(request):
     """returns totals for statistics as JSON"""
 
     cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
-    finished_contracts = Q(contract_acceptor__status__exact=Contract.STATUS_FINISHED) \
+    
+    finished_contracts = \
+        Q(contract_acceptor__status__exact=Contract.STATUS_FINISHED) \
         & Q(contract_acceptor__date_completed__gte=cutoff_date)
-    pilot_totals = EveCharacter.objects.exclude(contract_acceptor__exact=None).select_related() \
-        .annotate(contracts_count=Count('contract_acceptor', filter=finished_contracts)) \
-        .annotate(rewards=Sum('contract_acceptor__reward', filter=finished_contracts)) \
-        .annotate(collaterals=Sum('contract_acceptor__collateral', filter=finished_contracts))        
+    
+    pilot_totals = EveCharacter.objects\
+        .exclude(contract_acceptor__exact=None)\
+        .select_related() \
+        .annotate(contracts_count=\
+            Count('contract_acceptor', filter=finished_contracts)) \
+        .annotate(rewards=\
+            Sum('contract_acceptor__reward', filter=finished_contracts)) \
+        .annotate(collaterals=\
+            Sum('contract_acceptor__collateral', filter=finished_contracts))        
 
     totals = list()
     for pilot in pilot_totals:
@@ -492,6 +500,57 @@ def statistics_pilots_data(request):
                 'name': pilot.character_name,
                 'corporation': pilot.corporation_name,
                 'contracts': '{:,}'.format(pilot.contracts_count),
+                'rewards': '{:,.0f}'.format(rewards),
+                'collaterals': '{:,.0f}'.format(collaterals),            
+            })
+
+    return JsonResponse(totals, safe=False)
+
+
+@login_required
+@permission_required('freight.view_statistics')
+def statistics_pilot_corporations_data(request):
+    """returns totals for statistics as JSON"""
+
+    cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
+    
+    finished_contracts = \
+        Q(contract_acceptor_corporation__status__exact\
+            =Contract.STATUS_FINISHED) \
+        & Q(contract_acceptor_corporation__date_completed__gte=cutoff_date)
+    
+    corporation_totals = EveCorporationInfo.objects\
+        .exclude(contract_acceptor_corporation__exact=None)\
+        .select_related() \
+        .annotate(contracts_count=Count(
+            'contract_acceptor_corporation', 
+            filter=finished_contracts
+        )) \
+        .annotate(rewards=Sum(
+            'contract_acceptor_corporation__reward', filter=finished_contracts
+        )) \
+        .annotate(collaterals=Sum(
+            'contract_acceptor_corporation__collateral', filter=finished_contracts
+        ))        
+
+    totals = list()
+    for corporation in corporation_totals:
+        if corporation.contracts_count > 0:
+            if corporation.rewards:
+                rewards = corporation.rewards / 1000000
+            else:
+                rewards = 0
+
+            if corporation.collaterals:
+                collaterals = corporation.collaterals / 1000000
+            else:
+                collaterals = 0
+                        
+            totals.append({
+                'name': corporation.corporation_name,
+                'alliance': corporation.alliance.alliance_name \
+                    if corporation.alliance else '',
+                'contracts': '{:,}'.format(corporation.contracts_count),
                 'rewards': '{:,.0f}'.format(rewards),
                 'collaterals': '{:,.0f}'.format(collaterals),            
             })

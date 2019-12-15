@@ -13,6 +13,7 @@ This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianc
 - [Operation Mode](#operation-mode)
 - [Permissions](#permissions)
 - [Pricing](#pricing)
+- [Contract Check](#contract-check)
 - [Change Log](CHANGELOG.md)
 
 ## Overview
@@ -25,13 +26,13 @@ Alliance Freight offers the following main features:
 
 - Reward calculator allowing members to easily calculate the correct reward for their a courier contract
 
-- Page showing the list of currently outstanding courier contracts incl. an indicator  if the contract is compliant with the pricing for the respective route
+- Page showing the list of currently outstanding courier contracts incl. an indicator if the contract is compliant with the pricing for the respective route ("contract check")
 
 - Multiple routes can be defined, each with its own pricing
 
 - Automatic notification to alliance pilots on Discord informing them about new courier contracts
 
-- Automatic notification to contract issuer on Discord informing him about the developing status of his contract
+- Automatic notification to contract issuer on Discord informing him about the developing status of his contract and potentially issues with his contract
 
 - Contract issuer can always check the current status of his courier contracts
 
@@ -208,3 +209,19 @@ Details | Text with additional instructions for using this pricing | Info
 
 
 > **How to add new locations**:<br>If you are creating a pricing for a new route you may need to first add the locations (stations and/or structures).<br>The easiest way is to create a courier contract between those locations in game and then run contract sync. Those locations will then be added automatically.<br>Alternatively you can use the "Add Location" feature on the main page of the app. This will require you to provide the respective station or structure eve ID.
+
+## Contract Check
+
+The app will automatically check if a newly issued contract complies with the pricing parameters for the respective route.
+
+Compliant contracts will have a green checkmark (✓) in the "Contract Check" column on the contract list. Related notifications on Discord will be colored in green.
+
+Non-compliant contracts will have a red warning sign in the "Contract Check" column on the contract list. And related notifications on Discord will be colored in red. In addition the first customer notification will inform the customer about the issues and ask him to correct the issues.
+
+The following parameters will be checked (if they have been defined):
+
+- reward in contract >= calculated reward
+- volume min <= volume in contract <= volume max
+- collateral min <= collateral in contract <= collateral max
+
+Deviations on "Days to expire" and "Days to complete" are currently not part of the contract check and only used to show the recommended contract parameters in the calculator.

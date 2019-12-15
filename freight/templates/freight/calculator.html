@@ -41,10 +41,10 @@
                             
                                 <dl class="dl-horizontal">
 
-                                    <dt>From</dt>
+                                    <dt>From / To</dt>
                                     <dd>{{ pricing.start_location }}</dd>
 
-                                    <dt>To</dt>
+                                    <dt>From / To</dt>
                                     <dd>{{ pricing.end_location }}</dd>
 
                                     <br>
@@ -153,6 +153,10 @@
                                         <dt>Volume:</dt>
                                         <dd>{{ volume|formatnumber:"0"|default_if_none:"???" }} m3</dd>
                                     {% endif %}
+
+                                    <hr>
+
+                                    Note that this route is bidirectional, so Location and Destination can be switched.
 
                                 </dl>
 

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.12.0] - 2019-12-15
+
+### Added
+
+- Statistics for pilot corporations, which also include contracts that are accepted by corporations
+- Added section explaining in details how the "contrat check" feature works
+
+### Changed
+
+- Renamed "Price Check" to "Contract Check", which better expresses that not only the reward, but also volume and collateral are checked for compliance
+- Updated "pricing details" and "your contracts" info boxes on the calculator to better reflect that routes are bidirectional
+
+### Fixed
+
+- Pilots and Customer count was mixed up on the statistics page for routes.
+
 ## [0.11.4] - 2019-12-14
 
 ### Fixed

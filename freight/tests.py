@@ -1158,11 +1158,12 @@ class TestNotifications(TestCase):
         )
         
         for contract in self.contracts:
-            Contract.objects.update_or_create_from_dict(
-                handler=handler,
-                contract=contract,
-                esi_client=Mock()
-            )
+            if contract['type'] == 'courier':
+                Contract.objects.update_or_create_from_dict(
+                    handler=handler,
+                    contract=contract,
+                    esi_client=Mock()
+                )
 
         Contract.objects.update_pricing() 
 
@@ -1469,11 +1470,12 @@ class TestViews(TestCase):
         )
         
         for contract in self.contracts:
-            Contract.objects.update_or_create_from_dict(
-                handler=self.handler,
-                contract=contract,
-                esi_client=Mock()
-            )
+            if contract['type'] == 'courier':
+                Contract.objects.update_or_create_from_dict(
+                    handler=self.handler,
+                    contract=contract,
+                    esi_client=Mock()
+                )
 
         Contract.objects.update_pricing() 
 
@@ -1707,6 +1709,114 @@ class TestViews(TestCase):
         
         response = orig_view(request, token)
         self.assertEqual(mock_run_contracts_sync.call_count, 1)
+
+
+    def test_statistics_routes_data(self):
+        p = Permission.objects.get(
+            codename='view_statistics', 
+            content_type__app_label=__package__
+        )
+        self.user.user_permissions.add(p)
+        self.user.save()
+
+        request = self.factory.get(reverse(
+            'freight:statistics_routes_data'
+        ))
+        request.user = self.user
+        
+        response = views.statistics_routes_data(request)
+        self.assertEqual(response.status_code, 200)
+
+        data = json.loads(response.content.decode('utf-8'))        
+        
+        self.assertListEqual(
+            data,
+            [{
+                'contracts': '3', 
+                'collaterals': '3,000', 
+                'pilots': '1', 
+                'name': 'Jita <-> Amamake', 
+                'customers': '1', 
+                'rewards': '300'
+            }]
+        )
+
+    def test_statistics_pilots_data(self):
+        p = Permission.objects.get(
+            codename='view_statistics', 
+            content_type__app_label=__package__
+        )
+        self.user.user_permissions.add(p)
+        self.user.save()
+
+        request = self.factory.get(reverse(
+            'freight:statistics_pilots_data'
+        ))
+        request.user = self.user
+        
+        response = views.statistics_pilots_data(request)
+        self.assertEqual(response.status_code, 200)
+
+        data = json.loads(response.content.decode('utf-8'))        
+        
+        self.assertListEqual(
+            data,
+            [{'collaterals': '3,000', 'rewards': '300', 'corporation': 'Wayne Enterprise', 'contracts': '3', 'name': 'Bruce Wayne'}]
+        )
+
+
+    def test_statistics_pilot_corporations_data(self):
+        p = Permission.objects.get(
+            codename='view_statistics', 
+            content_type__app_label=__package__
+        )
+        self.user.user_permissions.add(p)
+        self.user.save()
+
+        request = self.factory.get(reverse(
+            'freight:statistics_pilot_corporations_data'
+        ))
+        request.user = self.user
+        
+        response = views.statistics_pilot_corporations_data(request)
+        self.assertEqual(response.status_code, 200)
+
+        data = json.loads(response.content.decode('utf-8'))        
+        
+        self.assertListEqual(
+            data,
+            [{
+                'name': 'Wayne Enterprise', 
+                'rewards': '300', 
+                'alliance': '', 
+                'collaterals': '3,000', 
+                'contracts': '3'
+            }]
+        )
+
+
+    def test_statistics_customer_data(self):
+        p = Permission.objects.get(
+            codename='view_statistics', 
+            content_type__app_label=__package__
+        )
+        self.user.user_permissions.add(p)
+        self.user.save()
+
+        request = self.factory.get(reverse(
+            'freight:statistics_customer_data'
+        ))
+        request.user = self.user
+        
+        response = views.statistics_customer_data(request)
+        self.assertEqual(response.status_code, 200)
+
+        data = json.loads(response.content.decode('utf-8'))        
+        
+        self.assertListEqual(
+            data,
+            [{'collaterals': '3,000', 'rewards': '300', 'corporation': 'Wayne Enterprise', 'contracts': '3', 'name': 'Robin'}]
+        )
 
 
 class TestModelContract(TestCase):

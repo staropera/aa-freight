@@ -13,7 +13,8 @@ from django.urls import reverse
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership, User
-from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo
+from allianceauth.eveonline.models import EveAllianceInfo, \
+    EveCorporationInfo
 from allianceauth.eveonline.models import EveCharacter
 
 from . import __title__
@@ -792,7 +793,7 @@ class Contract(models.Model):
         else:
             check_text = 'N/A'
             color = None
-        desc += '**Price Check**: {}\n'.format(check_text)        
+        desc += '**Contract Check**: {}\n'.format(check_text)        
         desc += '**Issued on**: {}\n'.format(
             self.date_issued.strftime(DATETIME_FORMAT)
         )
