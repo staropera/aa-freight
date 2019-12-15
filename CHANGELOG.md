@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Statistics for pilot corporations, which also include contracts that are accepted by corporations
-- Added section explaining in details how the "contrat check" feature works
+- Added section explaining in details how the "contract check" feature works
 
 ### Changed
 
