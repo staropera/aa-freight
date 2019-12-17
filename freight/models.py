@@ -343,19 +343,19 @@ class Pricing(models.Model):
         
         if volume is not None and self.volume_min and volume < self.volume_min:
             issues.append('below the minimum required volume of '
-                + '{:,.0f} K m3'.format(self.volume_min / 1000))
+                + '{:,.0f} m3'.format(self.volume_min))
                 
         if volume is not None and self.volume_max and volume > self.volume_max:
             issues.append('exceeds the maximum allowed volume of '
-                + '{:,.0f} K m3'.format(self.volume_max / 1000))
+                + '{:,.0f} m3'.format(self.volume_max))
         
         if collateral is not None and self.collateral_max and collateral > self.collateral_max:
             issues.append('exceeds the maximum allowed collateral of '
-                + '{:,.0f} M ISK'.format(self.collateral_max / 1000000))
+                + '{:,.0f} ISK'.format(self.collateral_max))
         
         if collateral is not None and self.collateral_min and collateral < self.collateral_min:
             issues.append('below the minimum required collateral of '
-                + '{:,.0f} M ISK'.format(self.collateral_min / 1000000))
+                + '{:,.0f} ISK'.format(self.collateral_min))
 
         if reward is not None:
             calculated_price = self.get_calculated_price(
@@ -363,7 +363,7 @@ class Pricing(models.Model):
             )
             if reward < calculated_price:
                 issues.append('reward is below the calculated price of '
-                    + '{:,.0f} M ISK'.format(calculated_price / 1000000))
+                    + '{:,.0f} ISK'.format(calculated_price))
 
         if len(issues) == 0:
             return None
@@ -779,8 +779,8 @@ class Contract(models.Model):
         desc += '**Collateral**: {:,.0f} M ISK\n'.format(
             self.collateral / 1000000
         )
-        desc += '**Volume**: {:,.0f} K m3\n'.format(
-            self.volume / 1000
+        desc += '**Volume**: {:,.0f} m3\n'.format(
+            self.volume
         )
         desc += '**Status**: {}\n'.format(self.status)
         if self.pricing:            

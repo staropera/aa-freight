@@ -15,14 +15,14 @@ class CalculatorForm(forms.Form):
         empty_label=None
     )    
     volume = forms.IntegerField(
-        help_text='Est. volume of your cargo in K x m3, e.g. "50" = 50,000 m3',
+        help_text='Est. volume of your cargo in m3',
         required = False,
         validators=[            
             MinValueValidator(0)
         ]
     )
     collateral = forms.IntegerField(
-        help_text='Collaterial in M ISK, must be roughly equal to the est. '\
+        help_text='Collaterial in ISK, must be roughly equal to the est. '\
             + 'value of your cargo',
         required = False,
         validators=[            
@@ -46,16 +46,10 @@ class CalculatorForm(forms.Form):
         ):
             raise ValidationError(
                 '{} collateral is required'.format(issue_prefix)
-            )
+            )        
         
-        if self.cleaned_data['volume']:
-            volume = self.cleaned_data['volume'] * 1000
-        else:
-            volume = None
-        if self.cleaned_data['collateral']:
-            collateral = self.cleaned_data['collateral'] * 1000000
-        else:
-            collateral = None
+        volume = self.cleaned_data['volume']        
+        collateral = self.cleaned_data['collateral']        
         issues = pricing.get_contract_price_check_issues(
             volume,
             collateral

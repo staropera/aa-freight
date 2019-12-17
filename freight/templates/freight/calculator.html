@@ -18,9 +18,9 @@
                     <div class="panel-body">
                         {{ form|bootstrap }}
                         <br>
-                        <p><strong>Your Reward</strong></p>
+                        <p><strong>Reward</strong></p>
                         <h2>                
-                            {{ price|power10:"6"|formatnumber:"0"|default_if_none:"-" }} M ISK
+                            {{ price|formatnumber:"0"|default_if_none:"-" }} ISK
                         </h2>
                         
                         <button class="btn btn-success btn-lg" type="submit">Click To Calculate Reward!</button>
@@ -51,7 +51,7 @@
 
                                     {% if pricing.price_min != None %}
                                         <dt>Minimum price:</dt>
-                                        <dd>{{ pricing.price_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                        <dd>{{ pricing.price_min|formatnumber:"0" }} ISK</dd>
                                     {% endif %}
 
                                     {% if pricing.price_base != None %}
@@ -60,7 +60,7 @@
                                         {% else %}
                                             <dt>Base price:</dt>
                                         {% endif %}
-                                        <dd>{{ pricing.price_base|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                        <dd>{{ pricing.price_base|formatnumber:"0" }} ISK</dd>
                                     {% endif %}
                                     
                                     {% if pricing_price_per_volume_eff != None %}
@@ -76,22 +76,22 @@
                                     <br>
                                     {% if pricing.volume_min != None %}
                                         <dt>Min Volume:</dt>
-                                        <dd>{{ pricing.volume_min|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
+                                        <dd>{{ pricing.volume_min|formatnumber:"0"|default_if_none:"-" }} m3</dd>
                                     {% endif %}
                                     
                                     {% if pricing.volume_max != None %}
                                         <dt>Max Volume:</dt>
-                                        <dd>{{ pricing.volume_max|power10:"3"|formatnumber:"0"|default_if_none:"-" }} K m3</dd>
+                                        <dd>{{ pricing.volume_max|formatnumber:"0"|default_if_none:"-" }} m3</dd>
                                     {% endif %}
 
                                     {% if pricing.collateral_min != None %}
                                         <dt>Min. Collateral:</dt>
-                                        <dd>{{ pricing.collateral_min|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                        <dd>{{ pricing.collateral_min|formatnumber:"0" }} ISK</dd>
                                     {% endif %}
 
                                     {% if pricing.collateral_max != None %}
                                         <dt>Max. Collateral:</dt>        
-                                        <dd>{{ pricing.collateral_max|power10:"6"|formatnumber:"0" }} M ISK</dd>
+                                        <dd>{{ pricing.collateral_max|formatnumber:"0" }} ISK</dd>
                                     {% endif %}
 
                                     <br>

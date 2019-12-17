@@ -1,4 +1,5 @@
 import datetime
+import logging
 import math
 
 from django.conf import settings
@@ -13,7 +14,8 @@ from django.utils.html import mark_safe
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, EveCharacter
+from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, \
+    EveCharacter
 from esi.decorators import token_required
 from esi.clients import esi_client_factory
 from esi.models import Token
@@ -21,8 +23,11 @@ from esi.models import Token
 from . import tasks, __title__
 from .app_settings import FREIGHT_STATISTICS_MAX_DAYS
 from .models import *
-from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus
+from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus, \
+    LoggerAddTag
 
+
+logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 
 ADD_LOCATION_TOKEN_TAG = 'freight_add_location_token'
 CONTRACT_LIST_USER = 'user'
@@ -201,8 +206,8 @@ def calculator(request, pricing_pk = None):
             else:
                 collateral = 0
             price = math.ceil(pricing.get_calculated_price(
-                    volume * 1000, 
-                    collateral * 1000000
+                    volume, 
+                    collateral
                 ) / 1000000
             ) * 1000000
                 
@@ -247,8 +252,8 @@ def calculator(request, pricing_pk = None):
             'pricing': pricing,
             'price': price,
             'organization_name': organization_name,
-            'collateral': collateral * 1000000 if collateral is not None else 0,
-            'volume': volume * 1000 if volume is not None else None,
+            'collateral': collateral if collateral is not None else 0,
+            'volume': volume if volume is not None else None,
             'expires_on': expires_on,
             'availability': availability,
             'pricing_price_per_volume_eff': price_per_volume_eff

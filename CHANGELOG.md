@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.12.2] - 2019-12-17
+
+### Changed
+
+- Input for volume and collateral changed to exact figures ([#18](https://gitlab.com/ErikKalkoken/aa-freight/issues/18))
+
+- Volume on notification now also shown as exact figures. ISK figures shown in M format.
+
 ## [0.12.1] - 2019-12-16
 
 ### Added
