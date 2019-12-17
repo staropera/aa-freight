@@ -81,11 +81,18 @@ def contract_list_data(request, category):
         else:
             user_characters = [
                 x.character 
-                for x in \
-                    request.user.character_ownerships.select_related().all()
+                for x in request.user.character_ownerships\
+                    .select_related()\
+                    .all()
             ]
             contracts = Contract.objects\
                 .filter(issuer__in=user_characters)\
+                .filter(status__in=[
+                    Contract.STATUS_OUTSTANDING,
+                    Contract.STATUS_IN_PROGRESS,
+                    Contract.STATUS_FINISHED,
+                    Contract.STATUS_FAILED,
+                ])\
                 .select_related()
     else:
         raise ValueError('Invalid category: {}'.format(category))

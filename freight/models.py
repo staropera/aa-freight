@@ -769,7 +769,7 @@ class Contract(models.Model):
     def _generate_embed(self) -> Embed:
         """generates a Discord embed for this contract"""
         desc = ''
-        desc += '**Route**: {} → {}\n'.format(
+        desc += '**Route**: {} <-> {}\n'.format(
             self.start_location.solar_system_name,
             self.end_location.solar_system_name
         )                
@@ -801,13 +801,14 @@ class Contract(models.Model):
         desc += '**Expires on**: {}\n'.format(
             self.date_expired.strftime(DATETIME_FORMAT)
         )        
-        desc += '**Accepted by**: {}\n'.format(
-            self.acceptor_name if self.acceptor_name else ''
-        )
-        desc += '**Accepted on**: {}\n'.format(
-            self.date_accepted.strftime(DATETIME_FORMAT) \
-                if self.date_accepted else ''
-        )
+        if self.acceptor_name:
+            desc += '**Accepted by**: {}\n'.format(
+                self.acceptor_name
+            )
+        if self.date_accepted:
+            desc += '**Accepted on**: {}\n'.format(
+                self.date_accepted.strftime(DATETIME_FORMAT)
+            )
         
         return Embed(
             description=desc,            

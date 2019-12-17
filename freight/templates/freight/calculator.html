@@ -130,7 +130,7 @@
                                     
                                     {% if pricing.days_to_expire %}
                                         <dt>Expiration:</dt>
-                                        <dd>{{ expires_on|date:'Y-m-d' }} </dd>
+                                        <dd>{{ pricing.days_to_expire }} days ({{ expires_on|date:'Y-m-d' }})</dd>
                                     {% endif %}
 
                                     <hr>

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.12.1] - 2019-12-16
+
+### Added
+
+- Show notification status for each contract on admin page
+
+- Show "days to expire" in addition to expiration date in calculator / "Your Contract" panel ([#26](https://gitlab.com/ErikKalkoken/aa-freight/issues/26))
+
+### Changed
+
+- Will no longer show deleted contracts on "My Contracts" page. ([#25](https://gitlab.com/ErikKalkoken/aa-freight/issues/25))
+
+- Will no longer show empty "Accepted By" and "Accepted On" fields on notifications
+
+- Some data models on admin page are not read only or hidden completely to prevent accidental data corruption
+
 ## [0.12.0] - 2019-12-15
 
 ### Added

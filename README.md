@@ -122,7 +122,7 @@ To update your existing installation of Alliance Freight first enable your virtu
 Then run the following commands from your AA project directory (the one that contains `manage.py`).
 
 ```bash
-pip install git+https://gitlab.com/ErikKalkoken/aa-freight.git
+pip install git+https://gitlab.com/ErikKalkoken/aa-freight.git -U
 ```
 
 ```bash

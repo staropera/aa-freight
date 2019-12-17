@@ -1,18 +1,25 @@
 from django import forms
 from django.contrib import admin
-from django.conf import settings
 from django.utils.html import format_html
 
-from .models import *
 from . import tasks
+from .app_settings import FREIGHT_DEVELOPER_MODE
+from .models import *
 
 
-@admin.register(Location)
-class LocationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'category_id')    
-    list_filter = ('category_id',)
-    search_fields = ['name']
-    list_select_related = True
+if FREIGHT_DEVELOPER_MODE:
+    @admin.register(Location)
+    class LocationAdmin(admin.ModelAdmin):
+        list_display = ('id', 'name', 'category_id')    
+        list_filter = ('category_id',)
+        search_fields = ['name']
+        list_select_related = True
+
+
+    @admin.register(EveEntity)
+    class EveEntityAdmin(admin.ModelAdmin):
+        list_display = ('name', 'category')
+        list_filter = ('category', )
 
 
 @admin.register(Pricing)
@@ -25,26 +32,21 @@ class PricingAdmin(admin.ModelAdmin):
     )
     list_select_related = True
 
-
-@admin.register(EveEntity)
-class EveEntityAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category')
-    list_filter = ('category', )
-
-
 @admin.register(ContractHandler)
 class ContractHandlerAdmin(admin.ModelAdmin):
     list_display = ('organization', 'character', 'operation_mode', 'last_sync')
     actions = ('send_notifications', 'start_sync', 'update_pricing')
 
-    readonly_fields=(
-        'organization', 
-        'character', 
-        'operation_mode', 
-        'version_hash', 
-        'last_sync', 
-        'last_error', 
-    )
+    if not FREIGHT_DEVELOPER_MODE:            
+        readonly_fields=(
+            'organization', 
+            'character', 
+            'operation_mode', 
+            'version_hash', 
+            'last_sync', 
+            'last_error', 
+        )
+
 
     def start_sync(self, request, queryset):
                         
@@ -101,7 +103,9 @@ class ContractAdmin(admin.ModelAdmin):
         'contract_id',
         'status',
         'date_issued',
-        'issuer',        
+        'issuer',
+        'pilots_notified',
+        'customer_notified'
     ]
     list_filter = (
         'status',
@@ -111,26 +115,39 @@ class ContractAdmin(admin.ModelAdmin):
 
     list_select_related = True
 
-    actions = ['send_default_notification', 'send_customer_notification']
+    def pilots_notified(self, contract):
+        return contract.date_notified is not None
 
-    def send_default_notification(self, request, queryset):
+    pilots_notified.boolean = True
+
+    def customer_notified(self, contract):
+        return ', '.join(sorted([
+                x.status 
+                for x in contract.contractcustomernotification_set\
+                    .all()
+            ], reverse=True
+        ))
+
+    actions = ['send_pilots_notification', 'send_customer_notification']
+
+    def send_pilots_notification(self, request, queryset):
                         
         for obj in queryset:            
-            obj.send_default_notification()
+            obj.send_pilot_notification()
             self.message_user(
                 request, 
-                'Sent default notification for contract {} to Discord'.format(
+                'Sent pilots notification for contract {} to Discord'.format(
                     obj.contract_id
                 )
             )
     
-    send_default_notification.short_description = \
-        "Sent default notification for contracts to Discord"
+    send_pilots_notification.short_description = \
+        "Sent pilots notification for contracts to Discord"
 
     def send_customer_notification(self, request, queryset):
                         
         for obj in queryset:            
-            obj.send_customer_notification(send_again=True)
+            obj.send_customer_notification(force_sent=True)
             self.message_user(
                 request, 
                 'Sent customer notification for contract {} to Discord'.format(
@@ -143,18 +160,19 @@ class ContractAdmin(admin.ModelAdmin):
 
     # This will help you to disbale add functionality
     def has_add_permission(self, request):
-        if settings.DEBUG:
+        if FREIGHT_DEVELOPER_MODE:
             return True
         else:
             return False
 
     def has_change_permission(self, request, obj=None):
-        if settings.DEBUG:
+        if FREIGHT_DEVELOPER_MODE:
             return True
         else:
             return False
 
 
-@admin.register(ContractCustomerNotification)
-class ContractCustomerNotificationAdmin(admin.ModelAdmin):
-    pass
+if FREIGHT_DEVELOPER_MODE:
+    @admin.register(ContractCustomerNotification)
+    class ContractCustomerNotificationAdmin(admin.ModelAdmin):
+        pass

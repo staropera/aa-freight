@@ -1667,8 +1667,7 @@ class TestViews(TestCase):
         self.assertSetEqual(
             contract_ids, 
             {
-                149409016,
-                149419318,              
+                149409016
             }
         )
     

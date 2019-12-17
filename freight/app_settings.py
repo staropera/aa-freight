@@ -45,6 +45,13 @@ FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL = getattr(
     None
 )
 
+# Enables features for developers, e.g. write access to all models in admin
+FREIGHT_DEVELOPER_MODE = getattr(
+    settings, 
+    'FREIGHT_DEVELOPER_MODE', 
+    False
+)
+
 # defines after how many hours a status becomes stale
 # a stale status will not be reported to customers
 if (hasattr(settings, 'FREIGHT_HOURS_UNTIL_STALE_STATUS')
