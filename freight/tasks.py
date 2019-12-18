@@ -79,6 +79,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             ).require_scopes(
                 ContractHandler.get_esi_scopes()
             ).require_valid().first()
+
         except TokenInvalidError:        
             logger.error(add_prefix(
                 'Invalid token for fetching contracts'
@@ -95,18 +96,29 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             handler.save()
             raise TokenExpiredError()
         
+        else:
+            if not token:
+                logger.error(add_prefix('No valid token found'))            
+                handler.last_error = ContractHandler.ERROR_TOKEN_INVALID
+                handler.save()
+                raise TokenInvalidError()
+        
         try:
             # fetching data from ESI
-            logger.info(add_prefix('Fetching contracts from ESI - page 1'))
+            logger.info(add_prefix(
+                'Fetching contracts from ESI - page 1'
+            ))
             esi_client = esi_client_factory(
                 token=token, 
                 spec_file=get_swagger_spec_path()
             )
 
             # get contracts from first page
-            operation = esi_client.Contracts.get_corporations_corporation_id_contracts(
-                corporation_id=handler.character.character.corporation_id
-            )
+            operation = esi_client.Contracts\
+                .get_corporations_corporation_id_contracts(
+                    corporation_id=\
+                        handler.character.character.corporation_id
+                )
             operation.also_return_response = True
             contracts_all, response = operation.result()
             pages = int(response.headers['x-pages'])
@@ -116,10 +128,12 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 logger.info(add_prefix(
                     'Fetching contracts from ESI - page {}'.format(page)
                 ))
-                contracts_all += esi_client.Contracts.get_corporations_corporation_id_contracts(
-                    corporation_id=handler.character.character.corporation_id,
-                    page=page
-                ).result()
+                contracts_all += esi_client.Contracts\
+                    .get_corporations_corporation_id_contracts(
+                        corporation_id=handler\
+                            .character.character.corporation_id,
+                        page=page
+                    ).result()
             
             if settings.DEBUG:
                 # store to disk (for debugging)
@@ -182,7 +196,9 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             new_version_hash = hashlib.md5(
                 json.dumps(contracts, cls=DjangoJSONEncoder).encode('utf-8')
             ).hexdigest()
-            if force_sync or new_version_hash != handler.version_hash:
+            if (force_sync 
+                or new_version_hash != handler.version_hash
+            ):
                 logger.info(add_prefix(
                     'Storing update with {:,} contracts'.format(
                         len(contracts)
@@ -191,24 +207,38 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 
                 # update contracts in local DB
                 with transaction.atomic():                
+                    handler.version_hash = new_version_hash
+                    no_errors = True
                     for contract in contracts:                    
-                        Contract.objects.update_or_create_from_dict(
-                            handler=handler,
-                            contract=contract,
-                            esi_client=esi_client
-                        )
-                    handler.version_hash = new_version_hash                
+                        try:
+                            Contract.objects.update_or_create_from_dict(
+                                handler=handler,
+                                contract=contract,
+                                esi_client=esi_client
+                            )
+                        except Exception as ex:
+                            logger.exception(add_prefix(
+                                'An unexpected error ocurred ' \
+                                + 'while trying to load contract '\
+                                + '{}: {}'. format(
+                                    contract['contract_id'] \
+                                        if 'contract_id' in contract \
+                                        else 'Unknown',
+                                    ex
+                                )
+                            ))
+                            no_errors = False                
+                    
+                    if no_errors:
+                        handler.last_error = ContractHandler.ERROR_NONE
+                    else:
+                        handler.last_error = ContractHandler.ERROR_UNKNOWN
                     handler.save()
-                    success = True
-
-                handler.last_error = ContractHandler.ERROR_NONE
-                handler.save()
 
                 Contract.objects.update_pricing()
 
             else:
                 logger.info(add_prefix('Contracts are unchanged.'))
-                success = True
 
             send_contract_notifications.delay()
             
@@ -229,8 +259,10 @@ def run_contracts_sync(force_sync = False, user_pk = None):
 
     if user_pk:
         try:
-            message = 'Syncing of contracts for "{}" in operation mode "{}" {}.\n'.format(
-                handler.organization.name,
+            message = 'Syncing of contracts for "{}"'.format(
+                handler.organization.name
+            )
+            message += ' in operation mode "{}" {}.\n'.format(
                 handler.operation_mode_friendly,
                 'completed successfully' if success else 'has failed'
             )

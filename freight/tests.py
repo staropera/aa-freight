@@ -32,7 +32,7 @@ from . import views
 c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
 c_handler = logging.StreamHandler(sys.stdout)
 c_handler.setFormatter(c_format)
-logger = logging.getLogger('freight.managers')
+logger = logging.getLogger('freight.tasks')
 logger.level = logging.DEBUG
 logger.addHandler(c_handler)
 
@@ -520,6 +520,124 @@ class TestContractsSync(TestCase):
             ContractHandler.ERROR_TOKEN_INVALID            
         )
 
+    @patch(
+        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        FREIGHT_OPERATION_MODE_MY_ALLIANCE
+    )
+    @patch('freight.tasks.Token')    
+    def test_run_manager_sync_no_valid_token(
+            self,             
+            mock_Token
+        ):                
+        
+        mock_Token.objects.filter.return_value.require_scopes.return_value.require_valid.return_value.first.return_value = None
+                        
+        # create test data
+        p = Permission.objects.filter(            
+            codename='setup_contract_handler'
+        ).first()
+        self.user.user_permissions.add(p)
+        self.user.save()
+        handler = ContractHandler.objects.create(
+            organization=self.alliance,
+            character=self.main_ownership,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+        )
+        
+        # run manager sync
+        self.assertFalse(tasks.run_contracts_sync())
+
+        handler.refresh_from_db()
+        self.assertEqual(
+            handler.last_error, 
+            ContractHandler.ERROR_TOKEN_INVALID            
+        )
+
+    # exception occuring for one of the contracts    
+    @patch(
+        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        FREIGHT_OPERATION_MODE_MY_ALLIANCE
+    )
+    @patch(
+        'freight.tasks.Contract.objects.update_or_create_from_dict'
+    )
+    @patch('freight.tasks.Token')
+    @patch('freight.tasks.send_contract_notifications')
+    @patch('freight.tasks.esi_client_factory')
+    def test_sync_contract_fails(
+            self, 
+            mock_esi_client_factory, 
+            mock_send_contract_notifications,
+            mock_Token,
+            mock_Contracts_objects_update_or_create_from_dict
+        ):
+        
+        # create mocks
+        def get_contracts_page(*args, **kwargs):
+            """returns single page for operation.result(), first with header"""
+            page_size = 2
+            mock_calls_count = len(mock_operation.mock_calls)
+            start = (mock_calls_count - 1) * page_size
+            stop = start + page_size
+            pages_count = int(math.ceil(
+                len(self.contracts) / page_size
+            ))
+            if mock_calls_count == 1:
+                mock_response = Mock()
+                mock_response.headers = {'x-pages': pages_count}
+                return [self.contracts[start:stop], mock_response]
+            else:
+                return self.contracts[start:stop]
+
+        def func_Contracts_objects_update_or_create_from_dict(
+            handler, 
+            contract, 
+            esi_client
+        ):            
+            raise RuntimeError('Test exception')
+            
+
+        mock_Contracts_objects_update_or_create_from_dict\
+            .side_effect = \
+                func_Contracts_objects_update_or_create_from_dict
+
+        mock_client = Mock()
+        mock_operation = Mock()
+        mock_operation.result.side_effect = get_contracts_page        
+        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
+            return_value=mock_operation
+        )
+        mock_esi_client_factory.return_value = mock_client        
+        mock_send_contract_notifications.delay = Mock()        
+
+        mock_Token.objects.filter.return_value\
+            .require_scopes.return_value\
+            .require_valid.return_value\
+            .first.return_value = Mock(spec=Token)
+
+        # create test data
+        p = Permission.objects.filter(            
+            codename='setup_contract_handler'
+        ).first()
+        self.user.user_permissions.add(p)
+        self.user.save()
+        handler = ContractHandler.objects.create(
+            organization=self.alliance,
+            character=self.main_ownership,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE
+        )
+        
+        # run manager sync
+        self.assertTrue(
+            tasks.run_contracts_sync()
+        )
+
+        handler.refresh_from_db()
+        self.assertEqual(
+            handler.last_error, 
+            ContractHandler.ERROR_UNKNOWN            
+        )
+        
 
     # normal synch of new contracts, mode my_alliance
     # freight.tests.TestRunContractsSync.test_run_manager_sync_normal_my_alliance    
@@ -527,12 +645,14 @@ class TestContractsSync(TestCase):
         'freight.tasks.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_MY_ALLIANCE
     )
+    @patch('freight.tasks.Token')
     @patch('freight.tasks.send_contract_notifications')
     @patch('freight.tasks.esi_client_factory')
     def test_sync_my_alliance_contracts_only(
             self, 
             mock_esi_client_factory, 
-            mock_send_contract_notifications            
+            mock_send_contract_notifications,
+            mock_Token
         ):
         
         # create mocks
@@ -558,6 +678,11 @@ class TestContractsSync(TestCase):
         )
         mock_esi_client_factory.return_value = mock_client        
         mock_send_contract_notifications.delay = Mock()        
+
+        mock_Token.objects.filter.return_value\
+            .require_scopes.return_value\
+            .require_valid.return_value\
+            .first.return_value = Mock(spec=Token)
 
         # create test data
         p = Permission.objects.filter(            
@@ -602,12 +727,14 @@ class TestContractsSync(TestCase):
         'freight.tasks.FREIGHT_OPERATION_MODE',
         FREIGHT_OPERATION_MODE_MY_CORPORATION
     )
+    @patch('freight.tasks.Token')
     @patch('freight.tasks.send_contract_notifications')
     @patch('freight.tasks.esi_client_factory')
     def test_sync_my_corporation_contracts_only(
             self, 
             mock_esi_client_factory, 
-            mock_send_contract_notifications
+            mock_send_contract_notifications,
+            mock_Token
         ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
@@ -631,7 +758,12 @@ class TestContractsSync(TestCase):
             return_value=mock_operation
         )
         mock_esi_client_factory.return_value = mock_client        
-        mock_send_contract_notifications.delay = Mock()        
+        mock_send_contract_notifications.delay = Mock()
+
+        mock_Token.objects.filter.return_value\
+            .require_scopes.return_value\
+            .require_valid.return_value\
+            .first.return_value = Mock(spec=Token)
 
         # create test data
         p = Permission.objects.filter(            
@@ -676,12 +808,14 @@ class TestContractsSync(TestCase):
         'freight.tasks.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
     )
+    @patch('freight.tasks.Token')
     @patch('freight.tasks.send_contract_notifications')
     @patch('freight.tasks.esi_client_factory')
     def test_sync_corp_in_alliance_contracts_only(
             self, 
             mock_esi_client_factory, 
-            mock_send_contract_notifications
+            mock_send_contract_notifications,
+            mock_Token
         ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
@@ -705,7 +839,12 @@ class TestContractsSync(TestCase):
             return_value=mock_operation
         )
         mock_esi_client_factory.return_value = mock_client        
-        mock_send_contract_notifications.delay = Mock()        
+        mock_send_contract_notifications.delay = Mock()    
+
+        mock_Token.objects.filter.return_value\
+            .require_scopes.return_value\
+            .require_valid.return_value\
+            .first.return_value = Mock(spec=Token)    
 
         # create test data
         p = Permission.objects.filter(            
@@ -750,6 +889,7 @@ class TestContractsSync(TestCase):
         'freight.tasks.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_CORP_PUBLIC
     )    
+    @patch('freight.tasks.Token')
     @patch(
         'freight.managers.EveCorporationInfo.objects.create_corporation', 
         side_effect=ObjectNotFound(9999999, 'corporation')
@@ -765,7 +905,8 @@ class TestContractsSync(TestCase):
             mock_esi_client_factory, 
             mock_send_contract_notifications,
             mock_EveCharacter_objects_create_character,
-            mock_EveCorporationInfo_objects_create_corporation
+            mock_EveCorporationInfo_objects_create_corporation,
+            mock_Token
         ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
@@ -789,7 +930,12 @@ class TestContractsSync(TestCase):
             return_value=mock_operation
         )
         mock_esi_client_factory.return_value = mock_client        
-        mock_send_contract_notifications.delay = Mock()        
+        mock_send_contract_notifications.delay = Mock()      
+
+        mock_Token.objects.filter.return_value\
+            .require_scopes.return_value\
+            .require_valid.return_value\
+            .first.return_value = Mock(spec=Token)  
 
         # create test data
         p = Permission.objects.filter(            

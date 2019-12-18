@@ -88,6 +88,30 @@ Configure your AA settings (`local.py`) as follows:
 
 If you want to setup notifications for Discord you can now also add the required settings. Check out section **Settings** for details.
 
+### 3a Celery setup
+
+This app uses celery for critical functions like refreshing data from ESI. We strongly recommend to enable the following additional settings for celery workers to enable proper logging and to protect against potential memory leaks:
+
+- To enable logging of celery tasks up to info level: `-l info`
+
+- To automatically restart workers that grow above 512 MB: `--max-memory-per-child 512000`
+
+Here is how an example config would look for workers in your supervisor conf:
+
+```plain
+command=/home/allianceserver/venv/auth/bin/celery -A myauth worker -l info --max-memory-per-child 512000
+```
+
+On Ubuntu you can run `systemctl status supervisor` to see where your supervisor config file is located.
+
+Note that you need to restart the supervisor service itself to activate those changes.
+
+e.g. on Ubuntu:
+
+```bash
+systemctl restart supervisor
+```
+
 ### 4. Finalize installation into AA
 
 Run migrations & copy static files
