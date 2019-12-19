@@ -894,7 +894,7 @@ class Contract(models.Model):
                     .first()
 
                 if not issuer_user:
-                    logger.warning(add_tag(
+                    logger.info(add_tag(
                         'Could not find matching user for issuer'
                     ))
                     return
@@ -903,7 +903,7 @@ class Contract(models.Model):
                     discord_user = DiscordUser.objects.get(user=issuer_user)
                     discord_user_id = discord_user.uid
                 except DiscordUser.DoesNotExist:
-                    logger.warning(add_tag(
+                    logger.info(add_tag(
                         'Could not find Discord user for issuer'
                     ))
                     return

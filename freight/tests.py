@@ -18,8 +18,10 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.services.modules.discord.models import DiscordUser
+from bravado.exception import HTTPNotFound, HTTPForbidden
 from esi.models import Token, Scope
 from esi.errors import TokenExpiredError, TokenInvalidError
+from esi.clients import SwaggerClient
 
 from . import tasks
 from .app_settings import *
@@ -180,13 +182,18 @@ class TestPricing(TestCase):
     
     def test_get_contract_pricing_errors(self):
         p = Pricing()
-        p.price_base = 500        
-        self.assertIsNone(p.get_contract_price_check_issues(5, 10))
-        
+        p.price_base = 50
+        self.assertIsNone(p.get_contract_price_check_issues(10, 20, 50))
+                
         p = Pricing()
         p.price_base = 500
         p.volume_max = 300        
         self.assertIsNotNone(p.get_contract_price_check_issues(350, 1000))
+
+        p = Pricing()
+        p.price_base = 500
+        p.volume_min = 100
+        self.assertIsNotNone(p.get_contract_price_check_issues(50, 1000))
 
         p = Pricing()
         p.price_base = 500
@@ -2162,6 +2169,7 @@ class TestEveEntity(TestCase):
                 'category': EveEntity.CATEGORY_ALLIANCE,
                 'name': character['alliance_name']
             }
+            EveCharacter.objects.create(**character)
 
         cls.esi_data = esi_data
 
@@ -2277,4 +2285,149 @@ class TestEveEntity(TestCase):
             EveEntity.CATEGORY_CORPORATION
         )
 
+    def test_update_or_create_from_evecharacter(self):       
+        character = EveCharacter.objects.get(character_id=90000001)
+        corporation, _ = \
+            EveEntity.objects.update_or_create_from_evecharacter(
+                character,
+                category=EveEntity.CATEGORY_CORPORATION
+            )
+        self.assertEqual(
+            int(corporation.id), 
+                92000001            
+        )
+        alliance, _ = \
+            EveEntity.objects.update_or_create_from_evecharacter(
+                character,
+                category=EveEntity.CATEGORY_ALLIANCE
+            )
+        self.assertEqual(
+            int(alliance.id), 
+            93000001
+        )
+        char2, _ = \
+            EveEntity.objects.update_or_create_from_evecharacter(
+                character,
+                category=EveEntity.CATEGORY_CHARACTER
+            )
+        self.assertEqual(
+            int(char2.id),
+            90000001
+        )
+        with self.assertRaises(ValueError):
+            EveEntity.objects.update_or_create_from_evecharacter(
+                character,
+                category='xxx'
+            )
+
+class TestLocation(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestLocation, cls).setUpClass()
+
+        # Eve characters
+        with open(
+            currentdir + '/testdata/universe_structures.json', 
+            'r', 
+            encoding='utf-8'
+        ) as f:
+            cls.universe_structures = json.load(f)
+
     
+    @classmethod
+    def get_universe_stations_station_id(cls, *args, **kwargs) -> dict:    
+        if 'station_id' not in kwargs:
+            raise ValueError('missing parameter: station_id')
+        
+        station_id = str(kwargs['station_id'])
+        if station_id not in cls.universe_structures:
+            raise HTTPNotFound
+        else:                
+            m = Mock()
+            m.result.return_value = cls.universe_structures[station_id]
+            return m
+
+    @classmethod
+    def get_universe_structures_structure_id(cls, *args, **kwargs) -> dict:    
+        if 'structure_id' not in kwargs:
+            raise ValueError('missing parameter: structure_id')
+        
+        structure_id = str(kwargs['structure_id'])
+        if structure_id not in cls.universe_structures:
+            raise HTTPNotFound
+        else:                
+            m = Mock()
+            m.result.return_value = cls.universe_structures[structure_id]
+            return m
+            
+
+    def test_update_or_create_from_esi_structure_normal(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_structures_structure_id.side_effect = \
+            self.get_universe_structures_structure_id
+
+        obj, created = Location.objects.update_or_create_from_esi(
+            esi_client,
+            1000000000001
+        )
+        self.assertTrue(created)
+        self.assertEqual(obj.id, 1000000000001)        
+
+        obj, created = Location.objects.update_or_create_from_esi(
+            esi_client,
+            1000000000001
+        )        
+        self.assertFalse(created)
+
+    def test_update_or_create_from_esi_structure_forbidden(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_structures_structure_id.side_effect = \
+            HTTPForbidden(Mock())
+
+        with self.assertRaises(HTTPForbidden):
+            Location.objects.update_or_create_from_esi(
+                esi_client,
+                42,
+                add_unknown=False
+            )
+
+        obj, created = Location.objects.update_or_create_from_esi(
+            esi_client,
+            42,
+            add_unknown=True
+        )
+        self.assertTrue(created)
+        self.assertEqual(obj.id, 42)
+        
+        
+    def test_update_or_create_from_esi_station_normal(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_stations_station_id.side_effect = \
+            self.get_universe_stations_station_id
+
+        obj, created = Location.objects.update_or_create_from_esi(
+            esi_client,
+            60000001
+        )
+        self.assertTrue(created)
+        self.assertEqual(obj.id, 60000001)        
+
+        obj, created = Location.objects.update_or_create_from_esi(
+            esi_client,
+            60000001
+        )        
+        self.assertFalse(created)
+
+
+    def test_update_or_create_from_esi_station_forbidden(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_stations_station_id.side_effect = \
+            HTTPNotFound(Mock())
+
+        with self.assertRaises(HTTPNotFound):
+            Location.objects.update_or_create_from_esi(
+                esi_client,
+                60000001,
+                add_unknown=False
+            )

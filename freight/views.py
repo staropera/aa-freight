@@ -309,7 +309,7 @@ def setup_contract_handler(request, token):
             success = False
 
     if success:        
-        organization, _ = EveEntity.objects.update_or_create_org_from_evecharacter(
+        organization, _ = EveEntity.objects.update_or_create_from_evecharacter(
             token_char,
             EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE

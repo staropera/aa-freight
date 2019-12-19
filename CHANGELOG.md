@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.12.3] - 2019-12-19
+
+### Changed
+
+- Improved error handling for contract sync. A single failed contract will no longer fail the hinder other contracts from being synced. ([#27](https://gitlab.com/ErikKalkoken/aa-freight/issues/27))
+
 ## [0.12.2] - 2019-12-17
 
 ### Changed
