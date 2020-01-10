@@ -12,8 +12,7 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 
 from .app_settings import *
-from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path, \
-    make_logger_prefix
+from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
