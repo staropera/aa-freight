@@ -5,6 +5,8 @@ import os
 import sys
 from unittest.mock import Mock, patch
 
+from dhooks_lite import Embed
+
 from django.contrib.auth.models import User, Permission 
 from django.test import TestCase
 from django.utils.timezone import now
@@ -489,7 +491,8 @@ class TestContract(TestCase):
             reward=50000000,
             start_location=self.location_1,
             status=Contract.STATUS_OUTSTANDING,
-            volume=50000
+            volume=50000,
+            pricing = self.pricing
         )
     
 
@@ -580,6 +583,59 @@ class TestContract(TestCase):
             self.contract.get_issue_list(),
             ["one", "two"]
         )
+
+
+    def test_generate_embed_w_pricing(self):
+        x = self.contract._generate_embed()
+        self.assertIsInstance(x, Embed)
+        self.assertEqual(x.color, Contract.EMBED_COLOR_PASSED)
+
+
+    def test_generate_embed_w_pricing_issues(self):
+        self.contract.issues = ['we have issues']
+        x = self.contract._generate_embed()
+        self.assertIsInstance(x, Embed)
+        self.assertEqual(x.color, Contract.EMBED_COLOR_FAILED)
+
+
+    def test_generate_embed_wo_pricing(self):
+        self.contract.pricing = None
+        x = self.contract._generate_embed()
+        self.assertIsInstance(x, Embed)
+
+    
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch('freight.models.FREIGHT_DISCORD_DISABLE_BRANDING', False)
+    @patch('freight.models.FREIGHT_DISCORD_MENTIONS', None)
+    @patch('freight.models.Webhook.execute', autospec=True)
+    def test_send_pilot_notification_normal(self, mock_webhook_execute):
+        self.contract.send_pilot_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
+    @patch('freight.models.Webhook.execute', autospec=True)
+    def test_send_pilot_notification_no_webhook(self, mock_webhook_execute):
+        self.contract.send_pilot_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 0)
+
+
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch('freight.models.FREIGHT_DISCORD_DISABLE_BRANDING', True)    
+    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch('freight.models.FREIGHT_DISCORD_MENTIONS', None)
+    def test_send_pilot_notification_normal(self, mock_webhook_execute):
+        self.contract.send_pilot_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+
+    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch('freight.models.FREIGHT_DISCORD_DISABLE_BRANDING', True)    
+    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch('freight.models.FREIGHT_DISCORD_MENTIONS', '@here')
+    def test_send_pilot_notification_normal(self, mock_webhook_execute):
+        self.contract.send_pilot_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
 
 
 class TestLocation(TestCase):
