@@ -79,7 +79,7 @@ Configure your AA settings (`local.py`) as follows:
 - Add these lines add to bottom of your settings file:
 
    ```python
-   # settings for standingssync
+   # settings for freight
    CELERYBEAT_SCHEDULE['freight_run_contracts_sync'] = {
        'task': 'freight.tasks.run_contracts_sync',
        'schedule': crontab(minute='*/10'),
