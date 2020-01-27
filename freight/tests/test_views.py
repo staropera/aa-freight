@@ -38,8 +38,8 @@ class TestViews(TestCase):
     def setUpClass(cls):
         super(TestViews, cls).setUpClass()
 
-        print()
-        print('Running tests for class: {}'.format(cls))
+        
+        
 
         # ESI contracts        
         with open(

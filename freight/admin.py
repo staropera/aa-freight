@@ -142,7 +142,7 @@ class ContractAdmin(admin.ModelAdmin):
             )
     
     send_pilots_notification.short_description = \
-        "Sent pilots notification for contracts to Discord"
+        "Sent pilots notification for selected contracts to Discord"
 
     def send_customer_notification(self, request, queryset):
                         
@@ -156,7 +156,7 @@ class ContractAdmin(admin.ModelAdmin):
             )
     
     send_customer_notification.short_description = \
-        "Sent customer notification for contracts to Discord"
+        "Sent customer notification for selected contracts to Discord"
 
     # This will help you to disbale add functionality
     def has_add_permission(self, request):

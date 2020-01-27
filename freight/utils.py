@@ -1,9 +1,11 @@
 import logging
 import os
+import re
 
-from django.utils.html import mark_safe
+from django.conf import settings
 from django.contrib.messages.constants import *
 from django.contrib import messages
+from django.utils.html import mark_safe
 
 
 # Format for output of datetime for this app
@@ -103,3 +105,19 @@ class messages_plus():
             extra_tags, 
             fail_silently
         )
+
+
+def get_site_base_url() -> str:
+    """return base URL for this site"""    
+    
+    base_url = ''
+    if hasattr(settings, 'ESI_SSO_CALLBACK_URL'):            
+        match = re.match(
+            r'(.+)\/sso\/callback', 
+            settings.ESI_SSO_CALLBACK_URL
+        )
+        if match:
+            base_url = match.group(1)
+    
+    return base_url
+    

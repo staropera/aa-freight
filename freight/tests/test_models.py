@@ -33,9 +33,6 @@ class TestPricing(TestCase):
     def setUpClass(cls):
         super(TestPricing, cls).setUpClass()
         
-        print()
-        print('Running tests for class: {}'.format(cls))
-
         # Eve characters
         with open(
             currentdir + '/testdata/characters.json', 
@@ -401,8 +398,8 @@ class TestContract(TestCase):
     def setUpClass(cls):
         super(TestContract, cls).setUpClass()
         
-        print()
-        print('Running tests for class: {}'.format(cls))
+        
+        
 
         # Eve characters
         with open(
@@ -668,8 +665,8 @@ class TestContractHandler(TestCase):
     def setUpClass(cls):
         super(TestContractHandler, cls).setUpClass()
         
-        print()
-        print('Running tests for class: {}'.format(cls))
+        
+        
 
         # Eve characters
         with open(

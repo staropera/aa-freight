@@ -1,6 +1,7 @@
 import json
 import datetime
 import logging
+from urllib.parse import urljoin
 
 from dhooks_lite import Webhook, Embed, Thumbnail
 
@@ -20,7 +21,8 @@ from allianceauth.eveonline.models import EveCharacter
 from . import __title__
 from .app_settings import *
 from .managers import LocationManager, EveEntityManager, ContractManager
-from .utils import LoggerAddTag, DATETIME_FORMAT, make_logger_prefix
+from .utils import LoggerAddTag, DATETIME_FORMAT, make_logger_prefix,\
+    get_site_base_url
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -833,8 +835,7 @@ class Contract(models.Model):
                 FREIGHT_DISCORD_WEBHOOK_URL, 
                 username=username,
                 avatar_url=avatar_url
-            )            
-            # reverse('freight:contract_list')
+            )                                    
             with transaction.atomic():
                 logger.info(add_tag('Trying to sent pilot notification about '
                     + 'contract {}'.format(self.contract_id) 
@@ -844,9 +845,14 @@ class Contract(models.Model):
                 else:
                     contents = ''
 
-                contents += 'There is a new courier contract from {} '.format(
-                        self.issuer) + 'looking to be picked up:'
-               
+                contract_list_url = urljoin(
+                    get_site_base_url(), 
+                    reverse('freight:contract_list_active')
+                )
+                contents += ('There is a new courier contract from {} ' 
+                    'looking to be picked up '
+                    '[[show]({})]:').format(self.issuer, contract_list_url) 
+                        
                 embed = self._generate_embed()
                 response = hook.execute(
                     content=contents, 
@@ -902,6 +908,7 @@ class Contract(models.Model):
                 try:
                     discord_user = DiscordUser.objects.get(user=issuer_user)
                     discord_user_id = discord_user.uid
+
                 except DiscordUser.DoesNotExist:
                     logger.info(add_tag(
                         'Could not find Discord user for issuer'
@@ -933,7 +940,7 @@ class Contract(models.Model):
                                         
                     contents = '<@{}>\n'.format(
                         discord_user_id
-                    )
+                    )                    
                     if status_to_report == self.STATUS_OUTSTANDING:
                         contents += 'We have received your contract'                                                
                         if self.has_pricing_errors:
@@ -968,7 +975,13 @@ class Contract(models.Model):
                             
                     else:
                         raise NotImplementedError()
-                        
+                    
+                    contents += ('\nClick [here]({}) to check the current '
+                        'status of your contract.').format(urljoin(
+                            get_site_base_url(), 
+                            reverse('freight:contract_list_user')
+                    ))
+
                     response = hook.execute(
                         content=contents, 
                         embeds=[embed], 

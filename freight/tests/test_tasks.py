@@ -37,8 +37,8 @@ class TestContractsSync(TestCase):
     def setUpClass(cls):
         super(TestContractsSync, cls).setUpClass()
 
-        print()
-        print('Running tests for class: {}'.format(cls))
+        
+        
 
         # ESI contracts        
         with open(
@@ -811,8 +811,8 @@ class TestNotifications(TestCase):
         
     @classmethod
     def setUpClass(cls):
-        print()
-        print('Running tests for class: {}'.format(cls))
+        
+        
 
         super(TestNotifications, cls).setUpClass()
 

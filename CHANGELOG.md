@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.12.4] - 2020-01-27
+
+### Added
+
+- Added direct links to contract list views in Discord notifications
+
 ## [0.12.3] - 2019-12-19
 
 ### Changed

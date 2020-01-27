@@ -8,8 +8,8 @@ class TestFilters(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        print()
-        print('Running tests for class: {}'.format(cls))        
+        
+                
         return super().setUpClass()
 
     def test_power10(self):
