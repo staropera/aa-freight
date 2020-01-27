@@ -110,7 +110,7 @@ class messages_plus():
 def get_site_base_url() -> str:
     """return base URL for this site"""    
     
-    base_url = ''
+    base_url = 'http://www.example.com'
     if hasattr(settings, 'ESI_SSO_CALLBACK_URL'):            
         match = re.match(
             r'(.+)\/sso\/callback', 

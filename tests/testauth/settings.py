@@ -218,7 +218,7 @@ LOGGING = {
             'backupCount': 5,  # edit this line to change number of log backups
         },
         'console': {
-            'level': 'DEBUG',  # edit this line to change logging level to console
+            'level': 'CRITICAL',  # edit this line to change logging level to console
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
@@ -292,7 +292,7 @@ DATABASES['default'] = {
 # LOGIN_TOKEN_SCOPES setting). Other apps may require more (see their docs).
 ESI_SSO_CLIENT_ID = 'dummy'
 ESI_SSO_CLIENT_SECRET = 'dummy'
-ESI_SSO_CALLBACK_URL = 'http://localhost:8000'
+ESI_SSO_CALLBACK_URL = 'http://localhost:8000/sso/callback'
 
 # By default emails are validated before new users can log in.
 # It's recommended to use a free service like SparkPost or Elastic Email to send email.
