@@ -1,8 +1,4 @@
 import datetime
-import inspect
-import json
-import os
-import sys
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User, Permission 
@@ -20,13 +16,11 @@ from . import  _set_logger
 from ..app_settings import *
 from ..models import *
 from .. import tasks
+from .testdata import characters_data, structures_data,\
+    create_contract_handler_w_contracts
 
 
 logger = _set_logger('freight.managers', __file__)
-
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-    inspect.currentframe()
-)))
 
     
 class TestEveEntityManager(TestCase):
@@ -34,14 +28,6 @@ class TestEveEntityManager(TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestEveEntityManager, cls).setUpClass()
-
-        # Eve characters
-        with open(
-            currentdir + '/testdata/characters.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            characters_data = json.load(f)
 
         esi_data = dict()
         for character in characters_data:
@@ -213,19 +199,6 @@ class TestEveEntityManager(TestCase):
 
 
 class TestLocationManager(TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        super(TestLocationManager, cls).setUpClass()
-
-        # Eve characters
-        with open(
-            currentdir + '/testdata/universe_structures.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            cls.universe_structures = json.load(f)
-
     
     @classmethod
     def get_universe_stations_station_id(cls, *args, **kwargs) -> dict:    
@@ -233,11 +206,11 @@ class TestLocationManager(TestCase):
             raise ValueError('missing parameter: station_id')
         
         station_id = str(kwargs['station_id'])
-        if station_id not in cls.universe_structures:
+        if station_id not in structures_data:
             raise HTTPNotFound
         else:                
             m = Mock()
-            m.result.return_value = cls.universe_structures[station_id]
+            m.result.return_value = structures_data[station_id]
             return m
 
     @classmethod
@@ -246,11 +219,11 @@ class TestLocationManager(TestCase):
             raise ValueError('missing parameter: structure_id')
         
         structure_id = str(kwargs['structure_id'])
-        if structure_id not in cls.universe_structures:
+        if structure_id not in structures_data:
             raise HTTPNotFound
         else:                
             m = Mock()
-            m.result.return_value = cls.universe_structures[structure_id]
+            m.result.return_value = structures_data[structure_id]
             return m
             
 
@@ -323,3 +296,50 @@ class TestLocationManager(TestCase):
                 60000001,
                 add_unknown=False
             )
+
+
+class TestContractManager(TestCase):
+
+    def setUp(self):
+        self.user = create_contract_handler_w_contracts([
+            149409016,
+            149409061,
+            149409062
+        ])
+
+    def test_update_pricing(self):
+        jita = Location.objects.get(id=60003760)
+        amamake = Location.objects.get(id=1022167642188)
+        amarr = Location.objects.get(id=60008494)
+
+        pricing_1 = Pricing.objects.create(
+            start_location=jita,
+            end_location=amamake,
+            price_base=500000000
+        )
+        pricing_2 = Pricing.objects.create(
+            start_location=amamake,
+            end_location=jita,
+            price_base=350000000
+        )
+        pricing_3 = Pricing.objects.create(
+            start_location=amarr,
+            end_location=amamake,
+            price_base=250000000
+        )                
+        Contract.objects.update_pricing()
+
+        contract_1 = Contract.objects.get(contract_id=149409016)        
+        self.assertEqual(contract_1.pricing, pricing_1)
+
+        # pricing 2 should have been ignored, since it covers the same route
+        contract_2 = Contract.objects.get(contract_id=149409061)
+        self.assertEqual(contract_2.pricing, pricing_1)
+                
+        contract_3 = Contract.objects.get(contract_id=149409062)
+        self.assertEqual(contract_3.pricing, pricing_3)
+
+        
+
+    def test_update_pricing_both_directions(self):
+        pass

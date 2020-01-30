@@ -361,7 +361,7 @@ class ContractManager(models.Manager):
 
         pricings = {
             _make_route_key(x.start_location_id, x.end_location_id): x 
-            for x in Pricing.objects.filter(active__exact=True) 
+            for x in Pricing.objects.filter(active__exact=True).order_by('-id')
         }
 
         for contract in self.all():

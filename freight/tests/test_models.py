@@ -1,8 +1,4 @@
 import datetime
-import inspect
-import json
-import os
-import sys
 from unittest.mock import Mock, patch
 
 from dhooks_lite import Embed
@@ -19,30 +15,15 @@ from . import _set_logger
 from ..app_settings import *
 from ..models import *
 from .. import tasks
+from .testdata import characters_data, create_locations
 
 logger = _set_logger('freight.models', __file__)
-
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-    inspect.currentframe()
-)))
 
     
 class TestPricing(TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super(TestPricing, cls).setUpClass()
-        
-        # Eve characters
-        with open(
-            currentdir + '/testdata/characters.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            cls.characters_data = json.load(f)
-
     def setUp(self):
-        for character in self.characters_data:
+        for character in characters_data:
             EveCharacter.objects.create(**character)
             EveCorporationInfo.objects.get_or_create(
                 corporation_id=character['corporation_id'],
@@ -67,21 +48,29 @@ class TestPricing(TestCase):
             operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE
         )
 
-        self.location_1 = Location.objects.create(
-            id=60003760,
-            name='Jita IV - Moon 4 - Caldari Navy Assembly Plant',
-            solar_system_id=30000142,
-            type_id=52678,
-            category_id=3
-        )
-        self.location_2 = Location.objects.create(
-            id=1022167642188,
-            name='Amamake - 3 Time Nearly AT Winners',
-            solar_system_id=30002537,
-            type_id=35834,
-            category_id=65
-        )      
+        self.location_1, self.location_2, self.location_3 = create_locations()
 
+    def test_create_pricings(self):
+        # first pricing
+        pricing_1 = Pricing.objects.create(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=500000000
+        )
+        # pricing with different route
+        pricing_2 = Pricing.objects.create(
+            start_location=self.location_3,
+            end_location=self.location_2,
+            price_base=250000000
+        )
+        # pricing with reverse route then pricing 1
+        pricing_2 = Pricing.objects.create(
+            start_location=self.location_2,
+            end_location=self.location_1,
+            price_base=350000000
+        )
+
+    
     @patch('freight.models.FREIGHT_FULL_ROUTE_NAMES', False)
     def test_name_short(self):        
         p = Pricing(
@@ -393,26 +382,10 @@ class TestPricing(TestCase):
 
 
 class TestContract(TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        super(TestContract, cls).setUpClass()
-        
-        
-        
-
-        # Eve characters
-        with open(
-            currentdir + '/testdata/characters.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            cls.characters_data = json.load(f)
-
     
     def setUp(self):
 
-        for character in self.characters_data:
+        for character in characters_data:
             EveCharacter.objects.create(**character)
             EveCorporationInfo.objects.get_or_create(
                 corporation_id=character['corporation_id'],
@@ -660,25 +633,9 @@ class TestLocation(TestCase):
 
 
 class TestContractHandler(TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        super(TestContractHandler, cls).setUpClass()
-        
-        
-        
-
-        # Eve characters
-        with open(
-            currentdir + '/testdata/characters.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            cls.characters_data = json.load(f)
-
     
     def setUp(self):
-        for character in self.characters_data:
+        for character in characters_data:
             EveCharacter.objects.create(**character)
             EveCorporationInfo.objects.get_or_create(
                 corporation_id=character['corporation_id'],

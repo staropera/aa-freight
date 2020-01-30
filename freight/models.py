@@ -97,6 +97,13 @@ class Location(models.Model):
     def __str__(self):
         return self.name
 
+    def __repr__(self) -> str:
+        return '<{}({}): {}>'.format(
+            self.__class__.__name__, 
+            self.id, 
+            str(self)
+        )
+
     @property
     def category(self):
         return self.category_id
@@ -251,8 +258,15 @@ class Pricing(models.Model):
 
         return price_per_volume
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
+
+    def __repr__(self) -> str:
+        return '<{}({}): {}>'.format(
+            self.__class__.__name__, 
+            self.id, 
+            str(self)
+        )
 
     def requires_volume(self) -> bool:
         """whether this pricing required volume to be specified"""
@@ -405,6 +419,13 @@ class EveEntity(models.Model):
     def __str__(self):
         return self.name
 
+    def __repr__(self) -> str:
+        return '<{}({}): {}>'.format(
+            self.__class__.__name__, 
+            self.id, 
+            str(self)
+        )
+
     @property
     def is_alliance(self) -> bool:
         return self.category == self.CATEGORY_ALLIANCE
@@ -504,6 +525,13 @@ class ContractHandler(models.Model):
 
     def __str__(self):
         return str(self.organization.name)
+
+    def __repr__(self) -> str:
+        return '<{}({}): {}>'.format(
+            self.__class__.__name__, 
+            self.id, 
+            str(self)
+        )
 
     @property
     def operation_mode_friendly(self) -> str:        
@@ -752,6 +780,13 @@ class Contract(models.Model):
             self.contract_id,
             self.start_location.solar_system_name,
             self.end_location.solar_system_name
+        )
+
+    def __repr__(self) -> str:
+        return '<{}({}): {}>'.format(
+            self.__class__.__name__, 
+            self.id, 
+            str(self)
         )
 
     def get_price_check_issues(self, pricing: Pricing) -> list:
@@ -1027,3 +1062,10 @@ class ContractCustomerNotification(models.Model):
 
     def __str__(self):
         return '{}-{}'.format(self.contract.contract_id, self.status)
+
+    def __repr__(self) -> str:
+        return '<{}({}): {}>'.format(
+            self.__class__.__name__, 
+            self.id, 
+            str(self)
+        )

@@ -1,9 +1,5 @@
 import datetime
-import inspect
-import json
 import math
-import os
-from random import randrange
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User, Permission 
@@ -22,44 +18,17 @@ from . import _set_logger
 from .. import tasks
 from ..app_settings import *
 from ..models import *
+from .testdata import contracts_data, characters_data, create_locations
 
 
 logger = _set_logger('freight.tasks', __file__)
 
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-    inspect.currentframe()
-)))
-
 
 class TestContractsSync(TestCase):
-   
-    @classmethod
-    def setUpClass(cls):
-        super(TestContractsSync, cls).setUpClass()
-
-        
-        
-
-        # ESI contracts        
-        with open(
-            currentdir + '/testdata/contracts.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            cls.contracts = json.load(f)
-
-        # Eve characters
-        with open(
-            currentdir + '/testdata/characters.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            cls.characters_data = json.load(f)
-
     
     def setUp(self):
 
-        for character in self.characters_data:
+        for character in characters_data:
             EveCharacter.objects.create(**character)
             EveCorporationInfo.objects.get_or_create(
                 corporation_id=character['corporation_id'],
@@ -113,21 +82,7 @@ class TestContractsSync(TestCase):
             user=self.user
         )        
 
-        # Locations
-        Location.objects.create(
-            id=60003760,
-            name='Jita IV - Moon 4 - Caldari Navy Assembly Plant',
-            solar_system_id=30000142,
-            type_id=52678,
-            category_id=3
-        )
-        Location.objects.create(
-            id=1022167642188,
-            name='Amamake - 3 Time Nearly AT Winners',
-            solar_system_id=30002537,
-            type_id=35834,
-            category_id=65
-        )      
+        create_locations()
         
 
     # identify wrong operation mode
@@ -300,14 +255,14 @@ class TestContractsSync(TestCase):
             start = (mock_calls_count - 1) * page_size
             stop = start + page_size
             pages_count = int(math.ceil(
-                len(self.contracts) / page_size
+                len(contracts_data) / page_size
             ))
             if mock_calls_count == 1:
                 mock_response = Mock()
                 mock_response.headers = {'x-pages': pages_count}
-                return [self.contracts[start:stop], mock_response]
+                return [contracts_data[start:stop], mock_response]
             else:
-                return self.contracts[start:stop]
+                return contracts_data[start:stop]
 
         def func_Contracts_objects_update_or_create_from_dict(
             handler, 
@@ -382,13 +337,13 @@ class TestContractsSync(TestCase):
             mock_calls_count = len(mock_operation.mock_calls)
             start = (mock_calls_count - 1) * page_size
             stop = start + page_size
-            pages_count = int(math.ceil(len(self.contracts) / page_size))
+            pages_count = int(math.ceil(len(contracts_data) / page_size))
             if mock_calls_count == 1:
                 mock_response = Mock()
                 mock_response.headers = {'x-pages': pages_count}
-                return [self.contracts[start:stop], mock_response]
+                return [contracts_data[start:stop], mock_response]
             else:
-                return self.contracts[start:stop]
+                return contracts_data[start:stop]
 
         mock_client = Mock()
         mock_operation = Mock()
@@ -428,7 +383,7 @@ class TestContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 7)
+        self.assertEqual(mock_operation.result.call_count, 8)
 
         # should only contain the right contracts
         contract_ids = [
@@ -463,13 +418,13 @@ class TestContractsSync(TestCase):
             mock_calls_count = len(mock_operation.mock_calls)
             start = (mock_calls_count - 1) * page_size
             stop = start + page_size
-            pages_count = int(math.ceil(len(self.contracts) / page_size))
+            pages_count = int(math.ceil(len(contracts_data) / page_size))
             if mock_calls_count == 1:
                 mock_response = Mock()
                 mock_response.headers = {'x-pages': pages_count}
-                return [self.contracts[start:stop], mock_response]
+                return [contracts_data[start:stop], mock_response]
             else:
-                return self.contracts[start:stop]
+                return contracts_data[start:stop]
         
         mock_client = Mock()
         mock_operation = Mock()
@@ -509,7 +464,7 @@ class TestContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 7)
+        self.assertEqual(mock_operation.result.call_count, 8)
         
         # should only contain the right contracts
         contract_ids = [
@@ -520,7 +475,7 @@ class TestContractsSync(TestCase):
         ]
         self.assertCountEqual(
             contract_ids,
-            [149409016]
+            [149409016, 149409061, 149409062]
         )
 
     # normal synch of new contracts, mode my_corporation
@@ -544,13 +499,13 @@ class TestContractsSync(TestCase):
             mock_calls_count = len(mock_operation.mock_calls)
             start = (mock_calls_count - 1) * page_size
             stop = start + page_size
-            pages_count = int(math.ceil(len(self.contracts) / page_size))
+            pages_count = int(math.ceil(len(contracts_data) / page_size))
             if mock_calls_count == 1:
                 mock_response = Mock()
                 mock_response.headers = {'x-pages': pages_count}
-                return [self.contracts[start:stop], mock_response]
+                return [contracts_data[start:stop], mock_response]
             else:
-                return self.contracts[start:stop]
+                return contracts_data[start:stop]
         
         mock_client = Mock()
         mock_operation = Mock()
@@ -590,7 +545,7 @@ class TestContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 7)
+        self.assertEqual(mock_operation.result.call_count, 8)
 
         # should only contain the right contracts
         contract_ids = [
@@ -601,7 +556,7 @@ class TestContractsSync(TestCase):
         ]
         self.assertCountEqual(
             contract_ids,
-            [149409016, 149409017]
+            [149409016, 149409017, 149409061, 149409062]
         )
 
     # normal synch of new contracts, mode corp_public
@@ -635,13 +590,13 @@ class TestContractsSync(TestCase):
             mock_calls_count = len(mock_operation.mock_calls)
             start = (mock_calls_count - 1) * page_size
             stop = start + page_size
-            pages_count = int(math.ceil(len(self.contracts) / page_size))
+            pages_count = int(math.ceil(len(contracts_data) / page_size))
             if mock_calls_count == 1:
                 mock_response = Mock()
                 mock_response.headers = {'x-pages': pages_count}
-                return [self.contracts[start:stop], mock_response]
+                return [contracts_data[start:stop], mock_response]
             else:
-                return self.contracts[start:stop]
+                return contracts_data[start:stop]
         
         mock_client = Mock()
         mock_operation = Mock()
@@ -681,7 +636,7 @@ class TestContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 7)
+        self.assertEqual(mock_operation.result.call_count, 8)
 
         # should only contain the right contracts
         contract_ids = [
@@ -692,7 +647,7 @@ class TestContractsSync(TestCase):
         ]
         self.assertCountEqual(
             contract_ids,
-            [149409016, 149409017, 149409018]
+            [149409016, 149409061, 149409062, 149409017, 149409018]
         )
         
     def test_operation_mode_friendly(self):
@@ -753,13 +708,13 @@ class TestContractsSync(TestCase):
             mock_calls_count = len(mock_operation.mock_calls)
             start = (mock_calls_count - 1) * page_size
             stop = start + page_size
-            pages_count = int(math.ceil(len(self.contracts) / page_size))
+            pages_count = int(math.ceil(len(contracts_data) / page_size))
             if mock_calls_count == 1:
                 mock_response = Mock()
                 mock_response.headers = {'x-pages': pages_count}
-                return [self.contracts[start:stop], mock_response]
+                return [contracts_data[start:stop], mock_response]
             else:
-                return self.contracts[start:stop]
+                return contracts_data[start:stop]
         
         mock_client = Mock()
         mock_operation = Mock()
@@ -808,65 +763,10 @@ class TestContractsSync(TestCase):
 
 
 class TestNotifications(TestCase):
-        
-    @classmethod
-    def setUpClass(cls):
-        
-        
-
-        super(TestNotifications, cls).setUpClass()
-
-        # ESI contracts        
-        with open(
-            currentdir + '/testdata/contracts.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            cls.contracts = json.load(f)
-                
-        # update dates to something current, so won't be treated as stale
-        for contract in cls.contracts:
-            date_issued = now() - datetime.timedelta(
-                days=randrange(1), 
-                hours=randrange(10)
-            )
-            date_accepted = date_issued + datetime.timedelta(
-                hours=randrange(5),
-                minutes=randrange(30)
-            )
-            date_completed = date_accepted + datetime.timedelta(
-                hours=randrange(12),
-                minutes=randrange(30)
-            )
-            date_expired = now() + datetime.timedelta(
-                days=randrange(14), 
-                hours=randrange(10)
-            )
-            if 'date_issued' in contract:
-                contract['date_issued'] = date_issued.isoformat()
-
-            if 'date_accepted' in contract:
-                contract['date_accepted'] = date_accepted.isoformat()
-
-            if 'date_completed' in contract:
-                contract['date_completed'] = date_completed.isoformat()
-
-            if 'date_expired' in contract:
-                contract['date_expired'] = date_expired.isoformat()
-            
-
-        # Eve characters
-        with open(
-            currentdir + '/testdata/characters.json', 
-            'r', 
-            encoding='utf-8'
-        ) as f:
-            cls.characters_data = json.load(f)
-
-    
+          
     def setUp(self):
 
-        for character in self.characters_data:
+        for character in characters_data:
             EveCharacter.objects.create(**character)
             EveCorporationInfo.objects.get_or_create(
                 corporation_id=character['corporation_id'],
@@ -919,21 +819,8 @@ class TestNotifications(TestCase):
         )        
 
         # Locations
-        jita = Location.objects.create(
-            id=60003760,
-            name='Jita IV - Moon 4 - Caldari Navy Assembly Plant',
-            solar_system_id=30000142,
-            type_id=52678,
-            category_id=3
-        )
-        amamake = Location.objects.create(
-            id=1022167642188,
-            name='Amamake - 3 Time Nearly AT Winners',
-            solar_system_id=30002537,
-            type_id=35834,
-            category_id=65
-        )      
-
+        jita, amamake, _ = create_locations()
+        
         # create contracts
         pricing = Pricing.objects.create(
             start_location=jita,
@@ -946,7 +833,7 @@ class TestNotifications(TestCase):
             character=self.main_ownership            
         )
         
-        for contract in self.contracts:
+        for contract in contracts_data:
             if contract['type'] == 'courier':
                 Contract.objects.update_or_create_from_dict(
                     handler=handler,
@@ -993,7 +880,7 @@ class TestNotifications(TestCase):
         mock_webhook_execute
     ):        
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
-        self.assertEqual(mock_webhook_execute.call_count, 7)
+        self.assertEqual(mock_webhook_execute.call_count, 8)
 
 
     @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)

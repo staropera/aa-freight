@@ -313,3 +313,11 @@ DEFAULT_FROM_EMAIL = ''
 #######################################
 
 FREIGHT_OPERATION_MODE = 'corp_public'
+
+# Discord Configuration
+DISCORD_GUILD_ID = ''
+DISCORD_CALLBACK_URL = ''
+DISCORD_APP_ID = ''
+DISCORD_APP_SECRET = ''
+DISCORD_BOT_TOKEN = ''
+DISCORD_SYNC_NAMES = False

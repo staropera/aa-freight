@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.12.5] - 2020-01-30
+
+### Fixed
+
+- The pricing matched to a contract is no longer random if two pricings exist for the same route. It will now always pick the first pricing that was created.<br>**Note:** Alliance Freight current does officially not support defining individual pricings for each directions of a route.
+
 ## [0.12.4] - 2020-01-27
 
 ### Added
