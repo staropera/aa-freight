@@ -11,37 +11,24 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.authentication.models import CharacterOwnership
 from esi.models import Token
 
-from . import _set_logger
+from . import set_logger, TempDisconnectPricingSaveHandler
 from ..app_settings import *
 from ..models import *
 from .. import tasks
-from .testdata import characters_data, create_locations
+from .testdata import characters_data, create_locations, \
+    create_entities_from_characters
 
-logger = _set_logger('freight.models', __file__)
+logger = set_logger('freight.models', __file__)
 
     
 class TestPricing(TestCase):
 
-    def setUp(self):
-        for character in characters_data:
-            EveCharacter.objects.create(**character)
-            EveCorporationInfo.objects.get_or_create(
-                corporation_id=character['corporation_id'],
-                defaults={
-                    'corporation_name': character['corporation_name'],
-                    'corporation_ticker': character['corporation_ticker'],
-                    'member_count': 42
-                }
-            )
+    def setUp(self):                
+        create_entities_from_characters()
         
         # 1 user
-        character = EveCharacter.objects.get(character_id=90000001)
-        
-        alliance = EveEntity.objects.create(
-            id = character.alliance_id,
-            category = EveEntity.CATEGORY_ALLIANCE,
-            name = character.alliance_name
-        )
+        character = EveCharacter.objects.get(character_id=90000001)        
+        alliance = EveEntity.objects.get(id = character.alliance_id)
         
         self.handler = ContractHandler.objects.create(
             organization=alliance,
@@ -51,89 +38,94 @@ class TestPricing(TestCase):
         self.location_1, self.location_2, self.location_3 = create_locations()
 
     def test_create_pricings(self):
-        # first pricing
-        pricing_1 = Pricing.objects.create(
-            start_location=self.location_1,
-            end_location=self.location_2,
-            price_base=500000000
-        )
-        # pricing with different route
-        pricing_2 = Pricing.objects.create(
-            start_location=self.location_3,
-            end_location=self.location_2,
-            price_base=250000000
-        )
-        # pricing with reverse route then pricing 1
-        pricing_2 = Pricing.objects.create(
-            start_location=self.location_2,
-            end_location=self.location_1,
-            price_base=350000000
-        )
+        with TempDisconnectPricingSaveHandler():
+            # first pricing
+            pricing_1 = Pricing.objects.create(
+                start_location=self.location_1,
+                end_location=self.location_2,
+                price_base=500000000
+            )
+            # pricing with different route
+            pricing_2 = Pricing.objects.create(
+                start_location=self.location_3,
+                end_location=self.location_2,
+                price_base=250000000
+            )
+            # pricing with reverse route then pricing 1
+            pricing_2 = Pricing.objects.create(
+                start_location=self.location_2,
+                end_location=self.location_1,
+                price_base=350000000
+            )
 
     def test_create_pricing_no_2nd_allowed_a(self):
-        Pricing.objects.create(
-            start_location=self.location_1,
-            end_location=self.location_2,
-            price_base=500000000,
-            is_bidirectional=True
-        )
-        p = Pricing.objects.create(
-            start_location=self.location_2,
-            end_location=self.location_1,
-            price_base=500000000,
-            is_bidirectional=True
-        )
-        with self.assertRaises(ValidationError):
-            p.clean()
+        with TempDisconnectPricingSaveHandler():
+            Pricing.objects.create(
+                start_location=self.location_1,
+                end_location=self.location_2,
+                price_base=500000000,
+                is_bidirectional=True
+            )
+            p = Pricing.objects.create(
+                start_location=self.location_2,
+                end_location=self.location_1,
+                price_base=500000000,
+                is_bidirectional=True
+            )
+            with self.assertRaises(ValidationError):
+                p.clean()
 
     def test_create_pricing_no_2nd_allowed_b(self):
-        Pricing.objects.create(
-            start_location=self.location_1,
-            end_location=self.location_2,
-            price_base=500000000,
-            is_bidirectional=True
-        )
-        p = Pricing.objects.create(
-            start_location=self.location_2,
-            end_location=self.location_1,
-            price_base=500000000,
-            is_bidirectional=False
-        )
-        with self.assertRaises(ValidationError):
-            p.clean()
+        with TempDisconnectPricingSaveHandler():
+            Pricing.objects.create(
+                start_location=self.location_1,
+                end_location=self.location_2,
+                price_base=500000000,
+                is_bidirectional=True
+            )
+            p = Pricing.objects.create(
+                start_location=self.location_2,
+                end_location=self.location_1,
+                price_base=500000000,
+                is_bidirectional=False
+            )
+            with self.assertRaises(ValidationError):
+                p.clean()
             
 
     def test_create_pricing_2nd_must_be_unidirectional_a(self):
-        Pricing.objects.create(
-            start_location=self.location_1,
-            end_location=self.location_2,
-            price_base=500000000,
-            is_bidirectional=False
-        )
-        p = Pricing.objects.create(
-            start_location=self.location_2,
-            end_location=self.location_1,
-            price_base=500000000,
-            is_bidirectional=True
-        )
-        with self.assertRaises(ValidationError):
-            p.clean()
+        with TempDisconnectPricingSaveHandler():
+            Pricing.objects.create(
+                start_location=self.location_1,
+                end_location=self.location_2,
+                price_base=500000000,
+                is_bidirectional=False
+            )
+            p = Pricing.objects.create(
+                start_location=self.location_2,
+                end_location=self.location_1,
+                price_base=500000000,
+                is_bidirectional=True
+            )
+            with self.assertRaises(ValidationError):
+                p.clean()
 
     
     def test_create_pricing_2nd_ok_when_unidirectional(self):
-        Pricing.objects.create(
-            start_location=self.location_1,
-            end_location=self.location_2,
-            price_base=500000000,
-            is_bidirectional=False
-        )
-        p = Pricing.objects.create(
-            start_location=self.location_2,
-            end_location=self.location_1,
-            price_base=500000000,
-            is_bidirectional=False
-        )       
-        p.clean()
+        with TempDisconnectPricingSaveHandler():
+            Pricing.objects.create(
+                start_location=self.location_1,
+                end_location=self.location_2,
+                price_base=500000000,
+                is_bidirectional=False
+            )
+            p = Pricing.objects.create(
+                start_location=self.location_2,
+                end_location=self.location_1,
+                price_base=500000000,
+                is_bidirectional=False
+            )       
+            p.clean()
 
     
     @patch('freight.models.FREIGHT_FULL_ROUTE_NAMES', False)
@@ -515,11 +507,12 @@ class TestContract(TestCase):
         )      
 
         # create contracts
-        self.pricing = Pricing.objects.create(
-            start_location=self.location_1,
-            end_location=self.location_2,
-            price_base=500000000
-        )
+        with TempDisconnectPricingSaveHandler():
+            self.pricing = Pricing.objects.create(
+                start_location=self.location_1,
+                end_location=self.location_2,
+                price_base=500000000
+            )
         
         self.handler = ContractHandler.objects.create(
             organization=self.organization,

@@ -5,7 +5,7 @@ from .models import Pricing
 from .tasks import update_contracts_pricing
 
 
-@receiver(post_save, sender=Pricing)
+@receiver(post_save, sender=Pricing, dispatch_uid="id_update_contracts_pricing")
 def pricing_save_handler(sender, instance, *args, **kwargs):
-    """contract pricing needs to be updated after very pricing change"""
+    """contract pricing needs to be updated after every pricing change"""
     update_contracts_pricing.delay()

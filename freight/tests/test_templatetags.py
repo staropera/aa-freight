@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from . import _set_logger
+from . import set_logger
 from ..templatetags.freight_filters import power10, formatnumber
 
 

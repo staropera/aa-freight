@@ -24,7 +24,7 @@ if FREIGHT_DEVELOPER_MODE:
 
 @admin.register(Pricing)
 class PricingAdmin(admin.ModelAdmin):
-    list_display = ('name', 'start_location', 'end_location', 'is_bidirectional', 'is_active')
+    list_display = ('name', 'start_location', 'end_location', 'bidirectional', 'active')
     list_filter = (
         'is_bidirectional',
         'is_active',
@@ -32,6 +32,15 @@ class PricingAdmin(admin.ModelAdmin):
         ('end_location', admin.RelatedOnlyFieldListFilter),
     )
     list_select_related = True
+
+    def bidirectional(self, obj):
+        return obj.is_bidirectional
+    bidirectional.boolean = True
+
+    def active(self, obj):
+        return obj.is_active
+    active.boolean = True
+
 
 @admin.register(ContractHandler)
 class ContractHandlerAdmin(admin.ModelAdmin):

@@ -11,7 +11,7 @@ from allianceauth.authentication.models import CharacterOwnership
 from bravado.exception import HTTPNotFound, HTTPForbidden
 from esi.clients import SwaggerClient
 
-from . import  _set_logger
+from . import  set_logger, TempDisconnectPricingSaveHandler
 from ..app_settings import *
 from ..models import *
 from .. import tasks
@@ -19,7 +19,7 @@ from .testdata import characters_data, structures_data,\
     create_contract_handler_w_contracts
 
 
-logger = _set_logger('freight.managers', __file__)
+logger = set_logger('freight.managers', __file__)
 
     
 class TestEveEntityManager(TestCase):
@@ -299,7 +299,8 @@ class TestLocationManager(TestCase):
 
 class TestContractManager(TestCase):
 
-    def setUp(self):
+    def setUp(self):        
+    
         self.user = create_contract_handler_w_contracts([
             149409016,
             149409061,
@@ -313,24 +314,25 @@ class TestContractManager(TestCase):
         amamake = Location.objects.get(id=1022167642188)
         amarr = Location.objects.get(id=60008494)
 
-        pricing_1 = Pricing.objects.create(
-            start_location=jita,
-            end_location=amamake,
-            price_base=500000000,
-            is_bidirectional=True
-        )
-        pricing_2 = Pricing.objects.create(
-            start_location=amamake,
-            end_location=jita,
-            price_base=350000000,
-            is_bidirectional=True
-        )
-        pricing_3 = Pricing.objects.create(
-            start_location=amarr,
-            end_location=amamake,
-            price_base=250000000,
-            is_bidirectional=True
-        )                
+        with TempDisconnectPricingSaveHandler():
+            pricing_1 = Pricing.objects.create(
+                start_location=jita,
+                end_location=amamake,
+                price_base=500000000,
+                is_bidirectional=True
+            )
+            pricing_2 = Pricing.objects.create(
+                start_location=amamake,
+                end_location=jita,
+                price_base=350000000,
+                is_bidirectional=True
+            )
+            pricing_3 = Pricing.objects.create(
+                start_location=amarr,
+                end_location=amamake,
+                price_base=250000000,
+                is_bidirectional=True
+            )                
         Contract.objects.update_pricing()
 
         contract_1 = Contract.objects.get(contract_id=149409016)        
@@ -349,24 +351,25 @@ class TestContractManager(TestCase):
         amamake = Location.objects.get(id=1022167642188)
         amarr = Location.objects.get(id=60008494)
         
-        pricing_1 = Pricing.objects.create(
-            start_location=jita,
-            end_location=amamake,
-            price_base=500000000,
-            is_bidirectional=False
-        )
-        pricing_2 = Pricing.objects.create(
-            start_location=amamake,
-            end_location=jita,
-            price_base=350000000,
-            is_bidirectional=False
-        )
-        pricing_3 = Pricing.objects.create(
-            start_location=amarr,
-            end_location=amamake,
-            price_base=250000000,
-            is_bidirectional=True
-        )
+        with TempDisconnectPricingSaveHandler():
+            pricing_1 = Pricing.objects.create(
+                start_location=jita,
+                end_location=amamake,
+                price_base=500000000,
+                is_bidirectional=False
+            )
+            pricing_2 = Pricing.objects.create(
+                start_location=amamake,
+                end_location=jita,
+                price_base=350000000,
+                is_bidirectional=False
+            )
+            pricing_3 = Pricing.objects.create(
+                start_location=amarr,
+                end_location=amamake,
+                price_base=250000000,
+                is_bidirectional=True
+            )
 
         Contract.objects.update_pricing()
 

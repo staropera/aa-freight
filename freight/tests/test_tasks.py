@@ -13,7 +13,7 @@ from allianceauth.authentication.models import CharacterOwnership
 from esi.models import Token
 from esi.errors import TokenExpiredError, TokenInvalidError
 
-from . import _set_logger
+from . import set_logger, TempDisconnectPricingSaveHandler
 from .. import tasks
 from ..app_settings import *
 from ..models import *
@@ -21,7 +21,7 @@ from .testdata import contracts_data, characters_data, create_locations,\
     create_contract_handler_w_contracts, create_entities_from_characters
 
 
-logger = _set_logger('freight.models', __file__)
+logger = set_logger('freight.models', __file__)
 
 
 class TestContractsSync(TestCase):
@@ -757,15 +757,16 @@ class TestNotifications(TestCase):
     def setUp(self):
 
         create_contract_handler_w_contracts()
-
-         # create contracts
+        
+        # disable pricing signal                
         jita = Location.objects.get(id=60003760)
-        amamake = Location.objects.get(id=1022167642188)
-        pricing = Pricing.objects.create(
-            start_location=jita,
-            end_location=amamake,
-            price_base=500000000
-        )
+        amamake = Location.objects.get(id=1022167642188)        
+        with TempDisconnectPricingSaveHandler():
+            pricing = Pricing.objects.create(
+                start_location=jita,
+                end_location=amamake,
+                price_base=500000000
+            )
                 
         Contract.objects.update_pricing() 
 

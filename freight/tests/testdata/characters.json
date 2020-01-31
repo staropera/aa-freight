@@ -38,5 +38,15 @@
         "alliance_id": 93000002,
         "alliance_name": "The Avengers",
         "alliance_ticker": "XXX"  
+    },
+    {  
+        "character_id": 90000005,
+        "character_name": "Kara Danvers",
+        "corporation_id": 92000003,
+        "corporation_name": "CatCo Worldwide Media",
+        "corporation_ticker": "CCO",
+        "alliance_id": null,
+        "alliance_name": null,
+        "alliance_ticker": null
     }
 ]

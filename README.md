@@ -28,11 +28,13 @@ Alliance Freight offers the following main features:
 
 - Page showing the list of currently outstanding courier contracts incl. an indicator if the contract is compliant with the pricing for the respective route ("contract check")
 
-- Multiple routes can be defined, each with its own pricing
+- Multiple routes can be defined, each with its own pricing.
 
-- Automatic notification to alliance pilots on Discord informing them about new courier contracts
+- It's possible to have the same pricing for both directions, or to have different pricings for each direction of the same route.
 
-- Automatic notification to contract issuer on Discord informing him about the developing status of his contract and potentially issues with his contract
+- Automatic notifications to alliance pilots on Discord informing them about new courier contracts
+
+- Automatic notifications to contract issuers on Discord informing them about the developing status of their contract or potentially issues
 
 - Contract issuer can always check the current status of his courier contracts
 

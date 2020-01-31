@@ -315,19 +315,7 @@ def setup_contract_handler(request, token):
                 FREIGHT_OPERATION_MODE
             )
         )
-
-    if success:
-        if handler and handler.organization != organization:
-            messages_plus.error(
-                request,
-                'There already is a contract handler installed for a '
-                + 'different organization. You need to first delete the '
-                + 'existing contract handler in the admin section '
-                + 'before you can set up this app for a different organization.'
-            )
-            success = False
     
-    if success:
         handler, created = ContractHandler.objects.update_or_create(
             organization=organization,
             defaults={
@@ -352,6 +340,7 @@ def setup_contract_handler(request, token):
             + 'Started syncing of courier contracts. '
             + 'You will receive a report once it is completed.'
         )
+        
     return redirect('freight:index')
 
 

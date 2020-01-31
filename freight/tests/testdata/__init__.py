@@ -42,20 +42,20 @@ def _load_contract_data() -> list:
 
     # update dates to something current, so won't be treated as stale
     for contract in contracts_data:
-        date_issued = now() - timedelta(
-            days=randrange(1), 
-            hours=randrange(10)
+        date_issued = now() - timedelta(            
+            hours=12,
+            minutes=randrange(30)
         )
         date_accepted = date_issued + timedelta(
-            hours=randrange(5),
+            hours=2,
             minutes=randrange(30)
         )
         date_completed = date_accepted + timedelta(
-            hours=randrange(12),
+            hours=3,
             minutes=randrange(30)
         )
         date_expired = now() + timedelta(
-            days=randrange(14), 
+            days=7 + randrange(7), 
             hours=randrange(10)
         )
         if 'date_issued' in contract:
@@ -128,7 +128,7 @@ def create_entities_from_characters():
                 'name': character['corporation_name'],
             }
         )
-        if character['alliance_id'] and character['alliance_id'] != 0:
+        if 'alliance_id' in character and character['alliance_id'] is not None:
             EveEntity.objects.get_or_create(
                 id=character['alliance_id'],                
                 defaults={
