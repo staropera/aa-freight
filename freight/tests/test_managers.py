@@ -8,7 +8,6 @@ from django.utils.timezone import now
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.services.modules.discord.models import DiscordUser
 from bravado.exception import HTTPNotFound, HTTPForbidden
 from esi.clients import SwaggerClient
 

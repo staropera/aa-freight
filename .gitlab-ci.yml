@@ -1,11 +1,24 @@
+stages:
+- "test"
+
 before_script:
 - apt-get update
 - apt-get install redis-server -y
 - redis-server --daemonize yes
 - python -V
-- pip install tox
+- pip install wheel tox
     
-tests:
-    image: python:3.6-stretch
-    script:
-    - tox
+test-3.5:
+  image: python:3.5-stretch
+  script:  
+  - tox -e py35
+
+test-3.6:
+  image: python:3.6-stretch
+  script:  
+  - tox -e py36
+
+test-3.7:
+  image: python:3.7-stretch
+  script:  
+  - tox -e py37

@@ -10,7 +10,6 @@ from django.utils.timezone import now
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.services.modules.discord.models import DiscordUser
 from esi.models import Token
 from esi.errors import TokenExpiredError, TokenInvalidError
 
@@ -18,48 +17,18 @@ from . import _set_logger
 from .. import tasks
 from ..app_settings import *
 from ..models import *
-from .testdata import contracts_data, characters_data, create_locations
+from .testdata import contracts_data, characters_data, create_locations,\
+    create_contract_handler_w_contracts, create_entities_from_characters
 
 
-logger = _set_logger('freight.tasks', __file__)
+logger = _set_logger('freight.models', __file__)
 
 
 class TestContractsSync(TestCase):
     
     def setUp(self):
 
-        for character in characters_data:
-            EveCharacter.objects.create(**character)
-            EveCorporationInfo.objects.get_or_create(
-                corporation_id=character['corporation_id'],
-                defaults={
-                    'corporation_name': character['corporation_name'],
-                    'corporation_ticker': character['corporation_ticker'],
-                    'member_count': 42
-                }
-            )
-            EveEntity.objects.get_or_create(
-                id=character['character_id'],                
-                defaults={
-                    'category': EveEntity.CATEGORY_CHARACTER,
-                    'name': character['character_name'],
-                }
-            )
-            EveEntity.objects.get_or_create(
-                id=character['corporation_id'],
-                defaults={
-                    'category': EveEntity.CATEGORY_CORPORATION,
-                    'name': character['corporation_name'],
-                }
-            )
-            if character['alliance_id'] and character['alliance_id'] != 0:
-                EveEntity.objects.get_or_create(
-                    id=character['alliance_id'],                
-                    defaults={
-                        'category': EveEntity.CATEGORY_ALLIANCE,
-                        'name': character['alliance_name'],
-                    }
-                )
+        create_entities_from_characters()
         
         # 1 user
         self.character = EveCharacter.objects.get(character_id=90000001)
@@ -787,107 +756,18 @@ class TestNotifications(TestCase):
           
     def setUp(self):
 
-        for character in characters_data:
-            EveCharacter.objects.create(**character)
-            EveCorporationInfo.objects.get_or_create(
-                corporation_id=character['corporation_id'],
-                defaults={
-                    'corporation_name': character['corporation_name'],
-                    'corporation_ticker': character['corporation_ticker'],
-                    'member_count': 42
-                }
-            )
-            EveEntity.objects.get_or_create(
-                id=character['character_id'],                
-                defaults={
-                    'category': EveEntity.CATEGORY_CHARACTER,
-                    'name': character['character_name'],
-                }
-            )
-            EveEntity.objects.get_or_create(
-                id=character['corporation_id'],
-                defaults={
-                    'category': EveEntity.CATEGORY_CORPORATION,
-                    'name': character['corporation_name'],
-                }
-            )
-            if character['alliance_id'] and character['alliance_id'] != 0:
-                EveEntity.objects.get_or_create(
-                    id=character['alliance_id'],                
-                    defaults={
-                        'category': EveEntity.CATEGORY_ALLIANCE,
-                        'name': character['alliance_name'],
-                    }
-                )
-        
-        # 1 user
-        self.character = EveCharacter.objects.get(character_id=90000001)
-        
-        self.organization = EveEntity.objects.get(
-            id = self.character.alliance_id
-        )
-        
-        self.user = User.objects.create_user(
-            self.character.character_name,
-            'abc@example.com',
-            'password'
-        )
+        create_contract_handler_w_contracts()
 
-        self.main_ownership = CharacterOwnership.objects.create(
-            character=self.character,
-            owner_hash='x1',
-            user=self.user
-        )        
-
-        # Locations
-        jita, amamake, _ = create_locations()
-        
-        # create contracts
+         # create contracts
+        jita = Location.objects.get(id=60003760)
+        amamake = Location.objects.get(id=1022167642188)
         pricing = Pricing.objects.create(
             start_location=jita,
             end_location=amamake,
             price_base=500000000
         )
-        
-        handler = ContractHandler.objects.create(
-            organization=self.organization,
-            character=self.main_ownership            
-        )
-        
-        for contract in contracts_data:
-            if contract['type'] == 'courier':
-                Contract.objects.update_or_create_from_dict(
-                    handler=handler,
-                    contract=contract,
-                    esi_client=Mock()
-                )
-
+                
         Contract.objects.update_pricing() 
-
-        # create users and Discord accounts from contract issuers
-        for contract in Contract.objects.all():
-            issuer_user = User.objects\
-                .filter(
-                    character_ownerships__character__exact=contract.issuer
-                )\
-                .first()
-            if not issuer_user:
-                user = User.objects.create_user(
-                    contract.issuer.character_name,
-                    'abc@example.com',
-                    'password'
-                )
-                CharacterOwnership.objects.create(
-                    character=contract.issuer,
-                    owner_hash=contract.issuer.character_name + 'x',
-                    user=user
-                )   
-            DiscordUser.objects.update_or_create(
-                user=user,
-                defaults={
-                    "uid": contract.issuer.character_id
-                }
-            )
 
 
     @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
@@ -900,8 +780,10 @@ class TestNotifications(TestCase):
         self, 
         mock_webhook_execute
     ):        
+        logger.debug('test_send_pilot_notifications_normal - start')
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
         self.assertEqual(mock_webhook_execute.call_count, 8)
+        logger.debug('test_send_pilot_notifications_normal - complete')
 
 
     @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
@@ -914,8 +796,10 @@ class TestNotifications(TestCase):
         self, 
         mock_webhook_execute
     ):        
+        logger.debug('test_send_customer_notifications_normal - start')
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
-        self.assertEqual(mock_webhook_execute.call_count, 10)
+        self.assertEqual(mock_webhook_execute.call_count, 12)
+        logger.debug('test_send_customer_notifications_normal - complete')
 
     
     @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)

@@ -230,7 +230,7 @@ class Pricing(models.Model):
             
         route_name = '{} {} {}'.format(
                 start_name,
-                '<->' if self.is_bidirectional else '->',                    
+                '<->' if self.is_bidirectional else '->',
                 end_name
             )
         return route_name

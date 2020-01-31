@@ -10,6 +10,7 @@ from django.utils.timezone import now
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.services.modules.discord.models import DiscordUser
 
 from ...models import *
 
@@ -102,11 +103,7 @@ def create_locations():
     return jita, amamake, amarr
 
 
-def create_contract_handler_w_contracts(
-    selected_contract_ids: list = None
-):
-    
-    # create characters and entities
+def create_entities_from_characters():
     for character in characters_data:
         EveCharacter.objects.create(**character)
         EveCorporationInfo.objects.get_or_create(
@@ -139,6 +136,13 @@ def create_contract_handler_w_contracts(
                     'name': character['alliance_name'],
                 }
             )
+
+def create_contract_handler_w_contracts(
+    selected_contract_ids: list = None
+):
+    """create contract handler with contracts and all related entities"""
+    
+    create_entities_from_characters()
 
     # 1 user
     my_character = EveCharacter.objects.get(character_id=90000001)
@@ -187,4 +191,30 @@ def create_contract_handler_w_contracts(
                     esi_client=Mock()
                 )
 
+    # create users and Discord accounts from contract issuers
+    for contract in Contract.objects.all():
+        issuer_user = User.objects\
+            .filter(
+                character_ownerships__character=contract.issuer
+            )\
+            .first()
+        if not issuer_user:
+            issuer_user = User.objects.create_user(
+                contract.issuer.character_name,
+                'abc@example.com',
+                'password'
+            )
+            CharacterOwnership.objects.create(
+                character=contract.issuer,
+                owner_hash=contract.issuer.character_name + 'x',
+                user=issuer_user
+            )   
+
+        DiscordUser.objects.update_or_create(
+            user=issuer_user,
+            defaults={
+                "uid": contract.issuer.character_id
+            }
+        )
+    
     return my_user

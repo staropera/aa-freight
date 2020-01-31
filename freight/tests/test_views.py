@@ -10,7 +10,6 @@ from django.utils.timezone import now
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.services.modules.discord.models import DiscordUser
 from esi.models import Token
 
 from . import _set_logger
@@ -45,31 +44,6 @@ class TestViews(TestCase):
         )
         
         Contract.objects.update_pricing() 
-
-        # create users and Discord accounts from contract issuers
-        for contract in Contract.objects.all():
-            issuer_user = User.objects\
-                .filter(
-                    character_ownerships__character__exact=contract.issuer
-                )\
-                .first()
-            if not issuer_user:
-                user = User.objects.create_user(
-                    contract.issuer.character_name,
-                    'abc@example.com',
-                    'password'
-                )
-                CharacterOwnership.objects.create(
-                    character=contract.issuer,
-                    owner_hash=contract.issuer.character_name + 'x',
-                    user=user
-                )   
-            DiscordUser.objects.update_or_create(
-                user=user,
-                defaults={
-                    "uid": contract.issuer.character_id
-                }
-            )
 
         self.factory = RequestFactory()
 

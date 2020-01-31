@@ -31,7 +31,7 @@ setup(
     long_description_content_type='text/markdown',
     url='https://gitlab.com/ErikKalkoken/aa-freight',
     author='Erik Kalkoken',
-    author_email='erik.kalkoken@gmail.com',
+    author_email='kaloken87@gmail.com',
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
@@ -40,7 +40,9 @@ setup(
         'License :: OSI Approved :: MIT License',  # example license
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.5',        
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],    
