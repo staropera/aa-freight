@@ -383,7 +383,7 @@ class TestContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 8)
+        self.assertEqual(mock_operation.result.call_count, 9)
 
         # should only contain the right contracts
         contract_ids = [
@@ -464,7 +464,7 @@ class TestContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 8)
+        self.assertEqual(mock_operation.result.call_count, 9)
         
         # should only contain the right contracts
         contract_ids = [
@@ -475,7 +475,13 @@ class TestContractsSync(TestCase):
         ]
         self.assertCountEqual(
             contract_ids,
-            [149409016, 149409061, 149409062]
+            [
+                149409016, 
+                149409061, 
+                149409062,
+                149409063, 
+                149409064, 
+            ]
         )
 
     # normal synch of new contracts, mode my_corporation
@@ -545,7 +551,7 @@ class TestContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 8)
+        self.assertEqual(mock_operation.result.call_count, 9)
 
         # should only contain the right contracts
         contract_ids = [
@@ -556,7 +562,14 @@ class TestContractsSync(TestCase):
         ]
         self.assertCountEqual(
             contract_ids,
-            [149409016, 149409017, 149409061, 149409062]
+            [
+                149409016, 
+                149409017, 
+                149409061, 
+                149409062,
+                149409063, 
+                149409064, 
+            ]
         )
 
     # normal synch of new contracts, mode corp_public
@@ -636,7 +649,7 @@ class TestContractsSync(TestCase):
         )
         
         # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 8)
+        self.assertEqual(mock_operation.result.call_count, 9)
 
         # should only contain the right contracts
         contract_ids = [
@@ -647,7 +660,15 @@ class TestContractsSync(TestCase):
         ]
         self.assertCountEqual(
             contract_ids,
-            [149409016, 149409061, 149409062, 149409017, 149409018]
+            [
+                149409016, 
+                149409061, 
+                149409062, 
+                149409063, 
+                149409064, 
+                149409017, 
+                149409018
+            ]
         )
         
     def test_operation_mode_friendly(self):

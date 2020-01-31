@@ -24,9 +24,10 @@ if FREIGHT_DEVELOPER_MODE:
 
 @admin.register(Pricing)
 class PricingAdmin(admin.ModelAdmin):
-    list_display = ('name', 'start_location', 'end_location', 'active')
+    list_display = ('name', 'start_location', 'end_location', 'is_bidirectional', 'is_active')
     list_filter = (
-        'active',
+        'is_bidirectional',
+        'is_active',
         ('start_location', admin.RelatedOnlyFieldListFilter),
         ('end_location', admin.RelatedOnlyFieldListFilter),
     )

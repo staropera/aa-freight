@@ -304,10 +304,12 @@ class TestContractManager(TestCase):
         self.user = create_contract_handler_w_contracts([
             149409016,
             149409061,
-            149409062
+            149409062,
+            149409063,
+            149409064
         ])
 
-    def test_update_pricing(self):
+    def test_update_pricing_bidirectional(self):
         jita = Location.objects.get(id=60003760)
         amamake = Location.objects.get(id=1022167642188)
         amarr = Location.objects.get(id=60008494)
@@ -315,17 +317,20 @@ class TestContractManager(TestCase):
         pricing_1 = Pricing.objects.create(
             start_location=jita,
             end_location=amamake,
-            price_base=500000000
+            price_base=500000000,
+            is_bidirectional=True
         )
         pricing_2 = Pricing.objects.create(
             start_location=amamake,
             end_location=jita,
-            price_base=350000000
+            price_base=350000000,
+            is_bidirectional=True
         )
         pricing_3 = Pricing.objects.create(
             start_location=amarr,
             end_location=amamake,
-            price_base=250000000
+            price_base=250000000,
+            is_bidirectional=True
         )                
         Contract.objects.update_pricing()
 
@@ -339,7 +344,44 @@ class TestContractManager(TestCase):
         contract_3 = Contract.objects.get(contract_id=149409062)
         self.assertEqual(contract_3.pricing, pricing_3)
 
-        
 
-    def test_update_pricing_both_directions(self):
-        pass
+    def test_update_pricing_uni_directional(self):
+        jita = Location.objects.get(id=60003760)
+        amamake = Location.objects.get(id=1022167642188)
+        amarr = Location.objects.get(id=60008494)
+        
+        pricing_1 = Pricing.objects.create(
+            start_location=jita,
+            end_location=amamake,
+            price_base=500000000,
+            is_bidirectional=False
+        )
+        pricing_2 = Pricing.objects.create(
+            start_location=amamake,
+            end_location=jita,
+            price_base=350000000,
+            is_bidirectional=False
+        )
+        pricing_3 = Pricing.objects.create(
+            start_location=amarr,
+            end_location=amamake,
+            price_base=250000000,
+            is_bidirectional=True
+        )
+
+        Contract.objects.update_pricing()
+
+        contract_1 = Contract.objects.get(contract_id=149409016)        
+        self.assertEqual(contract_1.pricing, pricing_1)
+        
+        contract_2 = Contract.objects.get(contract_id=149409061)
+        self.assertEqual(contract_2.pricing, pricing_2)
+                
+        contract_3 = Contract.objects.get(contract_id=149409062)
+        self.assertEqual(contract_3.pricing, pricing_3)
+
+        contract_4 = Contract.objects.get(contract_id=149409063)
+        self.assertEqual(contract_4.pricing, pricing_3)
+
+        contract_5 = Contract.objects.get(contract_id=149409064)
+        self.assertIsNone(contract_5.pricing)

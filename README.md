@@ -204,7 +204,7 @@ Can see statistics | User with this permission can view the statistics page  |  
 
 A pricing defines a route and the parameters for calculating the price for that route along with some additional information for the users. You can define multiple pricings if you want, but at least one pricing has to be defined for this app to work.
 
-Pricing routes are bidirectional, so it does not matter which location is chosen as start and which as destination when creating a courier contract.
+Pricing routes are bidirectional by default. For bidirectional pricings courier contracts in both directions are matched against the same pricing. Alternatively pricings can also be defined individually for each direction.
 
 Pricings are defined in the admin section of AA, so you need staff permissions to access it.
 
@@ -216,7 +216,8 @@ Parameter | Description | Pricing Functionality
 -- | -- | --
 Start Location | Starting station or structure for courier route | -
 End Location | Destination station or structure for courier route  | -
-Active | Non active pricings will not be used or shown | -
+Is Active | Non active pricings will not be used or shown | -
+Is Bidirectional | Wether this pricing shall apply to contracts for both directions of the route or only the specified direction | -
 Price base | Base price in ISK. If this is the only defined pricing component it will be shown as "Fix price" in the calculator. | Pricing component
 Price min | Minimum total price in ISK | Pricing component
 Price per volume | Add-on price per m3 volume in ISK | Pricing component

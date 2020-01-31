@@ -127,10 +127,14 @@ class Pricing(models.Model):
         related_name='pricing_end_location', 
         help_text='Destination station or structure for courier route'
     )    
-    active = models.BooleanField(
+    is_bidirectional = models.BooleanField(
+        default=True, 
+        help_text='Whether this pricing is valid for contracts in either direction or only the one specified'
+    )
+    is_active = models.BooleanField(
         default=True, 
         help_text='Non active pricings will not be used or shown'
-    )
+    )    
     price_base = models.FloatField(
         default=None, 
         null=True,
@@ -211,21 +215,23 @@ class Pricing(models.Model):
         blank=True, 
         help_text='Text with additional instructions for using this pricing'
     )
-
+    
     class Meta:
         unique_together = (('start_location', 'end_location'),)
     
     @property
     def name(self):
         if FREIGHT_FULL_ROUTE_NAMES:
-            route_name = '{} <-> {}'.format(
-                self.start_location.name,
-                self.end_location.name
-            )
+            start_name = self.start_location.name
+            end_name = self.end_location.name
         else:
-            route_name = '{} <-> {}'.format(
-                self.start_location.solar_system_name,
-                self.end_location.solar_system_name
+            start_name = self.start_location.solar_system_name
+            end_name = self.end_location.solar_system_name
+            
+        route_name = '{} {} {}'.format(
+                start_name,
+                '<->' if self.is_bidirectional else '->',                    
+                end_name
             )
         return route_name
     
@@ -306,6 +312,36 @@ class Pricing(models.Model):
                 'You must specify at least one price component'
             )
 
+        if self.start_location_id and self.end_location_id:
+            if (Pricing.objects\
+                .filter(
+                    start_location=self.end_location, 
+                    end_location=self.start_location,
+                    is_bidirectional=True
+                )\
+                .exists()
+            ):
+                raise ValidationError(
+                    'There already exists a bidirectional pricing for this route. '
+                    'Please define the other pricing as non bidirectional before '
+                    'creating a 2nd one.'
+                ) 
+                
+            if (Pricing.objects\
+                    .filter(
+                        start_location=self.end_location, 
+                        end_location=self.start_location,
+                        is_bidirectional=False
+                    )\
+                    .exists()
+                and self.is_bidirectional
+            ):
+                raise ValidationError(
+                    'There already exists a non bidirectional pricing for '
+                    'this route. You need to mark this pricing as '
+                    'non-bidirectional too to continue.'
+                ) 
+        
     def get_calculated_price(self, volume: float, collateral: float) -> float:
         """returns the calculated price for the given parameters"""
 

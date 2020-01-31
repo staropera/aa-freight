@@ -175,12 +175,12 @@ def calculator(request, pricing_pk = None):
         if pricing_pk:
             try:
                 pricing = Pricing.objects \
-                    .filter(active__exact=True) \
+                    .filter(is_active=True) \
                     .get(pk=pricing_pk)
             except Pricing.DoesNotExist:
-                pricing = Pricing.objects.filter(active__exact=True).first()
+                pricing = Pricing.objects.filter(is_active=True).first()
         else:            
-            pricing = Pricing.objects.filter(active__exact=True).first()
+            pricing = Pricing.objects.filter(is_active=True).first()
         form = CalculatorForm(initial={'pricing': pricing})
         price = None        
 
@@ -190,10 +190,10 @@ def calculator(request, pricing_pk = None):
 
         try:
             pricing = Pricing.objects \
-                .filter(active__exact=True) \
+                .filter(is_active=True) \
                 .get(pk=form.data['pricing'])
         except Pricing.DoesNotExist:
-            pricing = Pricing.objects.filter(active__exact=True).first()
+            pricing = Pricing.objects.filter(is_active=True).first()
         
         if form.is_valid():                                    
             # pricing = form.cleaned_data['pricing']

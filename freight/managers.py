@@ -353,21 +353,22 @@ class ContractManager(models.Manager):
 
     
     def update_pricing(self):
-        """Updates pricing relation for all contracts"""
+        """Updates contracts with matching pricing"""
         from .models import Pricing, Contract
 
-        def _make_route_key(location_id_1: int, location_id_2: int) -> str:
-            return "x".join([str(x) for x in sorted([location_id_1, location_id_2])])
+        def _make_key(location_id_1: int, location_id_2: int) -> str:
+            return '{}x{}'.format(int(location_id_1), int(location_id_2))
 
-        pricings = {
-            _make_route_key(x.start_location_id, x.end_location_id): x 
-            for x in Pricing.objects.filter(active__exact=True).order_by('-id')
-        }
+        pricings = dict()
+        for x in Pricing.objects.filter(is_active=True).order_by('-id'):
+            pricings[_make_key(x.start_location_id, x.end_location_id)] = x
+            if x.is_bidirectional:
+                pricings[_make_key(x.end_location_id, x.start_location_id)] = x
 
         for contract in self.all():
             if contract.status == Contract.STATUS_OUTSTANDING or not contract.pricing:
                 with transaction.atomic():
-                    route_key = _make_route_key(
+                    route_key = _make_key(
                         contract.start_location_id, 
                         contract.end_location_id
                     )        

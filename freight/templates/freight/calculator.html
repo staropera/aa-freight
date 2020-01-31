@@ -41,12 +41,23 @@
                             
                                 <dl class="dl-horizontal">
 
-                                    <dt>From / To</dt>
+                                    {% if pricing.is_bidirectional %}
+                                        <dt>From / To:</dt>
+                                    {% else %}
+                                        <dt>From:</dt>
+                                    {% endif %}
+
                                     <dd>{{ pricing.start_location }}</dd>
 
-                                    <dt>From / To</dt>
+                                    {% if pricing.is_bidirectional %}
+                                        <dt>From / To:</dt>
+                                    {% else %}
+                                        <dt>To:</dt>
+                                    {% endif %}
                                     <dd>{{ pricing.end_location }}</dd>
 
+                                    <dt>Both directions:</dt>                                    
+                                    <dd>{{ pricing.is_bidirectional|yesno }}</dd>                                    
                                     <br>
 
                                     {% if pricing.price_min != None %}

@@ -70,6 +70,71 @@ class TestPricing(TestCase):
             price_base=350000000
         )
 
+    def test_create_pricing_no_2nd_allowed_a(self):
+        Pricing.objects.create(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=500000000,
+            is_bidirectional=True
+        )
+        p = Pricing.objects.create(
+            start_location=self.location_2,
+            end_location=self.location_1,
+            price_base=500000000,
+            is_bidirectional=True
+        )
+        with self.assertRaises(ValidationError):
+            p.clean()
+
+    def test_create_pricing_no_2nd_allowed_b(self):
+        Pricing.objects.create(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=500000000,
+            is_bidirectional=True
+        )
+        p = Pricing.objects.create(
+            start_location=self.location_2,
+            end_location=self.location_1,
+            price_base=500000000,
+            is_bidirectional=False
+        )
+        with self.assertRaises(ValidationError):
+            p.clean()
+            
+
+    def test_create_pricing_2nd_must_be_unidirectional_a(self):
+        Pricing.objects.create(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=500000000,
+            is_bidirectional=False
+        )
+        p = Pricing.objects.create(
+            start_location=self.location_2,
+            end_location=self.location_1,
+            price_base=500000000,
+            is_bidirectional=True
+        )
+        with self.assertRaises(ValidationError):
+            p.clean()
+
+    
+    def test_create_pricing_2nd_ok_when_unidirectional(self):
+        Pricing.objects.create(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=500000000,
+            is_bidirectional=False
+        )
+        p = Pricing.objects.create(
+            start_location=self.location_2,
+            end_location=self.location_1,
+            price_base=500000000,
+            is_bidirectional=False
+        )       
+        p.clean()
+
     
     @patch('freight.models.FREIGHT_FULL_ROUTE_NAMES', False)
     def test_name_short(self):        
@@ -94,6 +159,19 @@ class TestPricing(TestCase):
             p.name,            
             'Jita IV - Moon 4 - Caldari Navy Assembly Plant <-> ' \
                 + 'Amamake - 3 Time Nearly AT Winners'
+        )
+
+
+    def test_name_uni_directional(self):
+        p = Pricing(
+            start_location = self.location_1,
+            end_location = self.location_2,
+            price_base = 50000000,
+            is_bidirectional = False
+        )
+        self.assertEqual(
+            p.name,
+            'Jita -> Amamake'
         )
 
 

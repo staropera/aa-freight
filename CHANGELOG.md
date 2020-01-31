@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.13.0] - 2020-01-31
+
+**Uni-directional pricings**
+
+### Added
+
+- It is now also possible to define different pricings for either direction of a route. However, pricings will remain bidirectional by default. ([#21](https://gitlab.com/ErikKalkoken/aa-freight/issues/21))
+
+### Fixed
+
+- It's no longer possible to create a 2nd bidirectional pricing for the same route
+
 ## [0.12.5] - 2020-01-30
 
 ### Fixed
@@ -50,6 +62,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Some data models on admin page are not read only or hidden completely to prevent accidental data corruption
 
 ## [0.12.0] - 2019-12-15
+
+**Statistics**
 
 ### Added
 
@@ -95,6 +109,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [0.11.0] - 2019-12-10
 
+**Global pricing components**
+
 ### Added
 
 - Add global "price per volume" optional modifier ([#15](https://gitlab.com/ErikKalkoken/aa-freight/issues/15))
@@ -108,6 +124,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Improve error handling when posting messages on Discord
 
 ## [0.10.0] - 2019-12-06
+
+**Customer notifications**
 
 ### Added
 
@@ -141,6 +159,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [0.9.0] - 2019-11-12
 
+**Custom mentions**
+
 ### Changed
 
 - Renamed setting `FREIGHT_DISCORD_PING_TYPE` to `FREIGHT_DISCORD_MENTIONS`. This setting now accepts any kind of mentions incl. role and user mentions. Make sure to update your `local.py` accordingly if you use pings! ([#13](https://gitlab.com/ErikKalkoken/aa-freight/issues/13))
@@ -150,6 +170,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ## [0.8.0] - 2019-11-08
+
+**Corporation public operation mode**
 
 ### Added
 
