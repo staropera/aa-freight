@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.13.1] - 2020-02-02
+
+If you already have Pricings for both direction of the same route please make sure to set both to non-bidirectional. Otherwise those Pricings will not work probable.
+
+### Changed
+
+- It is now possible again to save changes to a Pricing if another bi-directional Pricing for the same route already exists. This is necessary to set both existing Pricing definitions to non-bidirectional.
+
 ## [0.13.0] - 2020-01-31
 
 **Uni-directional pricings**

@@ -58,7 +58,7 @@ class TestPricing(TestCase):
                 price_base=350000000
             )
 
-    def test_create_pricing_no_2nd_allowed_a(self):
+    def test_create_pricing_no_2nd_bidirectional_allowed(self):
         with TempDisconnectPricingSaveHandler():
             Pricing.objects.create(
                 start_location=self.location_1,
@@ -75,7 +75,7 @@ class TestPricing(TestCase):
             with self.assertRaises(ValidationError):
                 p.clean()
 
-    def test_create_pricing_no_2nd_allowed_b(self):
+    def test_create_pricing_no_2nd_unidirectional_allowed(self):
         with TempDisconnectPricingSaveHandler():
             Pricing.objects.create(
                 start_location=self.location_1,
@@ -89,8 +89,13 @@ class TestPricing(TestCase):
                 price_base=500000000,
                 is_bidirectional=False
             )
+            p.clean()
+            # this test case has been temporary inverted to allow users
+            # to migrate their pricings
+            """
             with self.assertRaises(ValidationError):
                 p.clean()
+            """
             
 
     def test_create_pricing_2nd_must_be_unidirectional_a(self):

@@ -314,17 +314,19 @@ class Pricing(models.Model):
 
         if self.start_location_id and self.end_location_id:
             if (Pricing.objects\
-                .filter(
-                    start_location=self.end_location, 
-                    end_location=self.start_location,
-                    is_bidirectional=True
-                )\
-                .exists()
+                    .filter(
+                        start_location=self.end_location, 
+                        end_location=self.start_location,
+                        is_bidirectional=True
+                    )\
+                    .exists()
+                and self.is_bidirectional
             ):
                 raise ValidationError(
                     'There already exists a bidirectional pricing for this route. '
-                    'Please define the other pricing as non bidirectional before '
-                    'creating a 2nd one.'
+                    'Please set this pricing to non-bidirectional to save it. '
+                    'And after you must also set the other pricing to '
+                    'non-bidirectional.'
                 ) 
                 
             if (Pricing.objects\
