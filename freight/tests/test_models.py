@@ -1,34 +1,41 @@
 import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from dhooks_lite import Embed
 
-from django.contrib.auth.models import User, Permission 
-from django.test import TestCase
+from django.contrib.auth.models import User 
+from django.core.exceptions import ValidationError
 from django.utils.timezone import now
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.authentication.models import CharacterOwnership
-from esi.models import Token
 
-from . import set_logger, TempDisconnectPricingSaveHandler
-from ..app_settings import *
-from ..models import *
+from . import TempDisconnectPricingSaveHandler
+from ..app_settings import (
+    FREIGHT_OPERATION_MODE_MY_ALLIANCE, 
+    FREIGHT_OPERATION_MODE_MY_CORPORATION,
+    FREIGHT_OPERATION_MODE_CORP_PUBLIC
+)
+from ..models import Contract, ContractHandler, EveEntity, Location, Pricing
 from .. import tasks
-from .testdata import characters_data, create_locations, \
-    create_entities_from_characters
+from .testdata import (
+    characters_data, create_locations, create_entities_from_characters
+)
+from ..utils import set_test_logger, NoSocketsTestCase
 
-logger = set_logger('freight.models', __file__)
 
-    
-class TestPricing(TestCase):
+MODULE_PATH = 'freight.models'
+logger = set_test_logger(MODULE_PATH, __file__)
+
+
+class TestPricing(NoSocketsTestCase):
 
     def setUp(self):                
         create_entities_from_characters()
         
         # 1 user
         character = EveCharacter.objects.get(character_id=90000001)        
-        alliance = EveEntity.objects.get(id = character.alliance_id)
+        alliance = EveEntity.objects.get(id=character.alliance_id)
         
         self.handler = ContractHandler.objects.create(
             organization=alliance,
@@ -40,19 +47,19 @@ class TestPricing(TestCase):
     def test_create_pricings(self):
         with TempDisconnectPricingSaveHandler():
             # first pricing
-            pricing_1 = Pricing.objects.create(
+            Pricing.objects.create(
                 start_location=self.location_1,
                 end_location=self.location_2,
                 price_base=500000000
             )
             # pricing with different route
-            pricing_2 = Pricing.objects.create(
+            Pricing.objects.create(
                 start_location=self.location_3,
                 end_location=self.location_2,
                 price_base=250000000
             )
             # pricing with reverse route then pricing 1
-            pricing_2 = Pricing.objects.create(
+            Pricing.objects.create(
                 start_location=self.location_2,
                 end_location=self.location_1,
                 price_base=350000000
@@ -97,7 +104,6 @@ class TestPricing(TestCase):
                 p.clean()
             """
             
-
     def test_create_pricing_2nd_must_be_unidirectional_a(self):
         with TempDisconnectPricingSaveHandler():
             Pricing.objects.create(
@@ -114,7 +120,6 @@ class TestPricing(TestCase):
             )
             with self.assertRaises(ValidationError):
                 p.clean()
-
     
     def test_create_pricing_2nd_ok_when_unidirectional(self):
         with TempDisconnectPricingSaveHandler():
@@ -132,45 +137,42 @@ class TestPricing(TestCase):
             )       
             p.clean()
 
-    
-    @patch('freight.models.FREIGHT_FULL_ROUTE_NAMES', False)
+    @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', False)
     def test_name_short(self):        
         p = Pricing(
-            start_location = self.location_1,
-            end_location = self.location_2,
-            price_base = 50000000
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=50000000
         )
         self.assertEqual(
             p.name,
             'Jita <-> Amamake'
         )
 
-    @patch('freight.models.FREIGHT_FULL_ROUTE_NAMES', True)
+    @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', True)
     def test_name_full(self):        
         p = Pricing(
-            start_location = self.location_1,
-            end_location = self.location_2,
-            price_base = 50000000
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=50000000
         )
         self.assertEqual(
             p.name,            
-            'Jita IV - Moon 4 - Caldari Navy Assembly Plant <-> ' \
-                + 'Amamake - 3 Time Nearly AT Winners'
+            'Jita IV - Moon 4 - Caldari Navy Assembly Plant <-> ' 
+            'Amamake - 3 Time Nearly AT Winners'
         )
-
 
     def test_name_uni_directional(self):
         p = Pricing(
-            start_location = self.location_1,
-            end_location = self.location_2,
-            price_base = 50000000,
-            is_bidirectional = False
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=50000000,
+            is_bidirectional=False
         )
         self.assertEqual(
             p.name,
             'Jita -> Amamake'
         )
-
 
     def test_get_calculated_price(self):
         p = Pricing()
@@ -262,7 +264,6 @@ class TestPricing(TestCase):
             p.get_calculated_price(None, 100),
             2
         )
-
     
     def test_get_contract_pricing_errors(self):
         p = Pricing()
@@ -304,7 +305,6 @@ class TestPricing(TestCase):
         with self.assertRaises(ValueError):            
             p.get_contract_price_check_issues(50, 5, -5)
         
-
     def test_collateral_min_allows_zero(self):
         p = Pricing()
         p.price_base = 500
@@ -445,8 +445,8 @@ class TestPricing(TestCase):
             Pricing(price_base=50000000, price_per_volume=400).is_fix_price()
         )
         self.assertFalse(
-            Pricing(price_base=50000000, price_per_collateral_percent=2)\
-                .is_fix_price()
+            Pricing(price_base=50000000, price_per_collateral_percent=2)
+            .is_fix_price()
         )
         self.assertFalse(Pricing().is_fix_price())
 
@@ -455,8 +455,7 @@ class TestPricing(TestCase):
         p.clean()
 
 
-
-class TestContract(TestCase):
+class TestContract(NoSocketsTestCase):
     
     def setUp(self):
 
@@ -478,9 +477,9 @@ class TestContract(TestCase):
         )
         
         self.organization = EveEntity.objects.create(
-            id = self.character.alliance_id,
-            category = EveEntity.CATEGORY_ALLIANCE,
-            name = self.character.alliance_name
+            id=self.character.alliance_id,
+            category=EveEntity.CATEGORY_ALLIANCE,
+            name=self.character.alliance_name
         )
         
         self.user = User.objects.create_user(
@@ -538,10 +537,9 @@ class TestContract(TestCase):
             start_location=self.location_1,
             status=Contract.STATUS_OUTSTANDING,
             volume=50000,
-            pricing = self.pricing
+            pricing=self.pricing
         )
     
-
     def test_hours_issued_2_completed(self):
         self.contract.date_completed = \
             self.contract.date_issued + datetime.timedelta(hours=9)
@@ -554,7 +552,6 @@ class TestContract(TestCase):
         self.contract.date_completed = None
         self.assertIsNone(self.contract.hours_issued_2_completed)
             
-    
     def test_str(self):
         self.assertEqual(
             str(self.contract),
@@ -584,8 +581,7 @@ class TestContract(TestCase):
             self.contract.date_latest
         )
 
-
-    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 24)
+    @patch(MODULE_PATH + '.FREIGHT_HOURS_UNTIL_STALE_STATUS', 24)
     def test_has_stale_status(self):
         # initial contract only had date_issued
         # date_issued is now
@@ -596,10 +592,8 @@ class TestContract(TestCase):
             self.contract.date_issued - datetime.timedelta(hours=30)
         self.assertTrue(self.contract.has_stale_status)
 
-
     def test_task_update_pricing(self):
         self.assertTrue(tasks.update_contracts_pricing())
-
 
     def test_acceptor_name(self):
         
@@ -618,7 +612,6 @@ class TestContract(TestCase):
             self.character.character_name
         )
 
-
     def test_get_issues_list(self):
         self.assertListEqual(
             self.contract.get_issue_list(),
@@ -630,12 +623,10 @@ class TestContract(TestCase):
             ["one", "two"]
         )
 
-
     def test_generate_embed_w_pricing(self):
         x = self.contract._generate_embed()
         self.assertIsInstance(x, Embed)
         self.assertEqual(x.color, Contract.EMBED_COLOR_PASSED)
-
 
     def test_generate_embed_w_pricing_issues(self):
         self.contract.issues = ['we have issues']
@@ -643,48 +634,43 @@ class TestContract(TestCase):
         self.assertIsInstance(x, Embed)
         self.assertEqual(x.color, Contract.EMBED_COLOR_FAILED)
 
-
     def test_generate_embed_wo_pricing(self):
         self.contract.pricing = None
         x = self.contract._generate_embed()
         self.assertIsInstance(x, Embed)
-
     
-    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
-    @patch('freight.models.FREIGHT_DISCORD_DISABLE_BRANDING', False)
-    @patch('freight.models.FREIGHT_DISCORD_MENTIONS', None)
-    @patch('freight.models.Webhook.execute', autospec=True)
-    def test_send_pilot_notification_normal(self, mock_webhook_execute):
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', False)
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_MENTIONS', None)
+    @patch(MODULE_PATH + '.Webhook.execute', autospec=True)
+    def test_send_pilot_notification_normal_1(self, mock_webhook_execute):
         self.contract.send_pilot_notification()
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
-
-    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
-    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', None)
+    @patch(MODULE_PATH + '.Webhook.execute', autospec=True)
     def test_send_pilot_notification_no_webhook(self, mock_webhook_execute):
         self.contract.send_pilot_notification()
         self.assertEqual(mock_webhook_execute.call_count, 0)
 
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', True)    
+    @patch(MODULE_PATH + '.Webhook.execute', autospec=True)
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_MENTIONS', None)
+    def test_send_pilot_notification_normal_2(self, mock_webhook_execute):
+        self.contract.send_pilot_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
 
-    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
-    @patch('freight.models.FREIGHT_DISCORD_DISABLE_BRANDING', True)    
-    @patch('freight.models.Webhook.execute', autospec=True)
-    @patch('freight.models.FREIGHT_DISCORD_MENTIONS', None)
-    def test_send_pilot_notification_normal(self, mock_webhook_execute):
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', True)    
+    @patch(MODULE_PATH + '.Webhook.execute', autospec=True)
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_MENTIONS', '@here')
+    def test_send_pilot_notification_normal_3(self, mock_webhook_execute):
         self.contract.send_pilot_notification()
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
 
-    @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
-    @patch('freight.models.FREIGHT_DISCORD_DISABLE_BRANDING', True)    
-    @patch('freight.models.Webhook.execute', autospec=True)
-    @patch('freight.models.FREIGHT_DISCORD_MENTIONS', '@here')
-    def test_send_pilot_notification_normal(self, mock_webhook_execute):
-        self.contract.send_pilot_notification()
-        self.assertEqual(mock_webhook_execute.call_count, 1)
-
-
-class TestLocation(TestCase):
+class TestLocation(NoSocketsTestCase):
 
     def setUp(self):
         self.location = Location.objects.create(
@@ -708,7 +694,7 @@ class TestLocation(TestCase):
         self.assertEqual(self.location.solar_system_name, 'Jita')
 
 
-class TestContractHandler(TestCase):
+class TestContractHandler(NoSocketsTestCase):
     
     def setUp(self):
         for character in characters_data:
@@ -729,9 +715,9 @@ class TestContractHandler(TestCase):
         )
         
         self.organization = EveEntity.objects.create(
-            id = self.character.alliance_id,
-            category = EveEntity.CATEGORY_ALLIANCE,
-            name = self.character.alliance_name
+            id=self.character.alliance_id,
+            category=EveEntity.CATEGORY_ALLIANCE,
+            name=self.character.alliance_name
         )
         
         self.user = User.objects.create_user(
@@ -754,7 +740,6 @@ class TestContractHandler(TestCase):
     def test_str(self):
         self.assertEqual(str(self.handler), 'Justice League')
 
-    
     def test_operation_mode_friendly(self):
         self.handler.operation_mode = FREIGHT_OPERATION_MODE_MY_ALLIANCE
         self.assertEqual(
@@ -764,7 +749,6 @@ class TestContractHandler(TestCase):
         self.handler.operation_mode = 'undefined operation mode'
         with self.assertRaises(ValueError):
             self.handler.operation_mode_friendly
-
 
     def test_get_availability_text_for_contracts(self):
         self.handler.operation_mode = FREIGHT_OPERATION_MODE_MY_ALLIANCE
@@ -782,8 +766,3 @@ class TestContractHandler(TestCase):
             self.handler.get_availability_text_for_contracts(),
             'Private (Justice League) '
         )
-            
-    
-
-        
-

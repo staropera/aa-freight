@@ -14,3 +14,4 @@ coverage.xml
 announce_release.py
 htmlcov/
 contracts_raw.json
+todos.md

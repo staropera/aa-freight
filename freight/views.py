@@ -4,27 +4,26 @@ import math
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
-from django.core.exceptions import ValidationError
 from django.forms import HiddenInput
-from django.http import HttpResponse, Http404, JsonResponse
-from django.db.models import Count, Sum, Q, Avg
+from django.http import JsonResponse
+from django.db.models import Count, Sum, Q
 from django.shortcuts import render, redirect
-from django.template import loader
-from django.utils.html import mark_safe
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.eveonline.models import EveAllianceInfo, EveCorporationInfo, \
-    EveCharacter
+from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
 from esi.decorators import token_required
 from esi.clients import esi_client_factory
 from esi.models import Token
 
 from . import tasks, __title__
-from .app_settings import FREIGHT_STATISTICS_MAX_DAYS
-from .models import *
-from .utils import get_swagger_spec_path, DATETIME_FORMAT, messages_plus, \
-    LoggerAddTag
+from .app_settings import (
+    FREIGHT_STATISTICS_MAX_DAYS, FREIGHT_OPERATION_MODE
+)
+from .models import Contract, ContractHandler, EveEntity, Location, Pricing
+from .utils import (
+    get_swagger_spec_path, DATETIME_FORMAT, messages_plus, LoggerAddTag
+)
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -86,9 +85,7 @@ def contract_list_data(request, category):
         else:
             user_characters = [
                 x.character 
-                for x in request.user.character_ownerships\
-                    .select_related()\
-                    .all()
+                for x in request.user.character_ownerships.select_related().all()
             ]
             contracts = Contract.objects\
                 .filter(issuer__in=user_characters)\
@@ -169,7 +166,7 @@ def contract_list_data(request, category):
 
 @login_required
 @permission_required('freight.use_calculator')
-def calculator(request, pricing_pk = None):            
+def calculator(request, pricing_pk=None):            
     from .forms import CalculatorForm
     if request.method != 'POST':
         if pricing_pk:
@@ -205,7 +202,8 @@ def calculator(request, pricing_pk = None):
                 collateral = int(form.cleaned_data['collateral'])        
             else:
                 collateral = 0
-            price = math.ceil(pricing.get_calculated_price(
+            price = math.ceil(
+                pricing.get_calculated_price(
                     volume, 
                     collateral
                 ) / 1000000
@@ -227,7 +225,7 @@ def calculator(request, pricing_pk = None):
         if pricing.days_to_expire:
             expires_on = datetime.datetime.now(
                 datetime.timezone.utc
-            )  + datetime.timedelta(days=pricing.days_to_expire)
+            ) + datetime.timedelta(days=pricing.days_to_expire)
         else:
             expires_on = None
     else:
@@ -268,7 +266,7 @@ def setup_contract_handler(request, token):
     success = True
     token_char = EveCharacter.objects.get(character_id=token.character_id)
 
-    if ( (EveEntity.get_category_for_operation_mode(
+    if ((EveEntity.get_category_for_operation_mode(
         FREIGHT_OPERATION_MODE) == EveEntity.CATEGORY_ALLIANCE)
         and token_char.alliance_id is None
     ):
@@ -330,15 +328,15 @@ def setup_contract_handler(request, token):
         messages_plus.success(
             request, 
             'Contract Handler setup started for '
-            + '<strong>{}</strong> organization '.format(organization.name)
-            + 'with <strong>{}</strong> as sync character. '.format(
-                    handler.character.character.character_name, 
-                )
-            + 'Operation mode: <strong>{}</strong>. '.format(
-                    handler.operation_mode_friendly
-                )
-            + 'Started syncing of courier contracts. '
-            + 'You will receive a report once it is completed.'
+            '<strong>{}</strong> organization '
+            'with <strong>{}</strong> as sync character. '
+            'Operation mode: <strong>{}</strong>. '
+            'Started syncing of courier contracts. '
+            'You will receive a report once it is completed.'.format(
+                organization.name, 
+                handler.character.character.character_name,  
+                handler.operation_mode_friendly
+            )
         )
         
     return redirect('freight:index')
@@ -392,14 +390,12 @@ def add_location_2(request):
 
             except Exception as ex:
                 messages_plus.error(
-                    request,
-                    'Failed to add location with token from {}'.format(
-                            token.character_name
-                        )
-                    + ' for location ID {}: '. format(location_id)
-                    + '{}'.format(type(ex).__name__)
+                    request,                    
+                    'Failed to add location with token from {} '
+                    'for location ID {}: {}'.format(
+                        token.character_name, location_id, type(ex).__name__
+                    )
                 )
-            
         
     return render(
         request, 'freight/add_location.html', 
@@ -410,6 +406,7 @@ def add_location_2(request):
             'token_char_name': token.character_name
         }
     )
+
 
 @login_required
 @permission_required('freight.view_statistics')
@@ -432,11 +429,25 @@ def statistics_routes_data(request):
     finished_contracts = Q(contract__status__exact=Contract.STATUS_FINISHED) \
         & Q(contract__date_completed__gte=cutoff_date)
     route_totals = Pricing.objects.select_related() \
-        .annotate(contracts_count=Count('contract', filter=finished_contracts)) \
-        .annotate(rewards=Sum('contract__reward', filter=finished_contracts)) \
-        .annotate(collaterals=Sum('contract__collateral', filter=finished_contracts)) \
-        .annotate(pilots=Count('contract__acceptor', distinct=True, filter=finished_contracts)) \
-        .annotate(customers=Count('contract__issuer', distinct=True, filter=finished_contracts)) 
+        .annotate(contracts_count=Count(
+            'contract', filter=finished_contracts
+        )) \
+        .annotate(rewards=Sum(
+            'contract__reward', filter=finished_contracts
+        )) \
+        .annotate(collaterals=Sum(
+            'contract__collateral', filter=finished_contracts
+        )) \
+        .annotate(pilots=Count(
+            'contract__acceptor', distinct=True, filter=finished_contracts
+        )) \
+        .annotate(
+            customers=Count(
+                'contract__issuer', 
+                distinct=True, 
+                filter=finished_contracts
+            )
+        )
 
     totals = list()
     for route in route_totals:
@@ -477,12 +488,16 @@ def statistics_pilots_data(request):
     pilot_totals = EveCharacter.objects\
         .exclude(contract_acceptor__exact=None)\
         .select_related() \
-        .annotate(contracts_count=\
-            Count('contract_acceptor', filter=finished_contracts)) \
-        .annotate(rewards=\
-            Sum('contract_acceptor__reward', filter=finished_contracts)) \
-        .annotate(collaterals=\
-            Sum('contract_acceptor__collateral', filter=finished_contracts))        
+        .annotate(
+            contracts_count=Count(
+                'contract_acceptor', filter=finished_contracts
+            )) \
+        .annotate(rewards=Sum(
+            'contract_acceptor__reward', filter=finished_contracts
+        )) \
+        .annotate(collaterals=Sum(
+            'contract_acceptor__collateral', filter=finished_contracts
+        ))        
 
     totals = list()
     for pilot in pilot_totals:
@@ -516,9 +531,11 @@ def statistics_pilot_corporations_data(request):
     cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
     
     finished_contracts = \
-        Q(contract_acceptor_corporation__status__exact\
-            =Contract.STATUS_FINISHED) \
-        & Q(contract_acceptor_corporation__date_completed__gte=cutoff_date)
+        Q(
+            contract_acceptor_corporation__status__exact=Contract.STATUS_FINISHED
+        ) & Q(
+            contract_acceptor_corporation__date_completed__gte=cutoff_date
+        )
     
     corporation_totals = EveCorporationInfo.objects\
         .exclude(contract_acceptor_corporation__exact=None)\
@@ -549,8 +566,8 @@ def statistics_pilot_corporations_data(request):
                         
             totals.append({
                 'name': corporation.corporation_name,
-                'alliance': corporation.alliance.alliance_name \
-                    if corporation.alliance else '',
+                'alliance': corporation.alliance.alliance_name
+                if corporation.alliance else '',
                 'contracts': '{:,}'.format(corporation.contracts_count),
                 'rewards': '{:,.0f}'.format(rewards),
                 'collaterals': '{:,.0f}'.format(collaterals),            
@@ -567,10 +584,18 @@ def statistics_customer_data(request):
     cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
     finished_contracts = Q(contract_issuer__status__exact=Contract.STATUS_FINISHED) \
         & Q(contract_issuer__date_completed__gte=cutoff_date)
-    customer_totals = EveCharacter.objects.exclude(contract_issuer__exact=None).select_related() \
-        .annotate(contracts_count=Count('contract_issuer', filter=finished_contracts)) \
-        .annotate(rewards=Sum('contract_issuer__reward', filter=finished_contracts)) \
-        .annotate(collaterals=Sum('contract_issuer__collateral', filter=finished_contracts))        
+    customer_totals = EveCharacter.objects\
+        .exclude(contract_issuer__exact=None)\
+        .select_related() \
+        .annotate(contracts_count=Count(
+            'contract_issuer', filter=finished_contracts
+        )) \
+        .annotate(rewards=Sum(
+            'contract_issuer__reward', filter=finished_contracts
+        )) \
+        .annotate(collaterals=Sum(
+            'contract_issuer__collateral', filter=finished_contracts
+        ))
 
     totals = list()
     for customer in customer_totals:        

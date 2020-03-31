@@ -1,30 +1,32 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MinValueValidator
 
 from .models import Pricing
 
 
 class CalculatorForm(forms.Form):             
     pricing = forms.ModelChoiceField(
-        queryset=Pricing.objects\
-            .filter(is_active=True)\
-            .order_by('start_location__name', 'end_location__name'),
+        queryset=Pricing.objects
+        .filter(is_active=True)
+        .order_by('start_location__name', 'end_location__name'),
         label='Route',
         help_text='Pick a route for your courier contract',
         empty_label=None
     )    
     volume = forms.IntegerField(
         help_text='Est. volume of your cargo in m3',
-        required = False,
+        required=False,
         validators=[            
             MinValueValidator(0)
         ]
     )
     collateral = forms.IntegerField(
-        help_text='Collaterial in ISK, must be roughly equal to the est. '\
-            + 'value of your cargo',
-        required = False,
+        help_text=(
+            'Collaterial in ISK, must be roughly equal to the est. '
+            'value of your cargo'
+        ),
+        required=False,
         validators=[            
             MinValueValidator(0)
         ]
@@ -66,4 +68,3 @@ class AddLocationForm(forms.Form):
         label='Location ID',
         help_text='Eve Online ID for a station or an Upwell structure'
     )    
-

@@ -8,4 +8,4 @@ class FreightConfig(AppConfig):
     verbose_name = 'Freight v{}'.format(__version__)
 
     def ready(self):
-        from . import signals
+        from . import signals   # noqa F401

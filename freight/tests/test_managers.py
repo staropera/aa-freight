@@ -1,28 +1,30 @@
-import datetime
 from unittest.mock import Mock, patch
 
-from django.contrib.auth.models import User, Permission 
-from django.test import TestCase
-from django.utils.timezone import now
-
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import EveCharacter
 from allianceauth.eveonline.providers import ObjectNotFound
-from allianceauth.authentication.models import CharacterOwnership
 from bravado.exception import HTTPNotFound, HTTPForbidden
-from esi.clients import SwaggerClient
 
-from . import  set_logger, TempDisconnectPricingSaveHandler
-from ..app_settings import *
-from ..models import *
-from .. import tasks
-from .testdata import characters_data, structures_data,\
-    create_contract_handler_w_contracts
+from . import TempDisconnectPricingSaveHandler
+from ..app_settings import (
+    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+    FREIGHT_OPERATION_MODE_MY_CORPORATION,
+    FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE,
+    FREIGHT_OPERATION_MODE_CORP_PUBLIC
+)
+from ..models import (
+    Contract, EveEntity, Location, Pricing
+)
+from .testdata import (
+    characters_data, structures_data, create_contract_handler_w_contracts
+)
+from ..utils import set_test_logger, NoSocketsTestCase
 
 
-logger = set_logger('freight.managers', __file__)
+MODULE_PATH = 'freight.managers'
+logger = set_test_logger(MODULE_PATH, __file__)
 
     
-class TestEveEntityManager(TestCase):
+class TestEveEntityManager(NoSocketsTestCase):
     
     @classmethod
     def setUpClass(cls):
@@ -48,7 +50,6 @@ class TestEveEntityManager(TestCase):
             EveCharacter.objects.create(**character)
 
         cls.esi_data = esi_data
-
     
     @classmethod
     def esi_post_universe_names(cls, *args, **kwargs) -> list:
@@ -67,7 +68,7 @@ class TestEveEntityManager(TestCase):
     def test_character_basics(self, SwaggerClient):
         SwaggerClient.from_spec.return_value\
             .Universe.post_universe_names.side_effect = \
-                TestEveEntityManager.esi_post_universe_names
+            TestEveEntityManager.esi_post_universe_names
 
         entity, created = EveEntity.objects.get_or_create_from_esi(id=90000001)
         self.assertTrue(created)
@@ -90,7 +91,7 @@ class TestEveEntityManager(TestCase):
     def test_corporation_basics(self, SwaggerClient):
         SwaggerClient.from_spec.return_value\
             .Universe.post_universe_names.side_effect = \
-                TestEveEntityManager.esi_post_universe_names
+            TestEveEntityManager.esi_post_universe_names
 
         entity, _ = EveEntity.objects.get_or_create_from_esi(id=92000001)
         self.assertEqual(
@@ -109,7 +110,7 @@ class TestEveEntityManager(TestCase):
     def test_alliance_basics(self, SwaggerClient):
         SwaggerClient.from_spec.return_value\
             .Universe.post_universe_names.side_effect = \
-                TestEveEntityManager.esi_post_universe_names
+            TestEveEntityManager.esi_post_universe_names
 
         entity, _ = EveEntity.objects.get_or_create_from_esi(id=93000001)
         self.assertEqual(
@@ -124,17 +125,15 @@ class TestEveEntityManager(TestCase):
             'https://imageserver.eveonline.com/Alliance/93000001_128.png'
         )
 
-
     @patch('esi.clients.SwaggerClient')
-    def test_alliance_basics(self, SwaggerClient):
+    def test_alliance_not_found(self, SwaggerClient):
         SwaggerClient.from_spec.return_value\
             .Universe.post_universe_names.side_effect = \
-                TestEveEntityManager.esi_post_universe_names
+            TestEveEntityManager.esi_post_universe_names
 
         with self.assertRaises(ObjectNotFound):
             entity, _ = EveEntity.objects.get_or_create_from_esi(id=666)
         
-
     def test_get_category_for_operation_mode(self):
         self.assertEqual(
             EveEntity.get_category_for_operation_mode(
@@ -168,28 +167,19 @@ class TestEveEntityManager(TestCase):
                 character,
                 category=EveEntity.CATEGORY_CORPORATION
             )
-        self.assertEqual(
-            int(corporation.id), 
-                92000001            
-        )
+        self.assertEqual(int(corporation.id), 92000001)
         alliance, _ = \
             EveEntity.objects.update_or_create_from_evecharacter(
                 character,
                 category=EveEntity.CATEGORY_ALLIANCE
             )
-        self.assertEqual(
-            int(alliance.id), 
-            93000001
-        )
+        self.assertEqual(int(alliance.id), 93000001)
         char2, _ = \
             EveEntity.objects.update_or_create_from_evecharacter(
                 character,
                 category=EveEntity.CATEGORY_CHARACTER
             )
-        self.assertEqual(
-            int(char2.id),
-            90000001
-        )
+        self.assertEqual(int(char2.id), 90000001)
         with self.assertRaises(ValueError):
             EveEntity.objects.update_or_create_from_evecharacter(
                 character,
@@ -197,7 +187,7 @@ class TestEveEntityManager(TestCase):
             )
 
 
-class TestLocationManager(TestCase):
+class TestLocationManager(NoSocketsTestCase):
     
     @classmethod
     def get_universe_stations_station_id(cls, *args, **kwargs) -> dict:    
@@ -225,7 +215,6 @@ class TestLocationManager(TestCase):
             m.result.return_value = structures_data[structure_id]
             return m
             
-
     def test_update_or_create_from_esi_structure_normal(self):
         esi_client = Mock()
         esi_client.Universe.get_universe_structures_structure_id.side_effect = \
@@ -264,7 +253,6 @@ class TestLocationManager(TestCase):
         self.assertTrue(created)
         self.assertEqual(obj.id, 42)
         
-        
     def test_update_or_create_from_esi_station_normal(self):
         esi_client = Mock()
         esi_client.Universe.get_universe_stations_station_id.side_effect = \
@@ -283,7 +271,6 @@ class TestLocationManager(TestCase):
         )        
         self.assertFalse(created)
 
-
     def test_update_or_create_from_esi_station_forbidden(self):
         esi_client = Mock()
         esi_client.Universe.get_universe_stations_station_id.side_effect = \
@@ -297,7 +284,7 @@ class TestLocationManager(TestCase):
             )
 
 
-class TestContractManager(TestCase):
+class TestContractManager(NoSocketsTestCase):
 
     def setUp(self):        
     
@@ -321,7 +308,7 @@ class TestContractManager(TestCase):
                 price_base=500000000,
                 is_bidirectional=True
             )
-            pricing_2 = Pricing.objects.create(
+            Pricing.objects.create(
                 start_location=amamake,
                 end_location=jita,
                 price_base=350000000,
@@ -344,7 +331,6 @@ class TestContractManager(TestCase):
                 
         contract_3 = Contract.objects.get(contract_id=149409062)
         self.assertEqual(contract_3.pricing, pricing_3)
-
 
     def test_update_pricing_uni_directional(self):
         jita = Location.objects.get(id=60003760)

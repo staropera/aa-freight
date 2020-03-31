@@ -1,5 +1,4 @@
 import logging
-import os
 import datetime
 import hashlib
 import json
@@ -11,22 +10,28 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 
-from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.notifications import notify
-from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
+from allianceauth.eveonline.models import EveCharacter
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 
+from .app_settings import (
+    FREIGHT_OPERATION_MODE,
+    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+    FREIGHT_OPERATION_MODE_MY_CORPORATION,
+    FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE,
+    FREIGHT_OPERATION_MODE_CORP_PUBLIC
+)
+from .models import ContractHandler, Contract
 from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
-from .models import *
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 
 
 @shared_task
-def run_contracts_sync(force_sync = False, user_pk = None):
+def run_contracts_sync(force_sync=False, user_pk=None):
     
     try:
         handler = ContractHandler.objects.first()
@@ -60,9 +65,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             raise ValueError()
 
         # abort if character does not have sufficient permissions
-        if not handler.character.user.has_perm(
-                'freight.setup_contract_handler'
-            ):
+        if not handler.character.user.has_perm('freight.setup_contract_handler'):
             logger.error(add_prefix(
                 'Character does not have sufficient permission '
                 + 'to sync contracts'
@@ -116,8 +119,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             # get contracts from first page
             operation = esi_client.Contracts\
                 .get_corporations_corporation_id_contracts(
-                    corporation_id=\
-                        handler.character.character.corporation_id
+                    corporation_id=handler.character.character.corporation_id
                 )
             operation.also_return_response = True
             contracts_all, response = operation.result()
@@ -130,8 +132,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                 ))
                 contracts_all += esi_client.Contracts\
                     .get_corporations_corporation_id_contracts(
-                        corporation_id=handler\
-                            .character.character.corporation_id,
+                        corporation_id=handler.character.character.corporation_id,
                         page=page
                     ).result()
             
@@ -177,8 +178,11 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                     in_scope = assignee_id == issuer_corporation_id
                 
                 elif handler.operation_mode == FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE:
-                    in_scope = (issuer_alliance_id ==
-                        int(handler.character.character.alliance_id))
+                    in_scope = (
+                        issuer_alliance_id == int(
+                            handler.character.character.alliance_id
+                        )
+                    )
 
                 elif handler.operation_mode == FREIGHT_OPERATION_MODE_CORP_PUBLIC:
                     in_scope = True
@@ -218,12 +222,11 @@ def run_contracts_sync(force_sync = False, user_pk = None):
                             )
                         except Exception as ex:
                             logger.exception(add_prefix(
-                                'An unexpected error ocurred ' \
-                                + 'while trying to load contract '\
-                                + '{}: {}'. format(
-                                    contract['contract_id'] \
-                                        if 'contract_id' in contract \
-                                        else 'Unknown',
+                                'An unexpected error ocurred '
+                                'while trying to load contract '
+                                '{}: {}'. format(
+                                    contract['contract_id'] 
+                                    if 'contract_id' in contract else 'Unknown',
                                     ex
                                 )
                             ))
@@ -243,12 +246,12 @@ def run_contracts_sync(force_sync = False, user_pk = None):
             send_contract_notifications.delay()
             
         except Exception as ex:
-                logger.exception(add_prefix(
-                    'An unexpected error ocurred {}'. format(ex)
-                ))                                
-                handler.last_error = ContractHandler.ERROR_UNKNOWN
-                handler.save()
-                raise ex
+            logger.exception(add_prefix(
+                'An unexpected error ocurred {}'. format(ex)
+            ))                                
+            handler.last_error = ContractHandler.ERROR_UNKNOWN
+            handler.save()
+            raise ex
 
     except Exception as ex:
         success = False
@@ -292,7 +295,7 @@ def run_contracts_sync(force_sync = False, user_pk = None):
 
 
 @shared_task
-def send_contract_notifications(force_sent = False, rate_limted = True):
+def send_contract_notifications(force_sent=False, rate_limted=True):
     """Send notification about outstanding contracts that have pricing"""
       
     try:

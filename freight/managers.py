@@ -2,16 +2,17 @@ import logging
 import json
 from time import sleep
 
-from bravado.exception import *
+from bravado.exception import HTTPUnauthorized, HTTPForbidden
 
 from django.db import models, transaction
-from django.utils.timezone import now
 
 from esi.clients import esi_client_factory
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 
-from .app_settings import *
+from .app_settings import (
+    FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
+)
 from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 
 
@@ -23,11 +24,11 @@ class LocationManager(models.Manager):
     STATION_ID_END = 69999999
     
     def get_or_create_from_esi(
-            self, 
-            esi_client: object, 
-            location_id: int,
-            add_unknown: bool = True
-        ) -> list:
+        self, 
+        esi_client: object, 
+        location_id: int,
+        add_unknown: bool = True
+    ) -> list:
         """gets or creates location object with data fetched from ESI"""
         from .models import Location
         try:
@@ -42,13 +43,12 @@ class LocationManager(models.Manager):
         
         return location, created
 
-
     def update_or_create_from_esi(
-            self, 
-            esi_client: object, 
-            location_id: int, 
-            add_unknown: bool = True
-        ) -> list:
+        self, 
+        esi_client: object, 
+        location_id: int, 
+        add_unknown: bool = True
+    ) -> list:
         """updates or creates location object with data fetched from ESI"""
         from .models import Location
 
@@ -99,7 +99,7 @@ class LocationManager(models.Manager):
                 ))      
                 if add_unknown:
                     location, created = self.get_or_create(
-                        id = location_id,
+                        id=location_id,
                         defaults={
                             'name': 'Unknown structure {}'.format(location_id),
                             'category_id': Location.CATEGORY_STRUCTURE_ID
@@ -119,10 +119,10 @@ class LocationManager(models.Manager):
 class EveEntityManager(models.Manager):
     
     def get_or_create_from_esi(
-            self,             
-            id: int, 
-            esi_client: object = None
-        ) -> list:
+        self,             
+        id: int, 
+        esi_client: object = None
+    ) -> list:
         """gets or creates entity object with data fetched from ESI"""
         from .models import EveEntity
         try:
@@ -133,15 +133,13 @@ class EveEntityManager(models.Manager):
         
         return entity, created
 
-
     def update_or_create_from_esi(
-            self,             
-            id: int, 
-            esi_client: object = None
-        ) -> list:
+        self,             
+        id: int, 
+        esi_client: object = None
+    ) -> list:
         """updates or creates entity object with data fetched from ESI"""
-        from .models import EveEntity
-
+        
         addPrefix = make_logger_prefix(id)
         
         logger.info(addPrefix('Fetching entity from ESI'))
@@ -170,15 +168,13 @@ class EveEntityManager(models.Manager):
             ))
             raise ex
         
-       
         return entity, created
 
-
     def update_or_create_from_evecharacter(
-            self,             
-            character: EveCharacter,
-            category: str
-        ) -> list:
+        self,             
+        character: EveCharacter,
+        category: str
+    ) -> list:
         """updates or creates EveEntity object from an EveCharacter object"""
         from .models import EveEntity
         
@@ -259,7 +255,7 @@ class ContractManager(models.Manager):
                         acceptor_corporation = \
                             EveCorporationInfo.objects.create_corporation(
                                 corp_id=acceptor.corporation_id
-                        )
+                            )
                 elif entity.is_corporation:
                     acceptor = None
                     try:
@@ -270,7 +266,7 @@ class ContractManager(models.Manager):
                         acceptor_corporation = \
                             EveCorporationInfo.objects.create_corporation(
                                 corp_id=entity.id
-                        )
+                            )
                 else:
                     raise ValueError(
                         'Acceptor has invalid category: {}'.format(
@@ -351,7 +347,6 @@ class ContractManager(models.Manager):
         )
         return obj, created
 
-    
     def update_pricing(self):
         """Updates contracts with matching pricing"""
         from .models import Pricing, Contract
@@ -387,8 +382,7 @@ class ContractManager(models.Manager):
                     contract.issues = issues
                     contract.save()
 
-
-    def send_notifications(self, force_sent = False, rate_limted = True):
+    def send_notifications(self, force_sent=False, rate_limted=True):
         """Send notification about outstanding contracts that have pricing"""
         from .models import Contract
 
@@ -421,7 +415,8 @@ class ContractManager(models.Manager):
                         logger.debug(add_tag(
                             'contract {} has expired'.format(                                    
                                 contract.contract_id
-                        )))
+                            )
+                        ))
         else:
             logger.debug(add_tag('FREIGHT_DISCORD_WEBHOOK_URL not configured'))
 
@@ -443,12 +438,14 @@ class ContractManager(models.Manager):
                         logger.debug(add_tag(
                             'contract {} has expired'.format(                                    
                                 contract.contract_id
-                        )))
+                            )
+                        ))
                     elif contract.has_stale_status:
                         logger.debug(add_tag(
                             'contract {} has stale status'.format(                                    
                                 contract.contract_id
-                        )))
+                            )
+                        ))
                     else:
                         contract.send_customer_notification(force_sent)
                         if rate_limted:

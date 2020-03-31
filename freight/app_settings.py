@@ -7,7 +7,8 @@ FREIGHT_DISCORD_WEBHOOK_URL = getattr(
     None
 )
 
-# Will be shown as "user name" instead of "Alliance Freight" for notifications if defined
+# Will be shown as "user name" instead of "Alliance Freight" 
+# for notifications if defined
 FREIGHT_DISCORD_AVATAR_NAME = getattr(
     settings, 
     'FREIGHT_DISCORD_AVATAR_NAME', 
@@ -82,8 +83,7 @@ FREIGHT_OPERATION_MODES = [
 ]
 
 if (hasattr(settings, 'FREIGHT_OPERATION_MODE') 
-    and settings.FREIGHT_OPERATION_MODE in \
-        [x[0] for x in FREIGHT_OPERATION_MODES]
+    and settings.FREIGHT_OPERATION_MODE in [x[0] for x in FREIGHT_OPERATION_MODES]
 ):
     FREIGHT_OPERATION_MODE = settings.FREIGHT_OPERATION_MODE
 else:

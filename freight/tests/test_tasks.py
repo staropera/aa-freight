@@ -2,29 +2,40 @@ import datetime
 import math
 from unittest.mock import Mock, patch
 
-from django.contrib.auth.models import User, Permission 
-from django.test import TestCase
-from django.urls import reverse
+from django.contrib.auth.models import User 
 from django.utils.timezone import now
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import EveCharacter
 from allianceauth.eveonline.providers import ObjectNotFound
 from allianceauth.authentication.models import CharacterOwnership
 from esi.models import Token
 from esi.errors import TokenExpiredError, TokenInvalidError
 
-from . import set_logger, TempDisconnectPricingSaveHandler
+from . import TempDisconnectPricingSaveHandler
 from .. import tasks
-from ..app_settings import *
-from ..models import *
-from .testdata import contracts_data, characters_data, create_locations,\
-    create_contract_handler_w_contracts, create_entities_from_characters
+from ..app_settings import (
+    FREIGHT_OPERATION_MODE_MY_CORPORATION, 
+    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+    FREIGHT_OPERATION_MODE_CORP_PUBLIC,
+    FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE,
+    FREIGHT_OPERATION_MODES
+)
+from .auth_utils_2 import AuthUtils2
+from ..models import Contract, ContractHandler, EveEntity, Location, Pricing
+from .testdata import (
+    contracts_data,
+    create_locations,
+    create_contract_handler_w_contracts, 
+    create_entities_from_characters
+)
+from ..utils import set_test_logger, NoSocketsTestCase
 
 
-logger = set_logger('freight.models', __file__)
+MODULE_PATH = 'freight.tasks'
+logger = set_test_logger(MODULE_PATH, __file__)
 
 
-class TestContractsSync(TestCase):
+class TestContractsSync(NoSocketsTestCase):
     
     def setUp(self):
 
@@ -34,15 +45,14 @@ class TestContractsSync(TestCase):
         self.character = EveCharacter.objects.get(character_id=90000001)
         
         self.alliance = EveEntity.objects.get(
-            id = self.character.alliance_id
+            id=self.character.alliance_id
         )
         self.corporation = EveEntity.objects.get(
-            id = self.character.corporation_id
+            id=self.character.corporation_id
         )
         self.user = User.objects.create_user(
             self.character.character_name,
-            'abc@example.com',
-            'password'
+            'abc@example.com', 'password'
         )
 
         self.main_ownership = CharacterOwnership.objects.create(
@@ -53,10 +63,9 @@ class TestContractsSync(TestCase):
 
         create_locations()
         
-
     # identify wrong operation mode
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_MY_CORPORATION
     )
     def test_run_wrong_operation_mode(self):
@@ -74,10 +83,9 @@ class TestContractsSync(TestCase):
             ContractHandler.ERROR_OPERATION_MODE_MISMATCH
         )
 
-
     # run without char    
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_MY_ALLIANCE
     )
     def test_run_no_sync_char(self):
@@ -94,26 +102,17 @@ class TestContractsSync(TestCase):
             ContractHandler.ERROR_NO_CHARACTER
         )
 
-    
     # test expired token
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_MY_ALLIANCE
     )
-    @patch('freight.tasks.Token')    
-    def test_run_manager_sync_expired_token(
-            self,             
-            mock_Token
-        ):                
-        
+    @patch(MODULE_PATH + '.Token')    
+    def test_run_manager_sync_expired_token(self, mock_Token):        
         mock_Token.objects.filter.side_effect = TokenExpiredError()        
-                        
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
+        AuthUtils2.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', self.user
+        )
         handler = ContractHandler.objects.create(
             organization=self.alliance,
             character=self.main_ownership,
@@ -129,26 +128,17 @@ class TestContractsSync(TestCase):
             ContractHandler.ERROR_TOKEN_EXPIRED            
         )
 
-    
     # test invalid token
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_MY_ALLIANCE
     )
-    @patch('freight.tasks.Token')
-    def test_run_manager_sync_invalid_token(
-            self,             
-            mock_Token
-        ):                
-        
-        mock_Token.objects.filter.side_effect = TokenInvalidError()        
-                        
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
+    @patch(MODULE_PATH + '.Token')
+    def test_run_manager_sync_invalid_token(self, mock_Token):
+        mock_Token.objects.filter.side_effect = TokenInvalidError()
+        AuthUtils2.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', self.user
+        )
         handler = ContractHandler.objects.create(
             organization=self.alliance,
             character=self.main_ownership,
@@ -165,23 +155,20 @@ class TestContractsSync(TestCase):
         )
 
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_MY_ALLIANCE
     )
-    @patch('freight.tasks.Token')    
+    @patch(MODULE_PATH + '.Token')    
     def test_run_manager_sync_no_valid_token(
-            self,             
-            mock_Token
-        ):                
+        self,             
+        mock_Token
+    ):        
+        mock_Token.objects.filter.return_value.require_scopes.return_value\
+            .require_valid.return_value.first.return_value = None
         
-        mock_Token.objects.filter.return_value.require_scopes.return_value.require_valid.return_value.first.return_value = None
-                        
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
+        AuthUtils2.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', self.user
+        )        
         handler = ContractHandler.objects.create(
             organization=self.alliance,
             character=self.main_ownership,
@@ -199,23 +186,22 @@ class TestContractsSync(TestCase):
 
     # exception occuring for one of the contracts    
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_MY_ALLIANCE
     )
     @patch(
-        'freight.tasks.Contract.objects.update_or_create_from_dict'
+        MODULE_PATH + '.Contract.objects.update_or_create_from_dict'
     )
-    @patch('freight.tasks.Token')
-    @patch('freight.tasks.send_contract_notifications')
-    @patch('freight.tasks.esi_client_factory')
+    @patch(MODULE_PATH + '.Token')
+    @patch(MODULE_PATH + '.send_contract_notifications')
+    @patch(MODULE_PATH + '.esi_client_factory')
     def test_sync_contract_fails(
-            self, 
-            mock_esi_client_factory, 
-            mock_send_contract_notifications,
-            mock_Token,
-            mock_Contracts_objects_update_or_create_from_dict
-        ):
-        
+        self, 
+        mock_esi_client_factory, 
+        mock_send_contract_notifications,
+        mock_Token,
+        mock_Contracts_objects_update_or_create_from_dict
+    ):        
         # create mocks
         def get_contracts_page(*args, **kwargs):
             """returns single page for operation.result(), first with header"""
@@ -240,10 +226,8 @@ class TestContractsSync(TestCase):
         ):            
             raise RuntimeError('Test exception')
             
-
         mock_Contracts_objects_update_or_create_from_dict\
-            .side_effect = \
-                func_Contracts_objects_update_or_create_from_dict
+            .side_effect = func_Contracts_objects_update_or_create_from_dict
 
         mock_client = Mock()
         mock_operation = Mock()
@@ -259,12 +243,9 @@ class TestContractsSync(TestCase):
             .require_valid.return_value\
             .first.return_value = Mock(spec=Token)
 
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
+        AuthUtils2.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', self.user
+        )
         handler = ContractHandler.objects.create(
             organization=self.alliance,
             character=self.main_ownership,
@@ -282,23 +263,21 @@ class TestContractsSync(TestCase):
             ContractHandler.ERROR_UNKNOWN            
         )
         
-
     # normal synch of new contracts, mode my_alliance
     # freight.tests.TestRunContractsSync.test_run_manager_sync_normal_my_alliance    
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_MY_ALLIANCE
     )
-    @patch('freight.tasks.Token')
-    @patch('freight.tasks.send_contract_notifications')
-    @patch('freight.tasks.esi_client_factory')
+    @patch(MODULE_PATH + '.Token')
+    @patch(MODULE_PATH + '.send_contract_notifications')
+    @patch(MODULE_PATH + '.esi_client_factory')
     def test_sync_my_alliance_contracts_only(
-            self, 
-            mock_esi_client_factory, 
-            mock_send_contract_notifications,
-            mock_Token
-        ):
-        
+        self, 
+        mock_esi_client_factory, 
+        mock_send_contract_notifications,
+        mock_Token
+    ):        
         # create mocks
         def get_contracts_page(*args, **kwargs):
             """returns single page for operation.result(), first with header"""
@@ -328,12 +307,9 @@ class TestContractsSync(TestCase):
             .require_valid.return_value\
             .first.return_value = Mock(spec=Token)
 
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
+        AuthUtils2.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', self.user
+        )
         handler = ContractHandler.objects.create(
             organization=self.alliance,
             character=self.main_ownership,
@@ -357,9 +333,9 @@ class TestContractsSync(TestCase):
         # should only contain the right contracts
         contract_ids = [
             x['contract_id'] 
-            for x in Contract.objects\
-                .filter(status__exact=Contract.STATUS_OUTSTANDING)\
-                .values('contract_id')
+            for x in Contract.objects
+            .filter(status__exact=Contract.STATUS_OUTSTANDING)
+            .values('contract_id')
         ]
         self.assertCountEqual(
             contract_ids,
@@ -368,18 +344,18 @@ class TestContractsSync(TestCase):
 
     # normal synch of new contracts, mode my_corporation
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE',
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE',
         FREIGHT_OPERATION_MODE_MY_CORPORATION
     )
-    @patch('freight.tasks.Token')
-    @patch('freight.tasks.send_contract_notifications')
-    @patch('freight.tasks.esi_client_factory')
+    @patch(MODULE_PATH + '.Token')
+    @patch(MODULE_PATH + '.send_contract_notifications')
+    @patch(MODULE_PATH + '.esi_client_factory')
     def test_sync_my_corporation_contracts_only(
-            self, 
-            mock_esi_client_factory, 
-            mock_send_contract_notifications,
-            mock_Token
-        ):
+        self, 
+        mock_esi_client_factory, 
+        mock_send_contract_notifications,
+        mock_Token
+    ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
             """returns single page for operation.result(), first with header"""
@@ -409,12 +385,9 @@ class TestContractsSync(TestCase):
             .require_valid.return_value\
             .first.return_value = Mock(spec=Token)
 
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
+        AuthUtils2.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', self.user
+        )
         handler = ContractHandler.objects.create(
             organization=self.corporation,
             character=self.main_ownership,
@@ -438,9 +411,9 @@ class TestContractsSync(TestCase):
         # should only contain the right contracts
         contract_ids = [
             x['contract_id'] 
-            for x in Contract.objects\
-                .filter(status__exact=Contract.STATUS_OUTSTANDING)\
-                .values('contract_id')
+            for x in Contract.objects
+            .filter(status__exact=Contract.STATUS_OUTSTANDING)
+            .values('contract_id')
         ]
         self.assertCountEqual(
             contract_ids,
@@ -455,18 +428,18 @@ class TestContractsSync(TestCase):
 
     # normal synch of new contracts, mode my_corporation
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
     )
-    @patch('freight.tasks.Token')
-    @patch('freight.tasks.send_contract_notifications')
-    @patch('freight.tasks.esi_client_factory')
+    @patch(MODULE_PATH + '.Token')
+    @patch(MODULE_PATH + '.send_contract_notifications')
+    @patch(MODULE_PATH + '.esi_client_factory')
     def test_sync_corp_in_alliance_contracts_only(
-            self, 
-            mock_esi_client_factory, 
-            mock_send_contract_notifications,
-            mock_Token
-        ):
+        self, 
+        mock_esi_client_factory, 
+        mock_send_contract_notifications,
+        mock_Token
+    ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
             """returns single page for operation.result(), first with header"""
@@ -496,12 +469,9 @@ class TestContractsSync(TestCase):
             .require_valid.return_value\
             .first.return_value = Mock(spec=Token)    
 
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
+        AuthUtils2.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', self.user
+        )
         handler = ContractHandler.objects.create(
             organization=self.corporation,
             character=self.main_ownership,
@@ -525,9 +495,9 @@ class TestContractsSync(TestCase):
         # should only contain the right contracts
         contract_ids = [
             x['contract_id'] 
-            for x in Contract.objects\
-                .filter(status__exact=Contract.STATUS_OUTSTANDING)\
-                .values('contract_id')
+            for x in Contract.objects
+            .filter(status__exact=Contract.STATUS_OUTSTANDING)
+            .values('contract_id')
         ]
         self.assertCountEqual(
             contract_ids,
@@ -543,10 +513,10 @@ class TestContractsSync(TestCase):
 
     # normal synch of new contracts, mode corp_public
     @patch(
-        'freight.tasks.FREIGHT_OPERATION_MODE', 
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
         FREIGHT_OPERATION_MODE_CORP_PUBLIC
     )    
-    @patch('freight.tasks.Token')
+    @patch(MODULE_PATH + '.Token')
     @patch(
         'freight.managers.EveCorporationInfo.objects.create_corporation', 
         side_effect=ObjectNotFound(9999999, 'corporation')
@@ -555,16 +525,16 @@ class TestContractsSync(TestCase):
         'freight.managers.EveCharacter.objects.create_character', 
         side_effect=ObjectNotFound(9999999, 'character')
     )
-    @patch('freight.tasks.send_contract_notifications')
-    @patch('freight.tasks.esi_client_factory')
+    @patch(MODULE_PATH + '.send_contract_notifications')
+    @patch(MODULE_PATH + '.esi_client_factory')
     def test_sync_corp_public_contracts_only(
-            self, 
-            mock_esi_client_factory, 
-            mock_send_contract_notifications,
-            mock_EveCharacter_objects_create_character,
-            mock_EveCorporationInfo_objects_create_corporation,
-            mock_Token
-        ):
+        self, 
+        mock_esi_client_factory, 
+        mock_send_contract_notifications,
+        mock_EveCharacter_objects_create_character,
+        mock_EveCorporationInfo_objects_create_corporation,
+        mock_Token
+    ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
             """returns single page for operation.result(), first with header"""
@@ -594,12 +564,9 @@ class TestContractsSync(TestCase):
             .require_valid.return_value\
             .first.return_value = Mock(spec=Token)  
 
-        # create test data
-        p = Permission.objects.filter(            
-            codename='setup_contract_handler'
-        ).first()
-        self.user.user_permissions.add(p)
-        self.user.save()
+        AuthUtils2.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', self.user
+        )
         handler = ContractHandler.objects.create(
             organization=self.corporation,
             character=self.main_ownership,
@@ -623,9 +590,9 @@ class TestContractsSync(TestCase):
         # should only contain the right contracts
         contract_ids = [
             x['contract_id'] 
-            for x in Contract.objects\
-                .filter(status__exact=Contract.STATUS_OUTSTANDING)\
-                .values('contract_id')
+            for x in Contract.objects
+            .filter(status__exact=Contract.STATUS_OUTSTANDING)
+            .values('contract_id')
         ]
         self.assertCountEqual(
             contract_ids,
@@ -683,9 +650,12 @@ class TestContractsSync(TestCase):
 
     """
     # freight.tests.TestRunContractsSync.test_statistics_calculation
-    @patch('freight.tasks.FREIGHT_OPERATION_MODE', FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE)
-    @patch('freight.tasks.send_contract_notifications')
-    @patch('freight.tasks.esi_client_factory')
+    @patch(
+        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
+        FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
+    )
+    @patch(MODULE_PATH + '.send_contract_notifications')
+    @patch(MODULE_PATH + '.esi_client_factory')
     def test_statistics_calculation(
             self, 
             mock_esi_client_factory, 
@@ -752,7 +722,7 @@ class TestContractsSync(TestCase):
     """
 
 
-class TestNotifications(TestCase):
+class TestNotifications(NoSocketsTestCase):
           
     def setUp(self):
 
@@ -762,7 +732,7 @@ class TestNotifications(TestCase):
         jita = Location.objects.get(id=60003760)
         amamake = Location.objects.get(id=1022167642188)        
         with TempDisconnectPricingSaveHandler():
-            pricing = Pricing.objects.create(
+            Pricing.objects.create(
                 start_location=jita,
                 end_location=amamake,
                 price_base=500000000
@@ -770,48 +740,38 @@ class TestNotifications(TestCase):
                 
         Contract.objects.update_pricing() 
 
-
-    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.Webhook.execute', autospec=True)
-    def test_send_pilot_notifications_normal(
-        self, 
-        mock_webhook_execute
-    ):        
+    def test_send_pilot_notifications_normal(self, mock_webhook_execute):        
         logger.debug('test_send_pilot_notifications_normal - start')
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
         self.assertEqual(mock_webhook_execute.call_count, 8)
         logger.debug('test_send_pilot_notifications_normal - complete')
 
-
-    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
     @patch('freight.models.Webhook.execute', autospec=True)
-    def test_send_customer_notifications_normal(
-        self, 
-        mock_webhook_execute
-    ):        
+    def test_send_customer_notifications_normal(self, mock_webhook_execute):        
         logger.debug('test_send_customer_notifications_normal - start')
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
         self.assertEqual(mock_webhook_execute.call_count, 12)
         logger.debug('test_send_customer_notifications_normal - complete')
 
-    
-    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_dont_send_pilot_notifications_for_expired_contracts(
-        self, 
-        mock_webhook_execute
+        self, mock_webhook_execute
     ):        
         x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
         Contract.objects.all().exclude(pk=x.pk).delete()
@@ -820,16 +780,14 @@ class TestNotifications(TestCase):
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
         self.assertEqual(mock_webhook_execute.call_count, 0)
 
-
-    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)    
+    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)    
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_dont_send_customer_notifications_for_expired_contracts(
-        self, 
-        mock_webhook_execute
+        self, mock_webhook_execute
     ):        
         x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
         Contract.objects.all().exclude(pk=x.pk).delete()
@@ -838,8 +796,7 @@ class TestNotifications(TestCase):
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
         self.assertEqual(mock_webhook_execute.call_count, 0)
 
-
-    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
@@ -860,16 +817,14 @@ class TestNotifications(TestCase):
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
-
-    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_send_customer_notifications_only_once_per_state(
-        self, 
-        mock_webhook_execute
+        self, mock_webhook_execute
     ):        
         x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
         Contract.objects.all().exclude(pk=x.pk).delete()        
@@ -882,18 +837,14 @@ class TestNotifications(TestCase):
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
-
-    @patch('freight.managers.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.Webhook.execute', autospec=True)
     def test_dont_send_any_notifications_when_no_url_if_set(
-        self, 
-        mock_webhook_execute
+        self, mock_webhook_execute
     ):                
         self.assertTrue(tasks.send_contract_notifications(rate_limted=False))
         self.assertEqual(mock_webhook_execute.call_count, 0)
-
-    

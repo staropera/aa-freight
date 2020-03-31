@@ -1,10 +1,15 @@
-from django import forms
 from django.contrib import admin
-from django.utils.html import format_html
 
 from . import tasks
 from .app_settings import FREIGHT_DEVELOPER_MODE
-from .models import *
+from .models import (
+    ContractHandler, 
+    Contract, 
+    ContractCustomerNotification, 
+    EveEntity, 
+    Location, 
+    Pricing
+)
 
 
 if FREIGHT_DEVELOPER_MODE:
@@ -14,7 +19,6 @@ if FREIGHT_DEVELOPER_MODE:
         list_filter = ('category_id',)
         search_fields = ['name']
         list_select_related = True
-
 
     @admin.register(EveEntity)
     class EveEntityAdmin(admin.ModelAdmin):
@@ -48,7 +52,7 @@ class ContractHandlerAdmin(admin.ModelAdmin):
     actions = ('send_notifications', 'start_sync', 'update_pricing')
 
     if not FREIGHT_DEVELOPER_MODE:            
-        readonly_fields=(
+        readonly_fields = (
             'organization', 
             'character', 
             'operation_mode', 
@@ -56,7 +60,6 @@ class ContractHandlerAdmin(admin.ModelAdmin):
             'last_sync', 
             'last_error', 
         )
-
 
     def start_sync(self, request, queryset):
                         
@@ -105,7 +108,6 @@ class ContractHandlerAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
-    
 
 @admin.register(Contract)
 class ContractAdmin(admin.ModelAdmin):
@@ -131,12 +133,13 @@ class ContractAdmin(admin.ModelAdmin):
     pilots_notified.boolean = True
 
     def customer_notified(self, contract):
-        return ', '.join(sorted([
+        return ', '.join(
+            sorted([
                 x.status 
-                for x in contract.contractcustomernotification_set\
-                    .all()
+                for x in contract.contractcustomernotification_set.all()
             ], reverse=True
-        ))
+            )
+        )
 
     actions = ['send_pilots_notification', 'send_customer_notification']
 

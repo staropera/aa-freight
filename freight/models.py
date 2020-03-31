@@ -9,17 +9,25 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import Q
 from django.urls import reverse
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership, User
-from allianceauth.eveonline.models import EveAllianceInfo, \
-    EveCorporationInfo
+from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.eveonline.models import EveCharacter
 
 from . import __title__
-from .app_settings import *
+from .app_settings import (
+    FREIGHT_FULL_ROUTE_NAMES, 
+    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+    FREIGHT_OPERATION_MODES,
+    FREIGHT_OPERATION_MODE_MY_CORPORATION,
+    FREIGHT_HOURS_UNTIL_STALE_STATUS,
+    FREIGHT_DISCORD_WEBHOOK_URL,
+    FREIGHT_DISCORD_DISABLE_BRANDING,
+    FREIGHT_DISCORD_MENTIONS,
+    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
+)
 from .managers import LocationManager, EveEntityManager, ContractManager
 from .utils import LoggerAddTag, DATETIME_FORMAT, make_logger_prefix,\
     get_site_base_url
@@ -58,8 +66,8 @@ class Location(models.Model):
     id = models.BigIntegerField(
         primary_key=True,
         validators=[MinValueValidator(0)],
-        help_text='Eve Online location ID, ' \
-            + 'either item ID for stations or structure ID for structures'
+        help_text='Eve Online location ID, ' 
+        'either item ID for stations or structure ID for structures'
     )
     name = models.CharField(
         max_length=100,
@@ -129,7 +137,8 @@ class Pricing(models.Model):
     )    
     is_bidirectional = models.BooleanField(
         default=True, 
-        help_text='Whether this pricing is valid for contracts in either direction or only the one specified'
+        help_text='Whether this pricing is valid for contracts '
+        'in either direction or only the one specified'
     )
     is_active = models.BooleanField(
         default=True, 
@@ -229,10 +238,10 @@ class Pricing(models.Model):
             end_name = self.end_location.solar_system_name
             
         route_name = '{} {} {}'.format(
-                start_name,
-                '<->' if self.is_bidirectional else '->',
-                end_name
-            )
+            start_name,
+            '<->' if self.is_bidirectional else '->',
+            end_name
+        )
         return route_name
     
     def price_per_volume_modifier(self):
@@ -276,32 +285,38 @@ class Pricing(models.Model):
 
     def requires_volume(self) -> bool:
         """whether this pricing required volume to be specified"""
-        return ((
+        return (
+            (
                 self.price_per_volume is not None 
                 and self.price_per_volume != 0
             )   
             or (
                 self.volume_min is not None
                 and self.volume_min != 0
-            ))
+            )
+        )
 
     def requires_collateral(self) -> bool:
         """whether this pricing required collateral to be specified"""
-        return ((
+        return (
+            (
                 self.price_per_collateral_percent is not None
                 and self.price_per_collateral_percent != 0
             )
             or (
                 self.collateral_min is not None
                 and self.collateral_min != 0
-            ))
+            )
+        )
 
     def is_fix_price(self) -> bool:
         """whether this pricing is a fix price"""
-        return (self.price_base is not None 
+        return (
+            self.price_base is not None 
             and self.price_min is None
             and self.price_per_volume is None
-            and self.price_per_collateral_percent is None)
+            and self.price_per_collateral_percent is None
+        )
 
     def clean(self):
         if (self.price_base is None
@@ -313,13 +328,13 @@ class Pricing(models.Model):
             )
 
         if self.start_location_id and self.end_location_id:
-            if (Pricing.objects\
-                    .filter(
-                        start_location=self.end_location, 
-                        end_location=self.start_location,
-                        is_bidirectional=True
-                    )\
-                    .exists()
+            if (Pricing.objects
+                .filter(
+                    start_location=self.end_location, 
+                    end_location=self.start_location,
+                    is_bidirectional=True
+                )
+                .exists()
                 and self.is_bidirectional
             ):
                 raise ValidationError(
@@ -329,13 +344,13 @@ class Pricing(models.Model):
                     'non-bidirectional.'
                 ) 
                 
-            if (Pricing.objects\
-                    .filter(
-                        start_location=self.end_location, 
-                        end_location=self.start_location,
-                        is_bidirectional=False
-                    )\
-                    .exists()
+            if (Pricing.objects
+                .filter(
+                    start_location=self.end_location, 
+                    end_location=self.start_location,
+                    is_bidirectional=False
+                )
+                .exists()
                 and self.is_bidirectional
             ):
                 raise ValidationError(
@@ -374,16 +389,18 @@ class Pricing(models.Model):
             if not self.price_per_collateral_percent \
             else self.price_per_collateral_percent
 
-        return max(price_min, (price_base
+        return max(price_min, (
+            price_base
             + volume * price_per_volume
-            + collateral  * (price_per_collateral_percent / 100)))
+            + collateral * (price_per_collateral_percent / 100))
+        )
 
     def get_contract_price_check_issues(            
-            self,
-            volume: float,
-            collateral: float,
-            reward: float = None
-        ) -> list:
+        self,
+        volume: float,
+        collateral: float,
+        reward: float = None
+    ) -> list:
         """returns list of validation error messages or none if ok"""
         
         if volume and volume < 0:
@@ -396,28 +413,47 @@ class Pricing(models.Model):
         issues = list()
         
         if volume is not None and self.volume_min and volume < self.volume_min:
-            issues.append('below the minimum required volume of '
-                + '{:,.0f} m3'.format(self.volume_min))
+            issues.append(
+                'below the minimum required volume of {:,.0f} m3'.format(
+                    self.volume_min
+                )
+            )
                 
         if volume is not None and self.volume_max and volume > self.volume_max:
-            issues.append('exceeds the maximum allowed volume of '
-                + '{:,.0f} m3'.format(self.volume_max))
+            issues.append(
+                'exceeds the maximum allowed volume of {:,.0f} m3'.format(
+                    self.volume_max
+                )
+            )
         
-        if collateral is not None and self.collateral_max and collateral > self.collateral_max:
-            issues.append('exceeds the maximum allowed collateral of '
-                + '{:,.0f} ISK'.format(self.collateral_max))
+        if (collateral is not None 
+            and self.collateral_max 
+            and collateral > self.collateral_max
+        ):
+            issues.append(
+                'exceeds the maximum allowed collateral of {:,.0f} ISK'.format(
+                    self.collateral_max
+                )
+            )
         
-        if collateral is not None and self.collateral_min and collateral < self.collateral_min:
-            issues.append('below the minimum required collateral of '
-                + '{:,.0f} ISK'.format(self.collateral_min))
+        if (collateral is not None 
+            and self.collateral_min 
+            and collateral < self.collateral_min
+        ):
+            issues.append(
+                'below the minimum required collateral of {:,.0f} ISK'.format(
+                    self.collateral_min
+                )
+            )
 
         if reward is not None:
-            calculated_price = self.get_calculated_price(
-                volume, collateral
-            )
+            calculated_price = self.get_calculated_price(volume, collateral)
             if reward < calculated_price:
-                issues.append('reward is below the calculated price of '
-                    + '{:,.0f} ISK'.format(calculated_price))
+                issues.append(
+                    'reward is below the calculated price of {:,.0f} ISK'.format(
+                        calculated_price
+                    )
+                )
 
         if len(issues) == 0:
             return None
@@ -514,7 +550,10 @@ class ContractHandler(models.Model):
         (ERROR_INSUFFICIENT_PERMISSIONS, 'Insufficient permissions'),
         (ERROR_NO_CHARACTER, 'No character set for fetching alliance contacts'),
         (ERROR_ESI_UNAVAILABLE, 'ESI API is currently unavailable'),
-        (ERROR_OPERATION_MODE_MISMATCH, 'Operaton mode does not match with current setting'),
+        (
+            ERROR_OPERATION_MODE_MISMATCH, 
+            'Operaton mode does not match with current setting'
+        ),
         (ERROR_UNKNOWN, 'Unknown error'),
     ]
   
@@ -539,8 +578,9 @@ class ContractHandler(models.Model):
         default=None,
         null=True,
         blank=True,        
-        help_text=\
+        help_text=(
             'global modifier for price per volume in percent, e.g. 2.5 = +2.5%'
+        )
     )
     version_hash = models.CharField(
         max_length=32, 
@@ -610,7 +650,6 @@ class ContractHandler(models.Model):
 
         return 'Private ({}) {}'. format(self.organization.name, extra_text)
 
-    
     class Meta:
         verbose_name_plural = verbose_name = 'Contract Handler'        
 
@@ -647,7 +686,7 @@ class Contract(models.Model):
         STATUS_FAILED
     ]
 
-    EMBED_COLOR_PASSED =  0x008000
+    EMBED_COLOR_PASSED = 0x008000
     EMBED_COLOR_FAILED = 0xFF0000                
 
     handler = models.ForeignKey(
@@ -777,7 +816,7 @@ class Contract(models.Model):
     def hours_issued_2_completed(self) -> float:
         if self.date_completed:
             td = (self.date_completed - self.date_issued)
-            return td.days * 24 + (td.seconds / 3600 )
+            return td.days * 24 + (td.seconds / 3600)
         else:
             return None
 
@@ -910,9 +949,12 @@ class Contract(models.Model):
                 avatar_url=avatar_url
             )                                    
             with transaction.atomic():
-                logger.info(add_tag('Trying to sent pilot notification about '
-                    + 'contract {}'.format(self.contract_id) 
-                    + ' to {}'.format(FREIGHT_DISCORD_WEBHOOK_URL)))
+                logger.info(add_tag(
+                    'Trying to sent pilot notification about '
+                    'contract {} to {}'.format(
+                        self.contract_id, FREIGHT_DISCORD_WEBHOOK_URL
+                    )
+                ))
                 if FREIGHT_DISCORD_MENTIONS:
                     contents = str(FREIGHT_DISCORD_MENTIONS) + ' '
                 else:
@@ -922,9 +964,11 @@ class Contract(models.Model):
                     get_site_base_url(), 
                     reverse('freight:contract_list_active')
                 )
-                contents += ('There is a new courier contract from {} ' 
+                contents += (
+                    'There is a new courier contract from {} ' 
                     'looking to be picked up '
-                    '[[show]({})]:').format(self.issuer, contract_list_url) 
+                    '[[show]({})]:'
+                ).format(self.issuer, contract_list_url)
                         
                 embed = self._generate_embed()
                 response = hook.execute(
@@ -935,17 +979,16 @@ class Contract(models.Model):
                 if response.status_ok:
                     self.date_notified = now()
                     self.save()
-                    success = True
                 else:
                     logger.warn(add_tag(
                         'Failed to send message. HTTP code: {}'.format(
                             response.status_code
-                    )))
+                        )
+                    ))
         else:
             logger.debug(add_tag('FREIGHT_DISCORD_WEBHOOK_URL not configured'))
 
-
-    def send_customer_notification(self, force_sent = False):
+    def send_customer_notification(self, force_sent=False):
         """sends customer notification about this contract to Discord
         force_sent: send notification even if one has already been sent
         """
@@ -957,11 +1000,15 @@ class Contract(models.Model):
             
             status_to_report = None
             for status in self.STATUS_FOR_CUSTOMER_NOTIFICATION:
-                if self.status == status \
-                    and (force_sent 
-                        or not self.contractcustomernotification_set\
-                            .filter(status__exact=status)
-                    ):
+                if (
+                    self.status == status 
+                    and (
+                        force_sent 
+                        or not self.contractcustomernotification_set.filter(
+                            status__exact=status
+                        )
+                    )
+                ):
                     status_to_report = status
                     break
 
@@ -1001,14 +1048,15 @@ class Contract(models.Model):
                     avatar_url=avatar_url
                 )                        
                 with transaction.atomic():            
-                    logger.info(add_tag('Trying to sent customer notification'
-                        + ' about contract {} on status {}'.format(
-                                self.contract_id, 
-                                status_to_report
-                            ) 
-                        + ' to {}'.format(
-                                FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
-                            )))
+                    logger.info(add_tag(
+                        'Trying to sent customer notification'
+                        ' about contract {} on status {}'
+                        ' to {}'.format(
+                            self.contract_id, 
+                            status_to_report,
+                            FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
+                        )
+                    ))
                     embed = self._generate_embed()
                                         
                     contents = '<@{}>\n'.format(
@@ -1024,8 +1072,10 @@ class Contract(models.Model):
                             for issue in issues:
                                 contents += '• {}\n'.format(issue)
                         else:                        
-                            contents += ' and it will be picked up by ' \
-                                    + 'one of our pilots shortly.'
+                            contents += (
+                                ' and it will be picked up by '
+                                'one of our pilots shortly.'
+                            )
                     
                     elif status_to_report == self.STATUS_IN_PROGRESS:
                         if self.acceptor_name:
@@ -1049,11 +1099,13 @@ class Contract(models.Model):
                     else:
                         raise NotImplementedError()
                     
-                    contents += ('\nClick [here]({}) to check the current '
+                    contents += (
+                        '\nClick [here]({}) to check the current '
                         'status of your contract.').format(urljoin(
                             get_site_base_url(), 
                             reverse('freight:contract_list_user')
-                    ))
+                        )
+                    )
 
                     response = hook.execute(
                         content=contents, 
@@ -1062,8 +1114,8 @@ class Contract(models.Model):
                     )
                     if response.status_ok:
                         ContractCustomerNotification.objects.update_or_create(
-                            contract = self,
-                            status = status_to_report,
+                            contract=self,
+                            status=status_to_report,
                             defaults={
                                 "date_notified": now()
                             }
@@ -1073,11 +1125,12 @@ class Contract(models.Model):
                         logger.warn(add_tag(
                             'Failed to send message. HTTP code: {}'.format(
                                 response.status_code
-                        )))
+                            )
+                        ))
         else:
             logger.debug(add_tag(
-                'FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured or ' \
-                    + 'Discord services not installed'
+                'FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured or '
+                'Discord services not installed'
             ))
         
 
