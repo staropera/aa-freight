@@ -94,15 +94,14 @@ class ContractHandlerAdmin(admin.ModelAdmin):
     send_notifications.short_description = \
         "Send notifications for outstanding contracts"
 
-    def update_pricing(self, request, queryset):
-                        
-        for obj in queryset:            
-            tasks.update_contracts_pricing.delay()            
-            self.message_user(
-                request, 
-                'Started updating pricing releation for all contracts'
-            )
-    
+    def update_pricing(self, request, queryset):    
+        del queryset
+        tasks.update_contracts_pricing.delay()            
+        self.message_user(
+            request, 
+            'Started updating pricing relations for all contracts'
+        )
+
     update_pricing.short_description = "Update pricing info for all contracts"
     
     def has_add_permission(self, request):

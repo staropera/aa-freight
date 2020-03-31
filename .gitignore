@@ -15,3 +15,5 @@ announce_release.py
 htmlcov/
 contracts_raw.json
 todos.md
+.mypy_cache
+

@@ -5,14 +5,15 @@ import os
 from random import randrange
 from unittest.mock import Mock
 
-from django.contrib.auth.models import User, Permission 
+from django.contrib.auth.models import User
 from django.utils.timezone import now
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.services.modules.discord.models import DiscordUser
 
-from ...models import *
+from ..auth_utils_2 import AuthUtils2
+from ...models import Contract, ContractHandler, Location, EveEntity
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
     inspect.currentframe()
@@ -28,6 +29,7 @@ def _load_structures_data() -> list:
         data = json.load(f)
 
     return data
+
 
 def _load_characters_data() -> list:
     with open(currentdir + '/characters.json', 'r', encoding='utf-8') as f:
@@ -137,6 +139,7 @@ def create_entities_from_characters():
                 }
             )
 
+
 def create_contract_handler_w_contracts(
     selected_contract_ids: list = None
 ):
@@ -147,24 +150,14 @@ def create_contract_handler_w_contracts(
     # 1 user
     my_character = EveCharacter.objects.get(character_id=90000001)
     
-    my_organization = EveEntity.objects.get(
-        id = my_character.alliance_id
-    )
+    my_organization = EveEntity.objects.get(id=my_character.alliance_id)
     
     my_user = User.objects.create_user(
         my_character.character_name,
         'abc@example.com',
         'password'
-    )
-
-    # user needs basic permission to access the app
-    p = Permission.objects.get(
-        codename='basic_access', 
-        content_type__app_label='freight'
-    )
-    my_user.user_permissions.add(p)
-    my_user.save()
-
+    )    
+    AuthUtils2.add_permission_to_user_by_name('freight.basic_access', my_user)
     my_main_ownership = CharacterOwnership.objects.create(
         character=my_character,
         owner_hash='x1',

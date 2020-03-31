@@ -350,3 +350,68 @@ def get_site_base_url() -> str:
             base_url = match.group(1)
     
     return base_url
+
+
+def dt_eveformat(dt: object) -> str:
+    """converts a datetime to a string in eve format
+    e.g. '2019-06-25T19:04:44'
+    """
+    from datetime import datetime
+
+    dt2 = datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+    return dt2.isoformat()
+
+
+def add_bs_label_html(text: str, label: str) -> str:
+    """create Bootstrap label and return HTML"""
+    return format_html(
+        '<div class="label label-{}">{}</div>', label, text
+    )
+
+
+def create_link_html(url: str, label: str, new_window: bool = True) -> str:
+    """create html link and return HTML"""
+    return format_html(
+        '<a href="{}"{}>{}</a>',             
+        url,
+        mark_safe(' target="_blank"') if new_window else '',
+        label
+    )
+
+
+def create_bs_glyph_html(glyph_name: str) -> str:
+    return format_html(
+        '<span class="glyphicon glyphicon-{}"></span>', glyph_name.lower()
+    )
+
+
+def create_bs_glyph_2_html(glyph_name, tooltip_text=None, color='initial'):
+    if tooltip_text:
+        tooltip_html = mark_safe(
+            'aria-hidden="true" data-toggle="tooltip" data-placement="top" '
+            'title="{}"'.format(tooltip_text)
+        )
+    else:
+        tooltip_html = ''
+    return format_html(
+        '<span class="glyphicon glyphicon-{}"'
+        ' style="color:{};"{}></span>'.format(
+            glyph_name.lower(), color, tooltip_html
+        )
+    )
+
+
+def create_bs_button_html(
+    url: str, 
+    glyph_name: str, 
+    button_type: str, 
+    disabled: bool = False
+) -> str:
+    """create BS botton and return HTML"""
+    return format_html(
+        '<a href="{}" class="btn btn-{}"{}>{}</a>',
+        url,
+        button_type,
+        mark_safe(' disabled="disabled"') if disabled else '',
+        create_bs_glyph_html(glyph_name)
+    )

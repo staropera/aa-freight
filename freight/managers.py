@@ -73,7 +73,7 @@ class LocationManager(models.Manager):
                 ) 
             except Exception as ex:
                 logger.exception(addPrefix(
-                    'Failed to load station: '.format(ex)
+                    'Failed to load station: {}'.format(ex)
                 ))
                 raise ex
             
@@ -109,7 +109,7 @@ class LocationManager(models.Manager):
                     raise ex
             except Exception as ex:
                 logger.exception(addPrefix(
-                    'Failed to load structure: '.format(ex)
+                    'Failed to load structure: {}'.format(ex)
                 ))      
                 raise ex
        
@@ -119,9 +119,7 @@ class LocationManager(models.Manager):
 class EveEntityManager(models.Manager):
     
     def get_or_create_from_esi(
-        self,             
-        id: int, 
-        esi_client: object = None
+        self, id: int, esi_client: object = None
     ) -> list:
         """gets or creates entity object with data fetched from ESI"""
         from .models import EveEntity
@@ -134,9 +132,7 @@ class EveEntityManager(models.Manager):
         return entity, created
 
     def update_or_create_from_esi(
-        self,             
-        id: int, 
-        esi_client: object = None
+        self, id: int, esi_client: object = None
     ) -> list:
         """updates or creates entity object with data fetched from ESI"""
         
@@ -164,7 +160,7 @@ class EveEntityManager(models.Manager):
             ) 
         except Exception as ex:
             logger.exception(addPrefix(
-                'Failed to load entity with id {} from ESI: '.format(id, ex)
+                'Failed to load entity with id {} from ESI: {}'.format(id, ex)
             ))
             raise ex
         
@@ -212,7 +208,7 @@ class EveEntityManager(models.Manager):
         
         except Exception as ex:
             logger.exception(addPrefix(
-                'Failed to convert to EveEntity: '.format(ex)
+                'Failed to convert to EveEntity: {}'.format(ex)
             ))
             raise ex
 

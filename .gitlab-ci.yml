@@ -6,19 +6,25 @@ before_script:
 - apt-get install redis-server -y
 - redis-server --daemonize yes
 - python -V
-- pip install wheel tox
-    
-test-3.5:
-  image: python:3.5-stretch
-  script:  
-  - tox -e py35
+- pip install tox
 
 test-3.6:
-  image: python:3.6-stretch
+  image: python:3.6-buster
   script:  
   - tox -e py36
 
 test-3.7:
-  image: python:3.7-stretch
+  image: python:3.7-buster
   script:  
   - tox -e py37
+
+test-3.8:
+  image: python:3.8-buster
+  script:  
+  - tox -e py38
+
+test-flake8:
+  image: python:3.8-buster
+  script:  
+  - tox -e flake8
+

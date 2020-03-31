@@ -22,7 +22,11 @@ from .app_settings import (
 )
 from .models import Contract, ContractHandler, EveEntity, Location, Pricing
 from .utils import (
-    get_swagger_spec_path, DATETIME_FORMAT, messages_plus, LoggerAddTag
+    get_swagger_spec_path, 
+    DATETIME_FORMAT, 
+    messages_plus, 
+    LoggerAddTag,
+    create_bs_glyph_2_html
 )
 
 
@@ -68,6 +72,12 @@ def contract_list_user(request):
 def contract_list_data(request, category):
     """returns list of outstanding contracts for contract_list AJAX call"""
     
+    def datetime_format(x):
+        return x.strftime(DATETIME_FORMAT) if x else None
+    
+    def character_format(x):
+        return x.character_name if x else None
+    
     if category == CONTRACT_LIST_ACTIVE:
         if not request.user.has_perm('freight.view_contracts'):
             raise RuntimeError('Insufficient permissions')
@@ -99,18 +109,7 @@ def contract_list_data(request, category):
     else:
         raise ValueError('Invalid category: {}'.format(category))
 
-    create_glyph_html = lambda glyph, tooltip_text, color = 'initial': \
-        ('<span class="glyphicon '
-        + 'glyphicon-'+ glyph + '" ' 
-        + 'aria-hidden="true" '
-        + 'style="color:' + color + ' ;" ' 
-        + 'data-toggle="tooltip" data-placement="top" '
-        + 'title="' + tooltip_text + '">'
-        + '</span>')
-
-    contracts_data = list()
-    datetime_format = lambda x: x.strftime(DATETIME_FORMAT) if x else None
-    character_format = lambda x: x.character_name if x else None
+    contracts_data = list()    
     for contract in contracts:                                        
         if contract.has_pricing:            
             route_name = contract.pricing.name
@@ -125,13 +124,13 @@ def contract_list_data(request, category):
                     route_name, 
                     '\n'.join(contract.get_issue_list())
                 )
-            pricing_check = create_glyph_html(glyph, tooltip_text, color)
+            pricing_check = create_bs_glyph_2_html(glyph, tooltip_text, color)
         else:
             route_name = ''
             pricing_check = '-'
         
         if contract.title:
-            notes = create_glyph_html('envelope', contract.title)
+            notes = create_bs_glyph_2_html('envelope', contract.title)
         else:
             notes = ''
 
@@ -313,8 +312,8 @@ def setup_contract_handler(request, token):
                 FREIGHT_OPERATION_MODE
             )
         )
-    
-        handler, created = ContractHandler.objects.update_or_create(
+
+        handler, _ = ContractHandler.objects.update_or_create(
             organization=organization,
             defaults={
                 'character': owned_char,
@@ -447,7 +446,7 @@ def statistics_routes_data(request):
                 distinct=True, 
                 filter=finished_contracts
             )
-        )
+    )   
 
     totals = list()
     for route in route_totals:

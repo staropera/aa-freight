@@ -5,6 +5,7 @@ import requests
 
 from django.test import TestCase
 from django.utils import translation
+from django.utils.html import mark_safe
 
 from ..utils import (
     clean_setting, 
@@ -15,7 +16,11 @@ from ..utils import (
     SocketAccessError,
     app_labels,
     add_no_wrap_html,
-    yesno_str
+    yesno_str,
+    create_bs_button_html,
+    create_bs_glyph_html,
+    create_link_html,    
+    add_bs_label_html
 )
 from ..utils import set_test_logger
 
@@ -235,3 +240,67 @@ class TestHtmlHelper(TestCase):
             self.assertEqual(yesno_str(None), 'no')
             self.assertEqual(yesno_str(123), 'no')
             self.assertEqual(yesno_str('xxxx'), 'no')
+
+    def test_add_bs_label_html(self):
+        expected = '<div class="label label-danger">Dummy</div>'
+        self.assertEqual(add_bs_label_html('Dummy', 'danger'), expected)
+
+    def test_create_link_html_default(self):
+        expected = (
+            '<a href="https://www.example.com" target="_blank">'
+            'Example Link</a>'
+        )
+        self.assertEqual(
+            create_link_html('https://www.example.com', 'Example Link'),
+            expected
+        )
+
+    def test_create_link_html(self):
+        expected = '<a href="https://www.example.com">Example Link</a>'
+        self.assertEqual(
+            create_link_html(
+                'https://www.example.com', 'Example Link', False
+            ),
+            expected
+        )
+        expected = (
+            '<a href="https://www.example.com">'
+            '<strong>Example Link</strong></a>'
+        )
+        self.assertEqual(
+            create_link_html(
+                'https://www.example.com', 
+                mark_safe('<strong>Example Link</strong>'),
+                False
+            ),
+            expected
+        )
+
+    def test_create_bs_glyph_html(self):
+        expected = '<span class="glyphicon glyphicon-example"></span>'
+        self.assertEqual(create_bs_glyph_html('example'), expected)
+
+    def test_create_bs_button_html_default(self):
+        expected = (
+            '<a href="https://www.example.com" class="btn btn-info">'
+            '<span class="glyphicon glyphicon-example"></span></a>'
+        )
+        self.assertEqual(
+            create_bs_button_html(
+                'https://www.example.com', 'example', 'info'
+            ),
+            expected
+        )
+
+    def test_create_bs_button_html_disabled(self):
+        expected = (
+            '<a href="https://www.example.com" class="btn btn-info"'
+            ' disabled="disabled">'
+            '<span class="glyphicon glyphicon-example"></span></a>'
+        )
+        self.assertEqual(
+            create_bs_button_html(
+                'https://www.example.com', 'example', 'info', True
+            ),
+            expected
+        )
