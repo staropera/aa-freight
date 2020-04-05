@@ -1,5 +1,5 @@
 import json
-import datetime
+from datetime import timedelta
 import logging
 from urllib.parse import urljoin
 
@@ -26,7 +26,8 @@ from .app_settings import (
     FREIGHT_DISCORD_WEBHOOK_URL,
     FREIGHT_DISCORD_DISABLE_BRANDING,
     FREIGHT_DISCORD_MENTIONS,
-    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
+    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
+    FREIGHT_CONTRACT_SYNC_GRACE_MINUTES
 )
 from .managers import LocationManager, EveEntityManager, ContractManager
 from .utils import LoggerAddTag, DATETIME_FORMAT, make_logger_prefix,\
@@ -636,6 +637,19 @@ class ContractHandler(models.Model):
             'esi-universe.read_structures.v1'
         ]
 
+    @property
+    def is_sync_ok(self) -> bool:
+        """returns true if they have been no errors
+        and last syncing occurred within alloted time
+        """
+        return (
+            self.last_error == self.ERROR_NONE
+            and self.last_sync 
+            and self.last_sync > (now() - timedelta(
+                minutes=FREIGHT_CONTRACT_SYNC_GRACE_MINUTES
+            ))
+        )
+
     def get_availability_text_for_contracts(self) -> str:
         """returns a text detailing the availability choice for this setup"""
         
@@ -835,7 +849,7 @@ class Contract(models.Model):
     @property
     def has_stale_status(self) -> bool:
         """whether the status of this contract has become stale"""
-        return self.date_latest < now() - datetime.timedelta(
+        return self.date_latest < now() - timedelta(
             hours=FREIGHT_HOURS_UNTIL_STALE_STATUS
         )
 

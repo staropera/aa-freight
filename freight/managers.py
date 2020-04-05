@@ -28,7 +28,7 @@ class LocationManager(models.Manager):
         esi_client: object, 
         location_id: int,
         add_unknown: bool = True
-    ) -> list:
+    ) -> tuple:
         """gets or creates location object with data fetched from ESI"""
         from .models import Location
         try:
@@ -48,7 +48,7 @@ class LocationManager(models.Manager):
         esi_client: object, 
         location_id: int, 
         add_unknown: bool = True
-    ) -> list:
+    ) -> tuple:
         """updates or creates location object with data fetched from ESI"""
         from .models import Location
 
@@ -120,7 +120,7 @@ class EveEntityManager(models.Manager):
     
     def get_or_create_from_esi(
         self, id: int, esi_client: object = None
-    ) -> list:
+    ) -> tuple:
         """gets or creates entity object with data fetched from ESI"""
         from .models import EveEntity
         try:
@@ -133,7 +133,7 @@ class EveEntityManager(models.Manager):
 
     def update_or_create_from_esi(
         self, id: int, esi_client: object = None
-    ) -> list:
+    ) -> tuple:
         """updates or creates entity object with data fetched from ESI"""
         
         addPrefix = make_logger_prefix(id)
@@ -170,7 +170,7 @@ class EveEntityManager(models.Manager):
         self,             
         character: EveCharacter,
         category: str
-    ) -> list:
+    ) -> tuple:
         """updates or creates EveEntity object from an EveCharacter object"""
         from .models import EveEntity
         

@@ -1,73 +1,56 @@
 from django.conf import settings
+from .utils import clean_setting
+
+# Sets the number minutes until a delayed sync will be recognized as error
+FREIGHT_CONTRACT_SYNC_GRACE_MINUTES = \
+    clean_setting('FREIGHT_CONTRACT_SYNC_GRACE_MINUTES', 30)
 
 # Webhook URL used for notifications if defined
-FREIGHT_DISCORD_WEBHOOK_URL = getattr(
-    settings, 
-    'FREIGHT_DISCORD_WEBHOOK_URL', 
-    None
-)
+FREIGHT_DISCORD_WEBHOOK_URL = \
+    clean_setting('FREIGHT_DISCORD_WEBHOOK_URL', None, required_type=str)
+
 
 # Will be shown as "user name" instead of "Alliance Freight" 
 # for notifications if defined
-FREIGHT_DISCORD_AVATAR_NAME = getattr(
-    settings, 
-    'FREIGHT_DISCORD_AVATAR_NAME', 
-    None
-)
+FREIGHT_DISCORD_AVATAR_NAME = \
+    clean_setting('FREIGHT_DISCORD_AVATAR_NAME', None, required_type=str)
+
 
 # when set true will no longer set name and avatar for webhooks
-FREIGHT_DISCORD_DISABLE_BRANDING = getattr(
-    settings, 
-    'FREIGHT_DISCORD_DISABLE_BRANDING', 
-    None
-)
+FREIGHT_DISCORD_DISABLE_BRANDING = \
+    clean_setting('FREIGHT_DISCORD_DISABLE_BRANDING', False)
 
-# Menions to appear upfront to any notification
+
+# Mentions to appear upfront to any notification
 # Typical values are: None, '@here' and '@everyone'.
-FREIGHT_DISCORD_MENTIONS = getattr(
-    settings, 
-    'FREIGHT_DISCORD_MENTIONS', 
-    None
-)
+FREIGHT_DISCORD_MENTIONS = \
+    clean_setting('FREIGHT_DISCORD_MENTIONS', None, required_type=str)
+
 
 # max days back considered when calculating statistics
-if (hasattr(settings, 'FREIGHT_STATISTICS_MAX_DAYS')
-    and settings.FREIGHT_STATISTICS_MAX_DAYS > 0
-):
-    FREIGHT_STATISTICS_MAX_DAYS = settings.FREIGHT_STATISTICS_MAX_DAYS
-else:
-    FREIGHT_STATISTICS_MAX_DAYS = 90
-
+FREIGHT_STATISTICS_MAX_DAYS = \
+    clean_setting('FREIGHT_STATISTICS_MAX_DAYS', 90, min_value=1)
 
 # Webhook URL used for notifications to customers if defined
-FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL = getattr(
-    settings, 
-    'FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 
-    None
-)
+FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL = \
+    clean_setting('FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None, required_type=str)
+
 
 # Enables features for developers, e.g. write access to all models in admin
-FREIGHT_DEVELOPER_MODE = getattr(
-    settings, 
-    'FREIGHT_DEVELOPER_MODE', 
-    False
-)
+FREIGHT_DEVELOPER_MODE = \
+    clean_setting('FREIGHT_DEVELOPER_MODE', False)
+
 
 # defines after how many hours a status becomes stale
 # a stale status will not be reported to customers
-if (hasattr(settings, 'FREIGHT_HOURS_UNTIL_STALE_STATUS')
-    and settings.FREIGHT_HOURS_UNTIL_STALE_STATUS > 0
-):
-    FREIGHT_HOURS_UNTIL_STALE_STATUS = settings.FREIGHT_HOURS_UNTIL_STALE_STATUS
-else:
-    FREIGHT_HOURS_UNTIL_STALE_STATUS = 24
+FREIGHT_HOURS_UNTIL_STALE_STATUS = \
+    clean_setting('FREIGHT_HOURS_UNTIL_STALE_STATUS', 24)
+
 
 # Whether to show full location names in the route dropdown of the calculator
-FREIGHT_FULL_ROUTE_NAMES = getattr(
-    settings, 
-    'FREIGHT_FULL_ROUTE_NAMES', 
-    False
-)
+FREIGHT_FULL_ROUTE_NAMES = \
+    clean_setting('FREIGHT_FULL_ROUTE_NAMES', False)
+
 
 # modes of operation for Alliance Freight
 FREIGHT_OPERATION_MODE_MY_ALLIANCE = 'my_alliance'

@@ -167,14 +167,16 @@ Here is a list of available settings for this app. They can be configured by add
 
 Name | Description | Default
 -- | -- | --
-`FREIGHT_DISCORD_DISABLE_BRANDING`| Turns off setting the name and avatar url for the webhook | Notifications will be posted by a bot called "Alliance Freight" with the logo of your organization as avatar image
+`FREIGHT_CONTRACT_SYNC_GRACE_MINUTES`| Sets the number minutes until a delayed sync will be recognized as error  | 30
+`FREIGHT_DISCORD_DISABLE_BRANDING`| Turns off setting the name and avatar url for the webhook. Notifications will be posted by a bot called "Alliance Freight" with the logo of your organization as avatar image | False
 `FREIGHT_DISCORD_MENTIONS`| Optional mention string put in front of every notification to create pings: Typical values are: `@here` or `@everyone`. You can also mention roles, however you will need to add the role ID for that. The format is: `<@&role_id>` and you can get the role ID by entering `_<@role_name>` in a channel on Discord. See [this link](https://www.reddit.com/r/discordapp/comments/580qib/how_do_i_mention_a_role_with_webhooks/) for details. | Empty
 `FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications for pilots should appear. | Deactivated
 `FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications for customers should appear. | Deactivated
+`FREIGHT_FULL_ROUTE_NAMES`| Show full name of locations in route, e.g on calculator drop down  | False
 `FREIGHT_HOURS_UNTIL_STALE_STATUS`| Defines after how many hours the status of a contract is considered to be stale. Customer notifications will not be sent for a contract status that has become stale. This settings also prevents the app from sending out customer notifications for old contracts. | 24
 `FREIGHT_OPERATION_MODE`| See section [Operation Mode](#operation-mode) for details.<br> Note that switching operation modes requires you to remove the existing contract handler with all its contracts and then setup a new contract handler | `'my_alliance'`
 `FREIGHT_STATISTICS_MAX_DAYS`| Sets the number of days that are considered for creating the statistics  | 90
-`FREIGHT_FULL_ROUTE_NAMES`| Show full name of locations in route, e.g on calculator drop down  | False
+
 
 ## Operation Mode
 

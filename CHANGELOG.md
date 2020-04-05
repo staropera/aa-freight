@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+### Added
+
+- Contract sync status now shown as traffic light on admin site (under Contract Handler)
+- New setting FREIGHT_CONTRACT_SYNC_GRACE_MINUTES determines at what delay a sync is reported as error
+
 ## [0.13.1] - 2020-02-02
 
 If you already have Pricings for both direction of the same route please make sure to set both to non-bidirectional. Otherwise those Pricings will not work probable.

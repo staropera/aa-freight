@@ -1,4 +1,4 @@
-import datetime
+from datetime import timedelta
 from unittest.mock import patch
 
 from dhooks_lite import Embed
@@ -527,7 +527,7 @@ class TestContract(NoSocketsTestCase):
             contract_id=1,
             collateral=0,
             date_issued=now(),
-            date_expired=now() + datetime.timedelta(days=5),
+            date_expired=now() + timedelta(days=5),
             days_to_complete=3,
             end_location=self.location_2,
             for_corporation=False,
@@ -542,7 +542,7 @@ class TestContract(NoSocketsTestCase):
     
     def test_hours_issued_2_completed(self):
         self.contract.date_completed = \
-            self.contract.date_issued + datetime.timedelta(hours=9)
+            self.contract.date_issued + timedelta(hours=9)
 
         self.assertEqual(
             self.contract.hours_issued_2_completed,
@@ -567,7 +567,7 @@ class TestContract(NoSocketsTestCase):
 
         # adding date_accepted to contract
         self.contract.date_accepted = \
-            self.contract.date_issued + datetime.timedelta(days=1)
+            self.contract.date_issued + timedelta(days=1)
         self.assertEqual(
             self.contract.date_accepted, 
             self.contract.date_latest
@@ -575,7 +575,7 @@ class TestContract(NoSocketsTestCase):
 
         # adding date_completed to contract
         self.contract.date_completed = \
-            self.contract.date_accepted + datetime.timedelta(days=1)
+            self.contract.date_accepted + timedelta(days=1)
         self.assertEqual(
             self.contract.date_completed, 
             self.contract.date_latest
@@ -589,7 +589,7 @@ class TestContract(NoSocketsTestCase):
 
         # date_issued is 30 hours ago
         self.contract.date_issued = \
-            self.contract.date_issued - datetime.timedelta(hours=30)
+            self.contract.date_issued - timedelta(hours=30)
         self.assertTrue(self.contract.has_stale_status)
 
     def test_task_update_pricing(self):
@@ -766,3 +766,26 @@ class TestContractHandler(NoSocketsTestCase):
             self.handler.get_availability_text_for_contracts(),
             'Private (Justice League) '
         )
+
+    @patch(MODULE_PATH + '.FREIGHT_CONTRACT_SYNC_GRACE_MINUTES', 30)
+    def test_is_sync_ok(self):        
+        # no errors and recent sync
+        self.handler.last_error = ContractHandler.ERROR_NONE
+        self.handler.last_sync = now()
+        self.assertTrue(self.handler.is_sync_ok)
+
+        # no errors and sync within grace period
+        self.handler.last_error = ContractHandler.ERROR_NONE
+        self.handler.last_sync = now() - timedelta(minutes=29)
+        self.assertTrue(self.handler.is_sync_ok)
+
+        # recent sync error 
+        self.handler.last_error = \
+            ContractHandler.ERROR_INSUFFICIENT_PERMISSIONS
+        self.handler.last_sync = now()
+        self.assertFalse(self.handler.is_sync_ok)
+        
+        # no error, but no sync within grace period
+        self.handler.last_error = ContractHandler.ERROR_NONE
+        self.handler.last_sync = now() - timedelta(minutes=31)
+        self.assertFalse(self.handler.is_sync_ok)

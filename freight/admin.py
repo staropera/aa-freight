@@ -48,8 +48,14 @@ class PricingAdmin(admin.ModelAdmin):
 
 @admin.register(ContractHandler)
 class ContractHandlerAdmin(admin.ModelAdmin):
-    list_display = ('organization', 'character', 'operation_mode', 'last_sync')
-    actions = ('send_notifications', 'start_sync', 'update_pricing')
+    list_display = (
+        'organization', 
+        'character', 
+        'operation_mode', 
+        'last_sync', 
+        '_is_sync_ok'
+    )
+    actions = ('start_sync', 'send_notifications', 'update_pricing')
 
     if not FREIGHT_DEVELOPER_MODE:            
         readonly_fields = (
@@ -60,6 +66,12 @@ class ContractHandlerAdmin(admin.ModelAdmin):
             'last_sync', 
             'last_error', 
         )
+
+    def _is_sync_ok(self, obj):
+        return obj.is_sync_ok
+            
+    _is_sync_ok.boolean = True
+    _is_sync_ok.short_description = 'sync ok'
 
     def start_sync(self, request, queryset):
                         
@@ -115,8 +127,8 @@ class ContractAdmin(admin.ModelAdmin):
         'status',
         'date_issued',
         'issuer',
-        'pilots_notified',
-        'customer_notified'
+        '_pilots_notified',
+        '_customer_notified'
     ]
     list_filter = (
         'status',
@@ -126,12 +138,14 @@ class ContractAdmin(admin.ModelAdmin):
 
     list_select_related = True
 
-    def pilots_notified(self, contract):
+    actions = ['send_pilots_notification', 'send_customer_notification']
+
+    def _pilots_notified(self, contract):
         return contract.date_notified is not None
 
-    pilots_notified.boolean = True
+    _pilots_notified.boolean = True
 
-    def customer_notified(self, contract):
+    def _customer_notified(self, contract):
         return ', '.join(
             sorted([
                 x.status 
@@ -139,9 +153,7 @@ class ContractAdmin(admin.ModelAdmin):
             ], reverse=True
             )
         )
-
-    actions = ['send_pilots_notification', 'send_customer_notification']
-
+    
     def send_pilots_notification(self, request, queryset):
                         
         for obj in queryset:            

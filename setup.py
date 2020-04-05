@@ -40,12 +40,13 @@ setup(
         'License :: OSI Approved :: MIT License',  # example license
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],    
+    python_requires='~=3.5',
     install_requires=install_requires,    
     extras_require={
         'testing': testing_extras
