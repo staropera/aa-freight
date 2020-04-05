@@ -1,19 +1,20 @@
-import logging
 import json
+import logging
 from time import sleep
 
 from bravado.exception import HTTPUnauthorized, HTTPForbidden
 
 from django.db import models, transaction
 
-from esi.clients import esi_client_factory
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 
 from .app_settings import (
-    FREIGHT_DISCORD_WEBHOOK_URL, FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
+    FREIGHT_DISCORD_WEBHOOK_URL, 
+    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,   
 )
-from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
+from .helpers import EsiSmartRequest
+from .utils import LoggerAddTag, make_logger_prefix
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -36,9 +37,7 @@ class LocationManager(models.Manager):
             created = False
         except Location.DoesNotExist:
             location, created = self.update_or_create_from_esi(
-                esi_client, 
-                location_id,
-                add_unknown
+                esi_client, location_id, add_unknown
             )
         
         return location, created
@@ -52,16 +51,20 @@ class LocationManager(models.Manager):
         """updates or creates location object with data fetched from ESI"""
         from .models import Location
 
-        addPrefix = make_logger_prefix(location_id)
+        add_prefix = make_logger_prefix(location_id)
 
-        if (location_id >= self.STATION_ID_START 
-                and location_id <= self.STATION_ID_END):
-            logger.info(addPrefix('Fetching station from ESI'))
-            try:
-                station = esi_client.Universe\
-                    .get_universe_stations_station_id(
-                        station_id=location_id
-                    ).result()
+        if (
+            location_id >= self.STATION_ID_START 
+            and location_id <= self.STATION_ID_END
+        ):
+            logger.info(add_prefix('Fetching station from ESI'))
+            try:                
+                station = EsiSmartRequest.fetch(
+                    'Universe.get_universe_stations_station_id',
+                    args={'station_id': location_id},
+                    esi_client=esi_client,
+                    logger_tag=add_prefix()
+                )
                 location, created = self.update_or_create(
                     id=location_id,
                     defaults={
@@ -72,18 +75,19 @@ class LocationManager(models.Manager):
                     }
                 ) 
             except Exception as ex:
-                logger.exception(addPrefix(
+                logger.exception(add_prefix(
                     'Failed to load station: {}'.format(ex)
                 ))
                 raise ex
             
-        else:
-            logger.info(addPrefix('Fetching structure from ESI'))
-            try:
-                structure = esi_client.Universe\
-                    .get_universe_structures_structure_id(
-                        structure_id=location_id
-                    ).result()            
+        else:            
+            try:                
+                structure = EsiSmartRequest.fetch(
+                    'Universe.get_universe_structures_structure_id',
+                    args={'structure_id': location_id},
+                    esi_client=esi_client,
+                    logger_tag=add_prefix()
+                )
                 location, created = self.update_or_create(
                     id=location_id,
                     defaults={
@@ -94,7 +98,7 @@ class LocationManager(models.Manager):
                     }
                 )      
             except (HTTPUnauthorized, HTTPForbidden) as ex:
-                logger.warn(addPrefix(
+                logger.warn(add_prefix(
                     'No access to this structure: {}'.format(ex)
                 ))      
                 if add_unknown:
@@ -108,7 +112,7 @@ class LocationManager(models.Manager):
                 else:
                     raise ex
             except Exception as ex:
-                logger.exception(addPrefix(
+                logger.exception(add_prefix(
                     'Failed to load structure: {}'.format(ex)
                 ))      
                 raise ex
@@ -118,35 +122,28 @@ class LocationManager(models.Manager):
 
 class EveEntityManager(models.Manager):
     
-    def get_or_create_from_esi(
-        self, id: int, esi_client: object = None
-    ) -> tuple:
+    def get_or_create_from_esi(self, id: int) -> tuple:
         """gets or creates entity object with data fetched from ESI"""
         from .models import EveEntity
         try:
             entity = self.get(id=id)
             created = False
         except EveEntity.DoesNotExist:
-            entity, created = self.update_or_create_from_esi(id, esi_client)
+            entity, created = self.update_or_create_from_esi(id)
         
         return entity, created
 
-    def update_or_create_from_esi(
-        self, id: int, esi_client: object = None
-    ) -> tuple:
+    def update_or_create_from_esi(self, id: int) -> tuple:
         """updates or creates entity object with data fetched from ESI"""
         
-        addPrefix = make_logger_prefix(id)
-        
-        logger.info(addPrefix('Fetching entity from ESI'))
-        try:
-            if not esi_client:
-                esi_client = esi_client_factory(
-                    spec_file=get_swagger_spec_path()
-                )
-            response = esi_client.Universe.post_universe_names(
-                ids=[id]
-            ).result()
+        add_prefix = make_logger_prefix(id)
+                
+        try:            
+            response = EsiSmartRequest.fetch(
+                esi_path='Universe.post_universe_names', 
+                args={'ids': [id]},
+                logger_tag=add_prefix()
+            )
             if len(response) != 1:
                 raise ObjectNotFound(id, 'unknown_type')
             else:
@@ -159,7 +156,7 @@ class EveEntityManager(models.Manager):
                 }
             ) 
         except Exception as ex:
-            logger.exception(addPrefix(
+            logger.exception(add_prefix(
                 'Failed to load entity with id {} from ESI: {}'.format(id, ex)
             ))
             raise ex
@@ -174,7 +171,7 @@ class EveEntityManager(models.Manager):
         """updates or creates EveEntity object from an EveCharacter object"""
         from .models import EveEntity
         
-        addPrefix = make_logger_prefix(character.character_id)
+        add_prefix = make_logger_prefix(character.character_id)
 
         try:            
             if category == EveEntity.CATEGORY_ALLIANCE:            
@@ -207,7 +204,7 @@ class EveEntityManager(models.Manager):
                 raise ValueError('Invalid category: {}'. format(category))
         
         except Exception as ex:
-            logger.exception(addPrefix(
+            logger.exception(add_prefix(
                 'Failed to convert to EveEntity: {}'.format(ex)
             ))
             raise ex
@@ -226,13 +223,12 @@ class ContractManager(models.Manager):
         """updates or creates a contract from given dict"""
         from .models import Contract, Location, EveEntity
         
-        addPrefix = make_logger_prefix(contract['contract_id'])
+        add_prefix = make_logger_prefix(contract['contract_id'])
 
         if int(contract['acceptor_id']) != 0:
             try:
                 entity, _ = EveEntity.objects.get_or_create_from_esi(
-                    contract['acceptor_id'],
-                    esi_client
+                    contract['acceptor_id']
                 )
                 if entity.is_character:
                     try:
@@ -271,7 +267,7 @@ class ContractManager(models.Manager):
                     )
 
             except Exception as ex:
-                logger.exception(addPrefix(
+                logger.exception(add_prefix(
                     'Failed to identify acceptor for this contract: {}'.format(
                         ex
                     )
@@ -308,12 +304,10 @@ class ContractManager(models.Manager):
         title = contract['title'] if 'title' in contract else None
 
         start_location, _ = Location.objects.get_or_create_from_esi(
-            esi_client,
-            contract['start_location_id']
+            esi_client, contract['start_location_id']
         )
         end_location, _ = Location.objects.get_or_create_from_esi(
-            esi_client,
-            contract['end_location_id']
+            esi_client, contract['end_location_id']
         )
         
         obj, created = Contract.objects.update_or_create(
@@ -379,7 +373,7 @@ class ContractManager(models.Manager):
                     contract.save()
 
     def send_notifications(self, force_sent=False, rate_limted=True):
-        """Send notification about outstanding contracts that have pricing"""
+        """Send notifications for outstanding contracts that have pricing"""
         from .models import Contract
 
         add_tag = make_logger_prefix('send_notifications')
@@ -387,9 +381,9 @@ class ContractManager(models.Manager):
 
         # send pilot notifications
         if FREIGHT_DISCORD_WEBHOOK_URL:
-            q = Contract.objects.filter(                
-                status__exact=Contract.STATUS_OUTSTANDING,                
-            ).exclude(pricing__exact=None)
+            q = Contract.objects\
+                .filter(status__exact=Contract.STATUS_OUTSTANDING)\
+                .exclude(pricing__exact=None)
 
             if not force_sent:
                 q = q.filter(date_notified__exact=None)
@@ -418,9 +412,9 @@ class ContractManager(models.Manager):
 
         # send customer notifications        
         if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
-            q = Contract.objects.filter(
-                status__in=Contract.STATUS_FOR_CUSTOMER_NOTIFICATION,
-            ).exclude(pricing__exact=None)
+            q = Contract.objects\
+                .filter(status__in=Contract.STATUS_FOR_CUSTOMER_NOTIFICATION)\
+                .exclude(pricing__exact=None)
             
             q = q.select_related()
 
@@ -432,7 +426,7 @@ class ContractManager(models.Manager):
                 for contract in q:
                     if contract.has_expired:
                         logger.debug(add_tag(
-                            'contract {} has expired'.format(                                    
+                            'contract {} has expired'.format(
                                 contract.contract_id
                             )
                         ))

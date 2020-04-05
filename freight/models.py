@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+import hashlib
 import logging
 from urllib.parse import urljoin
 
@@ -7,31 +8,47 @@ from dhooks_lite import Webhook, Embed, Thumbnail
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.urls import reverse
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership, User
-from allianceauth.eveonline.models import EveCorporationInfo
-from allianceauth.eveonline.models import EveCharacter
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.notifications import notify
+
+from esi.clients import esi_client_factory
+from esi.errors import TokenExpiredError, TokenInvalidError
+from esi.models import Token
 
 from . import __title__
 from .app_settings import (
-    FREIGHT_FULL_ROUTE_NAMES, 
-    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
-    FREIGHT_OPERATION_MODES,
-    FREIGHT_OPERATION_MODE_MY_CORPORATION,
+    FREIGHT_FULL_ROUTE_NAMES,             
     FREIGHT_HOURS_UNTIL_STALE_STATUS,
     FREIGHT_DISCORD_WEBHOOK_URL,
     FREIGHT_DISCORD_DISABLE_BRANDING,
     FREIGHT_DISCORD_MENTIONS,
     FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
-    FREIGHT_CONTRACT_SYNC_GRACE_MINUTES
+    FREIGHT_CONTRACT_SYNC_GRACE_MINUTES,
+    FREIGHT_OPERATION_MODE,
+    FREIGHT_OPERATION_MODES,
+    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+    FREIGHT_OPERATION_MODE_MY_CORPORATION,
+    FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE,
+    FREIGHT_OPERATION_MODE_CORP_PUBLIC
 )
-from .managers import LocationManager, EveEntityManager, ContractManager
-from .utils import LoggerAddTag, DATETIME_FORMAT, make_logger_prefix,\
-    get_site_base_url
+from .managers import (
+    ContractManager, EveEntityManager, LocationManager, 
+)
+from .helpers import EsiSmartRequest
+from .utils import (    
+    DATETIME_FORMAT,     
+    get_site_base_url, 
+    get_swagger_spec_path,
+    LoggerAddTag, 
+    make_logger_prefix,
+)
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -401,7 +418,8 @@ class Pricing(models.Model):
         )
 
     def get_contract_price_check_issues(            
-        self, volume: float, collateral: float, reward: float = None) -> list:
+        self, volume: float, collateral: float, reward: float = None
+    ) -> list:
         """returns list of validation error messages or none if ok"""
         
         if volume and volume < 0:
@@ -606,10 +624,10 @@ class ContractHandler(models.Model):
         return str(self.organization.name)
 
     def __repr__(self) -> str:
-        return '<{}({}): {}>'.format(
+        return '{}(pk={}, organization=\'{}\')'.format(
             self.__class__.__name__, 
-            self.id, 
-            str(self)
+            self.pk, 
+            str(self.organization.name)
         )
 
     @property
@@ -678,6 +696,235 @@ class ContractHandler(models.Model):
         self.last_error = error
         self.last_sync = now() 
         self.save()
+
+    def update_contracts_esi(self, force_sync=False, user=None) -> bool:        
+        try:
+            add_prefix = make_logger_prefix(self)
+
+            # abort if operation mode from settings is different
+            if self.operation_mode != FREIGHT_OPERATION_MODE:
+                logger.error(add_prefix(
+                    'Current operation mode not matching the handler'
+                ))           
+                            
+                self.set_sync_status(self.ERROR_OPERATION_MODE_MISMATCH)
+                raise ValueError()
+                    
+            # abort if character is not configured
+            if self.character is None:
+                logger.error(add_prefix('No character configured to sync'))                       
+                self.set_sync_status(self.ERROR_NO_CHARACTER)
+                raise ValueError()
+
+            # abort if character does not have sufficient permissions
+            if not self.character.user.has_perm('freight.setup_contract_handler'):
+                logger.error(add_prefix(
+                    'Character does not have sufficient permission to sync contracts'
+                ))                        
+                self.set_sync_status(self.ERROR_INSUFFICIENT_PERMISSIONS)
+                raise ValueError()
+
+            try:            
+                # get token    
+                token = Token.objects\
+                    .filter(
+                        user=self.character.user, 
+                        character_id=self.character.character.character_id
+                    )\
+                    .require_scopes(self.get_esi_scopes())\
+                    .require_valid()\
+                    .first()
+
+            except TokenInvalidError:        
+                logger.error(add_prefix(
+                    'Invalid token for fetching contracts'
+                ))                        
+                self.set_sync_status(self.ERROR_TOKEN_INVALID)
+                raise TokenInvalidError()
+                
+            except TokenExpiredError:            
+                logger.error(add_prefix(
+                    'Token expired for fetching contracts'
+                ))            
+                self.set_sync_status(self.ERROR_TOKEN_EXPIRED)            
+                raise TokenExpiredError()
+            
+            else:
+                if not token:
+                    logger.error(add_prefix('No valid token found'))                            
+                    self.set_sync_status(self.ERROR_TOKEN_INVALID)                
+                    raise TokenInvalidError()
+            
+            try:
+                # fetching data from ESI
+                logger.info(add_prefix(
+                    'Fetching contracts from ESI - page 1'
+                ))
+                esi_client = esi_client_factory(
+                    token=token, spec_file=get_swagger_spec_path()
+                )
+
+                contracts_all = EsiSmartRequest.fetch(
+                    'Contracts.get_corporations_corporation_id_contracts',
+                    args={'corporation_id': self.character.character.corporation_id},            
+                    has_pages=True,
+                    esi_client=esi_client,
+                    logger_tag=add_prefix()
+                )   
+                            
+                if settings.DEBUG:
+                    # store to disk (for debugging)
+                    with open('contracts_raw.json', 'w', encoding='utf-8') as f:
+                        json.dump(
+                            contracts_all, 
+                            f, 
+                            cls=DjangoJSONEncoder, 
+                            sort_keys=True, 
+                            indent=4
+                        )
+                            
+                # 1st filter: reduce to courier contracts assigned to handler org
+                contracts_courier = [
+                    x for x in contracts_all 
+                    if x['type'] == 'courier' 
+                    and int(x['assignee_id']) == int(self.organization.id)
+                ]
+
+                # 2nd filter: remove contracts not in scope due to operation mode
+                contracts = list()
+                for contract in contracts_courier:
+                    try:
+                        issuer = EveCharacter.objects.get(
+                            character_id=contract['issuer_id']
+                        )
+                    except EveCharacter.DoesNotExist:
+                        issuer = EveCharacter.objects.create_character(
+                            character_id=contract['issuer_id']
+                        )
+                    
+                    assignee_id = int(contract['assignee_id'])
+                    issuer_corporation_id = int(issuer.corporation_id)
+                    issuer_alliance_id = int(issuer.alliance_id) \
+                        if issuer.alliance_id else None
+                    
+                    if self.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
+                        in_scope = issuer_alliance_id == assignee_id
+                    
+                    elif self.operation_mode == FREIGHT_OPERATION_MODE_MY_CORPORATION:
+                        in_scope = assignee_id == issuer_corporation_id
+                    
+                    elif self.operation_mode == FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE:
+                        in_scope = (
+                            issuer_alliance_id == int(
+                                self.character.character.alliance_id
+                            )
+                        )
+
+                    elif self.operation_mode == FREIGHT_OPERATION_MODE_CORP_PUBLIC:
+                        in_scope = True
+                    
+                    else:
+                        raise NotImplementedError(
+                            'Unsupported operation mode: {}'.format(
+                                self.operation_mode
+                            )
+                        )
+                    if in_scope:
+                        contracts.append(contract)
+
+                # determine if contracts have changed by comparing their hashes
+                new_version_hash = hashlib.md5(
+                    json.dumps(contracts, cls=DjangoJSONEncoder).encode('utf-8')
+                ).hexdigest()
+                if (force_sync 
+                    or new_version_hash != self.version_hash
+                ):
+                    logger.info(add_prefix(
+                        'Storing update with {:,} contracts'.format(
+                            len(contracts)
+                        ))
+                    )
+                    
+                    # update contracts in local DB
+                    with transaction.atomic():                
+                        self.version_hash = new_version_hash
+                        no_errors = True
+                        for contract in contracts:                    
+                            try:
+                                Contract.objects.update_or_create_from_dict(
+                                    handler=self,
+                                    contract=contract,
+                                    esi_client=esi_client
+                                )
+                            except Exception as ex:
+                                logger.exception(add_prefix(
+                                    'An unexpected error ocurred '
+                                    'while trying to load contract '
+                                    '{}: {}'. format(
+                                        contract['contract_id'] 
+                                        if 'contract_id' in contract else 'Unknown',
+                                        ex
+                                    )
+                                ))
+                                no_errors = False                
+                        
+                        if no_errors:
+                            last_error = self.ERROR_NONE
+                        else:
+                            last_error = self.ERROR_UNKNOWN
+                        self.set_sync_status(last_error)
+
+                    Contract.objects.update_pricing()
+
+                else:
+                    logger.info(add_prefix('Contracts are unchanged.'))
+                
+            except Exception as ex:
+                logger.exception(add_prefix(
+                    'An unexpected error ocurred {}'. format(ex)
+                ))            
+                self.set_sync_status(self.ERROR_UNKNOWN)
+                raise ex
+
+        except Exception as ex:
+            success = False
+            error_code = type(ex).__name__
+            
+        else:
+            success = True
+
+        if user:
+            try:
+                message = 'Syncing of contracts for "{}"'.format(
+                    self.organization.name
+                )
+                message += ' in operation mode "{}" {}.\n'.format(
+                    self.operation_mode_friendly,
+                    'completed successfully' if success else 'has failed'
+                )
+                if success:
+                    message += '{:,} contracts synced.'.format(
+                        self.contract_set.count()
+                    )
+                else:
+                    message += 'Error code: {}'.format(error_code)
+                
+                notify(
+                    user=user,
+                    title='Freight: Contracts sync for {}: {}'.format(
+                        self.organization.name,
+                        'OK' if success else 'FAILED'
+                    ),
+                    message=message,
+                    level='success' if success else 'danger'
+                )
+            except Exception as ex:
+                logger.exception(add_prefix(
+                    'An unexpected error ocurred while trying to '
+                    + 'report to user: {}'. format(ex)
+                ))
+        
+        return success
 
 
 class Contract(models.Model): 

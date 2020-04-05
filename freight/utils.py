@@ -47,8 +47,8 @@ def get_swagger_spec_path() -> str:
 
 
 def make_logger_prefix(tag: str):
-    """creates a function to add logger prefix"""
-    return lambda text: '{}: {}'.format(tag, text)
+    """creates a function to add logger prefix, which returns tag when used empty"""
+    return lambda text = '': '{}{}'.format(tag, (': ' + text) if text else '')
 
 
 class messages_plus():

@@ -13,7 +13,7 @@ logger = set_test_logger(MODULE_PATH, __file__)
 class TestSignals(NoSocketsTestCase):
 
     def setUp(self):
-        self.user = create_contract_handler_w_contracts([149409016])
+        _, self.user = create_contract_handler_w_contracts([149409016])
         from .. import signals  # noqa
 
     @patch(MODULE_PATH + '.update_contracts_pricing')

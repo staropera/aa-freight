@@ -8,11 +8,11 @@ from unittest.mock import Mock
 from django.contrib.auth.models import User
 from django.utils.timezone import now
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.tests.auth_utils import AuthUtils
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.services.modules.discord.models import DiscordUser
 
-from ..auth_utils_2 import AuthUtils2
 from ...models import Contract, ContractHandler, Location, EveEntity
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
@@ -22,9 +22,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
 
 def _load_structures_data() -> list:
     with open(
-        currentdir + '/universe_structures.json', 
-        'r', 
-        encoding='utf-8'
+        currentdir + '/universe_structures.json', 'r', encoding='utf-8'
     ) as f:
         data = json.load(f)
 
@@ -44,21 +42,15 @@ def _load_contract_data() -> list:
 
     # update dates to something current, so won't be treated as stale
     for contract in contracts_data:
-        date_issued = now() - timedelta(            
-            hours=12,
-            minutes=randrange(30)
-        )
+        date_issued = now() - timedelta(hours=12, minutes=randrange(30))
         date_accepted = date_issued + timedelta(
-            hours=2,
-            minutes=randrange(30)
+            hours=2, minutes=randrange(30)
         )
         date_completed = date_accepted + timedelta(
-            hours=3,
-            minutes=randrange(30)
+            hours=3, minutes=randrange(30)
         )
         date_expired = now() + timedelta(
-            days=7 + randrange(7), 
-            hours=randrange(10)
+            days=7 + randrange(7), hours=randrange(10)
         )
         if 'date_issued' in contract:
             contract['date_issued'] = date_issued.isoformat()
@@ -153,11 +145,9 @@ def create_contract_handler_w_contracts(
     my_organization = EveEntity.objects.get(id=my_character.alliance_id)
     
     my_user = User.objects.create_user(
-        my_character.character_name,
-        'abc@example.com',
-        'password'
+        my_character.character_name, 'abc@example.com', 'password'
     )    
-    AuthUtils2.add_permission_to_user_by_name('freight.basic_access', my_user)
+    AuthUtils.add_permission_to_user_by_name('freight.basic_access', my_user)
     my_main_ownership = CharacterOwnership.objects.create(
         character=my_character,
         owner_hash='x1',
@@ -187,9 +177,7 @@ def create_contract_handler_w_contracts(
     # create users and Discord accounts from contract issuers
     for contract in Contract.objects.all():
         issuer_user = User.objects\
-            .filter(
-                character_ownerships__character=contract.issuer
-            )\
+            .filter(character_ownerships__character=contract.issuer)\
             .first()
         if not issuer_user:
             issuer_user = User.objects.create_user(
@@ -210,4 +198,4 @@ def create_contract_handler_w_contracts(
             }
         )
     
-    return my_user
+    return my_handler, my_user
