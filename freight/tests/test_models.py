@@ -789,3 +789,23 @@ class TestContractHandler(NoSocketsTestCase):
         self.handler.last_error = ContractHandler.ERROR_NONE
         self.handler.last_sync = now() - timedelta(minutes=31)
         self.assertFalse(self.handler.is_sync_ok)
+
+    def test_set_sync_status_1(self):
+        self.handler.last_error = ContractHandler.ERROR_UNKNOWN
+        self.handler.last_sync = None
+        self.handler.save()
+
+        self.handler.set_sync_status(ContractHandler.ERROR_TOKEN_EXPIRED)
+        self.assertEqual(
+            self.handler.last_error, ContractHandler.ERROR_TOKEN_EXPIRED
+        )
+        self.assertGreater(self.handler.last_sync, now() - timedelta(minutes=1))
+
+    def test_set_sync_status_2(self):
+        self.handler.last_error = ContractHandler.ERROR_UNKNOWN
+        self.handler.last_sync = None
+        self.handler.save()
+
+        self.handler.set_sync_status()
+        self.assertEqual(self.handler.last_error, ContractHandler.ERROR_NONE)
+        self.assertGreater(self.handler.last_sync, now() - timedelta(minutes=1))

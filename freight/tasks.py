@@ -1,5 +1,4 @@
 import logging
-import datetime
 import hashlib
 import json
 
@@ -9,6 +8,7 @@ from django.db import transaction
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
+from django.utils.timezone import now
 
 from allianceauth.notifications import notify
 from allianceauth.eveonline.models import EveCharacter
@@ -41,9 +41,6 @@ def run_contracts_sync(force_sync=False, user_pk=None):
             )
             return False
 
-        handler.last_sync = datetime.datetime.now(datetime.timezone.utc)
-        handler.save()
-
         add_prefix = make_logger_prefix(handler)
 
         # abort if operation mode from settings is different
@@ -51,27 +48,22 @@ def run_contracts_sync(force_sync=False, user_pk=None):
             logger.error(add_prefix(
                 'Current operation mode not matching the handler'
             ))           
-            handler.last_error = ContractHandler.ERROR_OPERATION_MODE_MISMATCH
-            handler.save()
+                        
+            handler.set_sync_status(ContractHandler.ERROR_OPERATION_MODE_MISMATCH)            
             raise ValueError()
                 
         # abort if character is not configured
         if handler.character is None:
-            logger.error(add_prefix(
-                'No character configured to sync'
-            ))           
-            handler.last_error = ContractHandler.ERROR_NO_CHARACTER
-            handler.save()
+            logger.error(add_prefix('No character configured to sync'))                       
+            handler.set_sync_status(ContractHandler.ERROR_NO_CHARACTER)
             raise ValueError()
 
         # abort if character does not have sufficient permissions
         if not handler.character.user.has_perm('freight.setup_contract_handler'):
             logger.error(add_prefix(
-                'Character does not have sufficient permission '
-                + 'to sync contracts'
-            ))            
-            handler.last_error = ContractHandler.ERROR_INSUFFICIENT_PERMISSIONS
-            handler.save()
+                'Character does not have sufficient permission to sync contracts'
+            ))                        
+            handler.set_sync_status(ContractHandler.ERROR_INSUFFICIENT_PERMISSIONS)            
             raise ValueError()
 
         try:            
@@ -86,24 +78,21 @@ def run_contracts_sync(force_sync=False, user_pk=None):
         except TokenInvalidError:        
             logger.error(add_prefix(
                 'Invalid token for fetching contracts'
-            ))            
-            handler.last_error = ContractHandler.ERROR_TOKEN_INVALID
-            handler.save()
+            ))                        
+            handler.set_sync_status(ContractHandler.ERROR_TOKEN_INVALID)
             raise TokenInvalidError()
             
         except TokenExpiredError:            
             logger.error(add_prefix(
                 'Token expired for fetching contracts'
-            ))
-            handler.last_error = ContractHandler.ERROR_TOKEN_EXPIRED
-            handler.save()
+            ))            
+            handler.set_sync_status(ContractHandler.ERROR_TOKEN_EXPIRED)            
             raise TokenExpiredError()
         
         else:
             if not token:
-                logger.error(add_prefix('No valid token found'))            
-                handler.last_error = ContractHandler.ERROR_TOKEN_INVALID
-                handler.save()
+                logger.error(add_prefix('No valid token found'))                            
+                handler.set_sync_status(ContractHandler.ERROR_TOKEN_INVALID)                
                 raise TokenInvalidError()
         
         try:
@@ -233,10 +222,10 @@ def run_contracts_sync(force_sync=False, user_pk=None):
                             no_errors = False                
                     
                     if no_errors:
-                        handler.last_error = ContractHandler.ERROR_NONE
+                        last_error = ContractHandler.ERROR_NONE
                     else:
-                        handler.last_error = ContractHandler.ERROR_UNKNOWN
-                    handler.save()
+                        last_error = ContractHandler.ERROR_UNKNOWN
+                    handler.set_sync_status(last_error)
 
                 Contract.objects.update_pricing()
 
@@ -248,9 +237,8 @@ def run_contracts_sync(force_sync=False, user_pk=None):
         except Exception as ex:
             logger.exception(add_prefix(
                 'An unexpected error ocurred {}'. format(ex)
-            ))                                
-            handler.last_error = ContractHandler.ERROR_UNKNOWN
-            handler.save()
+            ))            
+            handler.set_sync_status(ContractHandler.ERROR_UNKNOWN)
             raise ex
 
     except Exception as ex:

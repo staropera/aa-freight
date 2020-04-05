@@ -74,24 +74,21 @@ class Location(models.Model):
         max_length=100,
         help_text='In-game name of this station or structure'
     ) 
-    solar_system_id = models.IntegerField(
+    solar_system_id = models.PositiveIntegerField(
         default=None, 
         null=True, 
-        blank=True,
-        validators=[MinValueValidator(0)],
+        blank=True,        
         help_text='Eve Online solar system ID'
     )
-    type_id = models.IntegerField(
+    type_id = models.PositiveIntegerField(
         default=None, 
         null=True, 
-        blank=True,
-        validators=[MinValueValidator(0)],
+        blank=True,        
         help_text='Eve Online type ID'
     )
-    category_id = models.IntegerField(
+    category_id = models.PositiveIntegerField(
         choices=CATEGORY_CHOICES, 
-        default=CATEGORY_UNKNOWN_ID,
-        validators=[MinValueValidator(0)],
+        default=CATEGORY_UNKNOWN_ID,        
         help_text='Eve Online category ID'
     )
     
@@ -140,10 +137,6 @@ class Pricing(models.Model):
         default=True, 
         help_text='Whether this pricing is valid for contracts '
         'in either direction or only the one specified'
-    )
-    is_active = models.BooleanField(
-        default=True, 
-        help_text='Non active pricings will not be used or shown'
     )    
     price_base = models.FloatField(
         default=None, 
@@ -205,14 +198,14 @@ class Pricing(models.Model):
         validators=[MinValueValidator(0)],
         help_text='Maximum allowed volume in m3'
     )
-    days_to_expire = models.IntegerField(
+    days_to_expire = models.PositiveIntegerField(
         default=None, 
         null=True, 
         blank=True, 
         validators=[MinValueValidator(1)],
         help_text='Recommended days for contracts to expire'
     )
-    days_to_complete = models.IntegerField(
+    days_to_complete = models.PositiveIntegerField(
         default=None, 
         null=True, 
         blank=True, 
@@ -225,6 +218,27 @@ class Pricing(models.Model):
         blank=True, 
         help_text='Text with additional instructions for using this pricing'
     )
+    is_active = models.BooleanField(
+        default=True, 
+        help_text='Non active pricings will not be used or shown'
+    )
+    is_default = models.BooleanField(
+        default=False, 
+        help_text=(
+            'The default pricing will be preselected in the calculator. '
+            'Please make sure to only mark one pricing as default.'
+        )
+    )
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return '<{}({}): {}>'.format(
+            self.__class__.__name__, 
+            self.id, 
+            str(self)
+        )
     
     class Meta:
         unique_together = (('start_location', 'end_location'),)
@@ -273,17 +287,7 @@ class Pricing(models.Model):
                 )
 
         return price_per_volume
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return '<{}({}): {}>'.format(
-            self.__class__.__name__, 
-            self.id, 
-            str(self)
-        )
-
+    
     def requires_volume(self) -> bool:
         """whether this pricing required volume to be specified"""
         return (
@@ -397,11 +401,7 @@ class Pricing(models.Model):
         )
 
     def get_contract_price_check_issues(            
-        self,
-        volume: float,
-        collateral: float,
-        reward: float = None
-    ) -> list:
+        self, volume: float, collateral: float, reward: float = None) -> list:
         """returns list of validation error messages or none if ok"""
         
         if volume and volume < 0:
@@ -650,6 +650,9 @@ class ContractHandler(models.Model):
             ))
         )
 
+    class Meta:
+        verbose_name_plural = verbose_name = 'Contract Handler'
+
     def get_availability_text_for_contracts(self) -> str:
         """returns a text detailing the availability choice for this setup"""
         
@@ -664,8 +667,17 @@ class ContractHandler(models.Model):
 
         return 'Private ({}) {}'. format(self.organization.name, extra_text)
 
-    class Meta:
-        verbose_name_plural = verbose_name = 'Contract Handler'        
+    def set_sync_status(self, error: int = None) -> None:
+        """sets the sync status incl. sync time. 
+        
+        Will set to no error if no error is provided as argument.
+        """
+        if not error:
+            error = self.ERROR_NONE
+
+        self.last_error = error
+        self.last_sync = now() 
+        self.save()
 
 
 class Contract(models.Model): 

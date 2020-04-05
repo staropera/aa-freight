@@ -163,6 +163,17 @@ def contract_list_data(request, category):
     return JsonResponse(contracts_data, safe=False)
 
 
+def _get_default_pricing() -> Pricing:
+    """return the default pricing if defined, else the first pricing"""
+    pricing_qs = Pricing.objects.filter(is_active=True)
+    try:
+        pricing = pricing_qs.filter(is_default=True).first()
+    except Pricing.DoesNotExist:
+        pricing = pricing_qs.first()
+    
+    return pricing
+
+
 @login_required
 @permission_required('freight.use_calculator')
 def calculator(request, pricing_pk=None):            
@@ -174,9 +185,9 @@ def calculator(request, pricing_pk=None):
                     .filter(is_active=True) \
                     .get(pk=pricing_pk)
             except Pricing.DoesNotExist:
-                pricing = Pricing.objects.filter(is_active=True).first()
+                pricing = _get_default_pricing()
         else:            
-            pricing = Pricing.objects.filter(is_active=True).first()
+            pricing = _get_default_pricing()
         form = CalculatorForm(initial={'pricing': pricing})
         price = None        
 
@@ -189,7 +200,7 @@ def calculator(request, pricing_pk=None):
                 .filter(is_active=True) \
                 .get(pk=form.data['pricing'])
         except Pricing.DoesNotExist:
-            pricing = Pricing.objects.filter(is_active=True).first()
+            pricing = _get_default_pricing()
         
         if form.is_valid():                                    
             # pricing = form.cleaned_data['pricing']
@@ -202,10 +213,7 @@ def calculator(request, pricing_pk=None):
             else:
                 collateral = 0
             price = math.ceil(
-                pricing.get_calculated_price(
-                    volume, 
-                    collateral
-                ) / 1000000
+                pricing.get_calculated_price(volume, collateral) / 1000000
             ) * 1000000
                 
         else:

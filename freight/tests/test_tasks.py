@@ -56,11 +56,8 @@ class TestContractsSync(NoSocketsTestCase):
         )
 
         self.main_ownership = CharacterOwnership.objects.create(
-            character=self.character,
-            owner_hash='x1',
-            user=self.user
-        )        
-
+            character=self.character, owner_hash='x1', user=self.user
+        )
         create_locations()
         
     # identify wrong operation mode
@@ -79,8 +76,7 @@ class TestContractsSync(NoSocketsTestCase):
         )
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_OPERATION_MODE_MISMATCH
+            handler.last_error, ContractHandler.ERROR_OPERATION_MODE_MISMATCH
         )
 
     # run without char    
@@ -98,8 +94,7 @@ class TestContractsSync(NoSocketsTestCase):
         )
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_NO_CHARACTER
+            handler.last_error, ContractHandler.ERROR_NO_CHARACTER
         )
 
     # test expired token
@@ -124,8 +119,7 @@ class TestContractsSync(NoSocketsTestCase):
 
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_TOKEN_EXPIRED            
+            handler.last_error, ContractHandler.ERROR_TOKEN_EXPIRED            
         )
 
     # test invalid token
@@ -150,8 +144,7 @@ class TestContractsSync(NoSocketsTestCase):
 
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_TOKEN_INVALID            
+            handler.last_error, ContractHandler.ERROR_TOKEN_INVALID
         )
 
     @patch(
@@ -180,8 +173,7 @@ class TestContractsSync(NoSocketsTestCase):
 
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_TOKEN_INVALID            
+            handler.last_error, ContractHandler.ERROR_TOKEN_INVALID            
         )
 
     # exception occuring for one of the contracts    
@@ -253,14 +245,11 @@ class TestContractsSync(NoSocketsTestCase):
         )
         
         # run manager sync
-        self.assertTrue(
-            tasks.run_contracts_sync()
-        )
+        self.assertTrue(tasks.run_contracts_sync())
 
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_UNKNOWN            
+            handler.last_error, ContractHandler.ERROR_UNKNOWN            
         )
         
     # normal synch of new contracts, mode my_alliance
@@ -317,14 +306,11 @@ class TestContractsSync(NoSocketsTestCase):
         )
         
         # run manager sync
-        self.assertTrue(
-            tasks.run_contracts_sync()
-        )
+        self.assertTrue(tasks.run_contracts_sync())
 
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_NONE            
+            handler.last_error, ContractHandler.ERROR_NONE            
         )
         
         # should have tried to fetch contracts
@@ -395,14 +381,11 @@ class TestContractsSync(NoSocketsTestCase):
         )
         
         # run manager sync
-        self.assertTrue(
-            tasks.run_contracts_sync()
-        )
+        self.assertTrue(tasks.run_contracts_sync())
 
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_NONE            
+            handler.last_error, ContractHandler.ERROR_NONE
         )
         
         # should have tried to fetch contracts
@@ -479,14 +462,11 @@ class TestContractsSync(NoSocketsTestCase):
         )
         
         # run manager sync
-        self.assertTrue(
-            tasks.run_contracts_sync()
-        )
+        self.assertTrue(tasks.run_contracts_sync())
 
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_NONE            
+            handler.last_error, ContractHandler.ERROR_NONE            
         )
         
         # should have tried to fetch contracts
@@ -574,14 +554,11 @@ class TestContractsSync(NoSocketsTestCase):
         )
         
         # run manager sync
-        self.assertTrue(
-            tasks.run_contracts_sync()
-        )
+        self.assertTrue(tasks.run_contracts_sync())
 
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_NONE            
+            handler.last_error, ContractHandler.ERROR_NONE
         )
         
         # should have tried to fetch contracts
@@ -614,26 +591,22 @@ class TestContractsSync(NoSocketsTestCase):
             character=self.main_ownership,
         )
         self.assertEqual(
-            handler.operation_mode_friendly,
-            FREIGHT_OPERATION_MODES[0][1]
+            handler.operation_mode_friendly, FREIGHT_OPERATION_MODES[0][1]
         )
 
         handler.operation_mode = FREIGHT_OPERATION_MODE_MY_CORPORATION
         self.assertEqual(
-            handler.operation_mode_friendly,
-            FREIGHT_OPERATION_MODES[1][1]
+            handler.operation_mode_friendly, FREIGHT_OPERATION_MODES[1][1]
         )
 
         handler.operation_mode = FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
         self.assertEqual(
-            handler.operation_mode_friendly,
-            FREIGHT_OPERATION_MODES[2][1]
+            handler.operation_mode_friendly, FREIGHT_OPERATION_MODES[2][1]
         )
 
         handler.operation_mode = FREIGHT_OPERATION_MODE_CORP_PUBLIC
         self.assertEqual(
-            handler.operation_mode_friendly,
-            FREIGHT_OPERATION_MODES[3][1]
+            handler.operation_mode_friendly, FREIGHT_OPERATION_MODES[3][1]
         )
 
     def test_last_error_message_friendly(self):
@@ -644,7 +617,7 @@ class TestContractsSync(NoSocketsTestCase):
             last_error=ContractHandler.ERROR_UNKNOWN
         )
         self.assertEqual(
-            handler.last_error_message_friendly,
+            handler.last_error_message_friendly, 
             ContractHandler.ERRORS_LIST[7][1]
         )
 
