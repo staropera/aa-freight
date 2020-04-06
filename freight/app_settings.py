@@ -5,6 +5,12 @@ from .utils import clean_setting
 FREIGHT_CONTRACT_SYNC_GRACE_MINUTES = \
     clean_setting('FREIGHT_CONTRACT_SYNC_GRACE_MINUTES', 30)
 
+
+# Enables features for developers, e.g. write access to all models in admin
+FREIGHT_DEVELOPER_MODE = \
+    clean_setting('FREIGHT_DEVELOPER_MODE', False)
+
+
 # Webhook URL used for notifications if defined
 FREIGHT_DISCORD_WEBHOOK_URL = \
     clean_setting('FREIGHT_DISCORD_WEBHOOK_URL', None, required_type=str)
@@ -34,11 +40,6 @@ FREIGHT_STATISTICS_MAX_DAYS = \
 # Webhook URL used for notifications to customers if defined
 FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL = \
     clean_setting('FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None, required_type=str)
-
-
-# Enables features for developers, e.g. write access to all models in admin
-FREIGHT_DEVELOPER_MODE = \
-    clean_setting('FREIGHT_DEVELOPER_MODE', False)
 
 
 # defines after how many hours a status becomes stale

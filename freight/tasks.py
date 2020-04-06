@@ -5,7 +5,7 @@ from celery import shared_task, chain
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import ContractHandler, Contract
+from .models import ContractHandler, Contract, Location
 from .utils import LoggerAddTag
 
 
@@ -25,21 +25,25 @@ def _get_user(user_pk) -> User:
     return user
 
 
-@shared_task
-def update_contracts_esi(force_sync=False, user_pk=None) -> None:
-    """start syncing contracts"""
+def _get_contract_handler() -> ContractHandler:
     handler = ContractHandler.objects.first()
     if not handler:
-        logger.info(
-            'could not sync contracts because no contract handler was found'
-        )
+        logger.warning('contract handler was found')
         raise ObjectDoesNotExist()
     else:
-        handler.update_contracts_esi(force_sync, user_pk=_get_user(user_pk))
+        return handler
+
+
+@shared_task
+def update_contracts_esi(force_sync=False, user_pk=None) -> None:
+    """start syncing contracts"""    
+    _get_contract_handler().update_contracts_esi(
+        force_sync, user_pk=_get_user(user_pk)
+    )
         
 
 @shared_task
-def send_contract_notifications(force_sent=False, rate_limted=True):
+def send_contract_notifications(force_sent=False, rate_limted=True) -> None:
     """Send notification about outstanding contracts that have pricing"""      
     try:
         Contract.objects.send_notifications(force_sent, rate_limted)        
@@ -59,7 +63,7 @@ def run_contracts_sync(force_sync=False, user_pk=None) -> None:
 
 
 @shared_task
-def update_contracts_pricing():
+def update_contracts_pricing() -> None:
     """Updates pricing for all contracts"""
     logger.info('Started updating contracts pricing')    
     try:    
@@ -67,3 +71,29 @@ def update_contracts_pricing():
 
     except Exception as ex:
         logger.exception('An unexpected error ocurred: {}'.format(ex))        
+
+
+@shared_task
+def update_location(location_id: int) -> None:
+    """Updates the location from ESI """
+    try:
+        Location.objects.get(id=location_id)        
+    except Location.DoesNotExist:
+        logger.warning(
+            'Tried to update a non-existing location with ID {}'.format(
+                location_id
+            )
+        )
+    else:
+        esi_client = _get_contract_handler().esi_client()
+        Location.objects.update_or_create_from_esi(
+            location_id=location_id, esi_client=esi_client
+        )
+
+
+@shared_task
+def update_locations(location_ids: list) -> None:
+    """Updates the locations from ESI """
+
+    for location_id in location_ids:
+        update_location.delay(location_id)

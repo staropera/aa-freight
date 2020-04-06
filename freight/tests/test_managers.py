@@ -68,9 +68,9 @@ class TestEveEntityManager(NoSocketsTestCase):
         m.result.return_value = response
         return m
 
-    @patch('esi.clients.SwaggerClient')
-    def test_character_basics(self, SwaggerClient):
-        SwaggerClient.from_spec.return_value\
+    @patch('freight.helpers.provider')
+    def test_character_basics(self, mock_provider):
+        mock_provider.client\
             .Universe.post_universe_names.side_effect = \
             TestEveEntityManager.esi_post_universe_names
 
@@ -91,16 +91,15 @@ class TestEveEntityManager(NoSocketsTestCase):
         entity, created = EveEntity.objects.get_or_create_from_esi(id=90000001)
         self.assertFalse(created)
 
-    @patch('esi.clients.SwaggerClient')
-    def test_corporation_basics(self, SwaggerClient):
-        SwaggerClient.from_spec.return_value\
+    @patch('freight.helpers.provider')
+    def test_corporation_basics(self, mock_provider):
+        mock_provider.client\
             .Universe.post_universe_names.side_effect = \
             TestEveEntityManager.esi_post_universe_names
 
         entity, _ = EveEntity.objects.get_or_create_from_esi(id=92000001)
         self.assertEqual(
-            str(entity),
-            'Wayne Enterprise'
+            str(entity), 'Wayne Enterprise'
         )
         self.assertFalse(entity.is_alliance)
         self.assertTrue(entity.is_corporation)
@@ -110,9 +109,9 @@ class TestEveEntityManager(NoSocketsTestCase):
             'https://imageserver.eveonline.com/Corporation/92000001_128.png'
         )
 
-    @patch('esi.clients.SwaggerClient')
-    def test_alliance_basics(self, SwaggerClient):
-        SwaggerClient.from_spec.return_value\
+    @patch('freight.helpers.provider')
+    def test_alliance_basics(self, mock_provider):
+        mock_provider.client\
             .Universe.post_universe_names.side_effect = \
             TestEveEntityManager.esi_post_universe_names
 
@@ -129,9 +128,9 @@ class TestEveEntityManager(NoSocketsTestCase):
             'https://imageserver.eveonline.com/Alliance/93000001_128.png'
         )
 
-    @patch('esi.clients.SwaggerClient')
-    def test_alliance_not_found(self, SwaggerClient):
-        SwaggerClient.from_spec.return_value\
+    @patch('freight.helpers.provider')
+    def test_alliance_not_found(self, mock_provider):
+        mock_provider.client\
             .Universe.post_universe_names.side_effect = \
             TestEveEntityManager.esi_post_universe_names
 

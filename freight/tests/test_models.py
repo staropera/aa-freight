@@ -679,26 +679,31 @@ class TestContract(NoSocketsTestCase):
 
 class TestLocation(NoSocketsTestCase):
 
-    def setUp(self):
-        self.location = Location.objects.create(
-            id=60003760,
-            name='Jita IV - Moon 4 - Caldari Navy Assembly Plant',
-            solar_system_id=30000142,
-            type_id=52678,
-            category_id=3
-        )
-
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.jita, cls.amamake, _ = create_locations()
+    
     def test_str(self):
         self.assertEqual(
-            str(self.location.name), 
+            str(self.jita.name), 
             'Jita IV - Moon 4 - Caldari Navy Assembly Plant'
         )
 
     def test_category(self):
-        self.assertEqual(self.location.category, Location.CATEGORY_STATION_ID)
+        self.assertEqual(self.jita.category, Location.CATEGORY_STATION_ID)
 
-    def test_solar_system_name(self):
-        self.assertEqual(self.location.solar_system_name, 'Jita')
+    def test_solar_system_name_station(self):
+        self.assertEqual(self.jita.solar_system_name, 'Jita')
+
+    def test_solar_system_name_structure(self):
+        self.assertEqual(self.amamake.solar_system_name, 'Amamake')
+
+    def test_location_name_station(self):
+        self.assertEqual(self.jita.location_name, 'Caldari Navy Assembly Plant')
+
+    def test_location_name_structure(self):
+        self.assertEqual(self.amamake.location_name, '3 Time Nearly AT Winners')
 
 
 class TestContractHandler(NoSocketsTestCase):

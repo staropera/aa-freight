@@ -135,6 +135,10 @@ class Location(models.Model):
     def solar_system_name(self):        
         return self.name.split(' ', 1)[0]
 
+    @property
+    def location_name(self):        
+        return self.name.rsplit('-', 1)[1].strip()
+
 
 class Pricing(models.Model):
     """Pricing for a courier route"""
@@ -724,46 +728,9 @@ class ContractHandler(models.Model):
                 self.set_sync_status(self.ERROR_INSUFFICIENT_PERMISSIONS)
                 raise ValueError()
 
-            try:            
-                # get token    
-                token = Token.objects\
-                    .filter(
-                        user=self.character.user, 
-                        character_id=self.character.character.character_id
-                    )\
-                    .require_scopes(self.get_esi_scopes())\
-                    .require_valid()\
-                    .first()
-
-            except TokenInvalidError:        
-                logger.error(add_prefix(
-                    'Invalid token for fetching contracts'
-                ))                        
-                self.set_sync_status(self.ERROR_TOKEN_INVALID)
-                raise TokenInvalidError()
-                
-            except TokenExpiredError:            
-                logger.error(add_prefix(
-                    'Token expired for fetching contracts'
-                ))            
-                self.set_sync_status(self.ERROR_TOKEN_EXPIRED)            
-                raise TokenExpiredError()
-            
-            else:
-                if not token:
-                    logger.error(add_prefix('No valid token found'))                            
-                    self.set_sync_status(self.ERROR_TOKEN_INVALID)                
-                    raise TokenInvalidError()
-            
+            esi_client = self.esi_client()                
             try:
-                # fetching data from ESI
-                logger.info(add_prefix(
-                    'Fetching contracts from ESI - page 1'
-                ))
-                esi_client = esi_client_factory(
-                    token=token, spec_file=get_swagger_spec_path()
-                )
-
+                # fetching data from ESI                
                 contracts_all = EsiSmartRequest.fetch(
                     'Contracts.get_corporations_corporation_id_contracts',
                     args={'corporation_id': self.character.character.corporation_id},            
@@ -925,6 +892,48 @@ class ContractHandler(models.Model):
                 ))
         
         return success
+
+    def esi_client(self) -> object:
+        """returns an esi client for the contract handler 
+        
+        raises exception on error
+        """
+        add_prefix = make_logger_prefix(self)
+        try:
+            # get token    
+            token = Token.objects\
+                .filter(
+                    user=self.character.user, 
+                    character_id=self.character.character.character_id
+                )\
+                .require_scopes(self.get_esi_scopes())\
+                .require_valid()\
+                .first()
+
+        except TokenInvalidError:        
+            logger.error(add_prefix(
+                'Invalid token for fetching contracts'
+            ))                        
+            self.set_sync_status(self.ERROR_TOKEN_INVALID)
+            raise TokenInvalidError()
+            
+        except TokenExpiredError:            
+            logger.error(add_prefix(
+                'Token expired for fetching contracts'
+            ))            
+            self.set_sync_status(self.ERROR_TOKEN_EXPIRED)            
+            raise TokenExpiredError()
+        
+        else:
+            if not token:
+                logger.error(add_prefix('No valid token found'))                            
+                self.set_sync_status(self.ERROR_TOKEN_INVALID)                
+                raise TokenInvalidError()
+
+        logger.info(add_prefix('Fetching ESI client...'))
+        return esi_client_factory(
+            token=token, spec_file=get_swagger_spec_path()
+        )
 
 
 class Contract(models.Model): 

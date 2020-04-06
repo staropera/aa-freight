@@ -10,16 +10,55 @@ from .models import (
     Location, 
     Pricing
 )
+from .tasks import update_locations
+
+
+@admin.register(Location)
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', '_category', '_solar_system')
+    list_filter = ('category_id',)
+    search_fields = ['name']
+    list_select_related = True
+
+    actions = ['update_location']
+
+    if not FREIGHT_DEVELOPER_MODE:
+        list_display_links = None
+    
+    def _category(self, obj):
+        return obj.get_category_id_display()
+    _category.admin_order_field = 'category_id'
+
+    def _solar_system(self, obj):
+        return obj.solar_system_name
+
+    def has_add_permission(self, request):
+        if FREIGHT_DEVELOPER_MODE:
+            return True
+        else:
+            return False
+
+    def has_change_permission(self, request):
+        if FREIGHT_DEVELOPER_MODE:
+            return True
+        else:
+            return False
+
+    def update_location(self, request, queryset):                        
+        location_ids = list()
+        for obj in queryset:            
+            location_ids.append(obj.pk)
+
+        update_locations.delay(location_ids)
+        self.message_user(
+            request, 
+            'Started updating {} locations. '
+            'This can take a short while to complete.'.format(len(location_ids))
+        )
+    update_location.short_description = 'Update selected locations from ESI'
 
 
 if FREIGHT_DEVELOPER_MODE:
-    @admin.register(Location)
-    class LocationAdmin(admin.ModelAdmin):
-        list_display = ('id', 'name', 'category_id')    
-        list_filter = ('category_id',)
-        search_fields = ['name']
-        list_select_related = True
-
     @admin.register(EveEntity)
     class EveEntityAdmin(admin.ModelAdmin):
         list_display = ('name', 'category')
@@ -165,8 +204,7 @@ class ContractAdmin(admin.ModelAdmin):
             )
         )
     
-    def send_pilots_notification(self, request, queryset):
-                        
+    def send_pilots_notification(self, request, queryset):                        
         for obj in queryset:            
             obj.send_pilot_notification()
             self.message_user(
@@ -179,8 +217,7 @@ class ContractAdmin(admin.ModelAdmin):
     send_pilots_notification.short_description = \
         "Sent pilots notification for selected contracts to Discord"
 
-    def send_customer_notification(self, request, queryset):
-                        
+    def send_customer_notification(self, request, queryset):                        
         for obj in queryset:            
             obj.send_customer_notification(force_sent=True)
             self.message_user(
@@ -192,8 +229,7 @@ class ContractAdmin(admin.ModelAdmin):
     
     send_customer_notification.short_description = \
         "Sent customer notification for selected contracts to Discord"
-
-    # This will help you to disbale add functionality
+    
     def has_add_permission(self, request):
         if FREIGHT_DEVELOPER_MODE:
             return True

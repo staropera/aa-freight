@@ -9,7 +9,9 @@ from ..tasks import (
     run_contracts_sync,
     send_contract_notifications,
     update_contracts_esi,
-    update_contracts_pricing
+    update_contracts_pricing,
+    update_location,
+    update_locations
 )
 from .testdata import create_contract_handler_w_contracts
 from ..utils import set_test_logger, NoSocketsTestCase
@@ -94,3 +96,38 @@ class TestUpdateContractsPricing(NoSocketsTestCase):
         mock_update_pricing.side_effect = RuntimeError        
         update_contracts_pricing()
         self.assertTrue(mock_update_pricing.called)
+
+
+@patch(MODULE_PATH + '.ContractHandler.esi_client')
+@patch(MODULE_PATH + '.Location.objects.update_or_create_from_esi')    
+class TestUpdateLocation(NoSocketsTestCase):
+        
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        create_contract_handler_w_contracts()
+    
+    def test_normal_run(self, mock_update_or_create_from_esi, mock_esi_client):
+        update_location(1022167642188)
+        self.assertTrue(mock_esi_client.called)
+        self.assertTrue(mock_update_or_create_from_esi.called)
+
+    def test_exceptions_are_handled(
+        self, mock_update_or_create_from_esi, mock_esi_client
+    ):
+        update_location(99)
+        self.assertFalse(mock_esi_client.called)
+        self.assertFalse(mock_update_or_create_from_esi.called)
+
+    def test_update_locations(
+        self, mock_update_or_create_from_esi, mock_esi_client
+    ):
+        app.conf.task_always_eager = True
+        update_locations([1022167642188, 60003760])
+        app.conf.task_always_eager = False
+        self.assertEqual(mock_update_or_create_from_esi.call_count, 2)
+        call_args_1, call_args_2 = mock_update_or_create_from_esi.call_args_list
+        _, kwargs_1 = call_args_1
+        _, kwargs_2 = call_args_2
+        self.assertEqual(kwargs_1['location_id'], 1022167642188)
+        self.assertEqual(kwargs_2['location_id'], 60003760)
