@@ -1,6 +1,5 @@
 import datetime
 import logging
-import math
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
@@ -179,45 +178,15 @@ def _get_default_pricing() -> Pricing:
 def calculator(request, pricing_pk=None):            
     from .forms import CalculatorForm
     if request.method != 'POST':
-        if pricing_pk:
-            try:
-                pricing = Pricing.objects \
-                    .filter(is_active=True) \
-                    .get(pk=pricing_pk)
-            except Pricing.DoesNotExist:
-                pricing = _get_default_pricing()
-        else:            
-            pricing = _get_default_pricing()
+        pricing = _get_pricing_from_pk(pricing_pk)
         form = CalculatorForm(initial={'pricing': pricing})
         price = None        
 
     else:
         form = CalculatorForm(request.POST)
         request.POST._mutable = True
-
-        try:
-            pricing = Pricing.objects \
-                .filter(is_active=True) \
-                .get(pk=form.data['pricing'])
-        except Pricing.DoesNotExist:
-            pricing = _get_default_pricing()
-        
-        if form.is_valid():                                    
-            # pricing = form.cleaned_data['pricing']
-            if form.cleaned_data['volume']:
-                volume = int(form.cleaned_data['volume'])
-            else:
-                volume = 0
-            if form.cleaned_data['collateral']:
-                collateral = int(form.cleaned_data['collateral'])        
-            else:
-                collateral = 0
-            price = math.ceil(
-                pricing.get_calculated_price(volume, collateral) / 1000000
-            ) * 1000000
-                
-        else:
-            price = None            
+        pricing = _get_pricing_from_pk(form.data['pricing'])
+        volume, collateral, price = form.get_calculated_data(pricing)         
 
     if pricing:
         price_per_volume_eff = pricing.price_per_volume_eff()
@@ -264,6 +233,19 @@ def calculator(request, pricing_pk=None):
             'pricing_price_per_volume_eff': price_per_volume_eff
         }
     )
+
+
+def _get_pricing_from_pk(pricing_pk: int) -> Pricing:
+    if pricing_pk:
+        try:
+            pricing = Pricing.objects \
+                .filter(is_active=True) \
+                .get(pk=pricing_pk)
+        except Pricing.DoesNotExist:
+            pricing = _get_default_pricing()
+    else:            
+        pricing = _get_default_pricing()
+    return pricing
 
 
 @login_required

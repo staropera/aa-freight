@@ -1,3 +1,5 @@
+import math
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -61,6 +63,27 @@ class CalculatorForm(forms.Form):
             raise ValidationError(                
                 '{} {}'.format(issue_prefix, ", ".join(issues))
             )
+
+    def get_calculated_data(self, pricing: object) -> tuple:
+        if self.is_valid():            
+            if self.cleaned_data['volume']:
+                volume = int(self.cleaned_data['volume'])
+            else:
+                volume = 0
+            if self.cleaned_data['collateral']:
+                collateral = int(self.cleaned_data['collateral'])        
+            else:
+                collateral = 0
+            price = math.ceil(
+                pricing.get_calculated_price(volume, collateral) / 1000000
+            ) * 1000000
+                
+        else:
+            volume = None
+            collateral = None
+            price = None
+
+        return volume, collateral, price 
     
 
 class AddLocationForm(forms.Form):

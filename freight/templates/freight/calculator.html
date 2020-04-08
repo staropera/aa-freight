@@ -6,7 +6,7 @@
 {% load freight_filters %}
 
 {% block details %}
-    <form class="form" action="{% url 'freight:calculator' %}" method="POST">        
+    <form id="form_calculator" class="form" action="{% url 'freight:calculator' %}" method="POST">        
         {% csrf_token %}
         <div class="row">
             <div class="col-md-6">
@@ -19,7 +19,7 @@
                         {{ form|bootstrap }}
                         <br>
                         <p><strong>Reward</strong></p>
-                        <h2>                
+                        <h2 id="text_price"> 
                             {{ price|formatnumber:"0"|default_if_none:"-" }} ISK
                         </h2>
                         
