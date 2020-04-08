@@ -27,19 +27,12 @@ This app helps running a central freight service for an alliance or corporation.
 Alliance Freight offers the following main features:
 
 - Reward calculator allowing members to easily calculate the correct reward for their a courier contract
-
 - Page showing the list of currently outstanding courier contracts incl. an indicator if the contract is compliant with the pricing for the respective route ("contract check")
-
 - Multiple routes can be defined, each with its own pricing.
-
 - It's possible to have the same pricing for both directions, or to have different pricings for each direction of the same route.
-
 - Automatic notifications to alliance pilots on Discord informing them about new courier contracts
-
 - Automatic notifications to contract issuers on Discord informing them about the developing status of their contract or potentially issues
-
 - Contract issuer can always check the current status of his courier contracts
-
 - Statistics page showing key performance metrics for routes, pilots, customers
 
 ## Screenshots
@@ -98,12 +91,12 @@ This app uses celery for critical functions like refreshing data from ESI. We st
 
 - To enable logging of celery tasks up to info level: `-l info`
 
-- To automatically restart workers that grow above 512 MB: `--max-memory-per-child 512000`
+- To automatically restart workers that grow above 256 MB: `--max-memory-per-child 262144`
 
 Here is how an example config would look for workers in your supervisor conf:
 
 ```plain
-command=/home/allianceserver/venv/auth/bin/celery -A myauth worker -l info --max-memory-per-child 512000
+command=/home/allianceserver/venv/auth/bin/celery -A myauth worker -l info --max-memory-per-child 262144
 ```
 
 On Ubuntu you can run `systemctl status supervisor` to see where your supervisor config file is located.
@@ -179,7 +172,6 @@ Name | Description | Default
 `FREIGHT_OPERATION_MODE`| See section [Operation Mode](#operation-mode) for details.<br> Note that switching operation modes requires you to remove the existing contract handler with all its contracts and then setup a new contract handler | `'my_alliance'`
 `FREIGHT_STATISTICS_MAX_DAYS`| Sets the number of days that are considered for creating the statistics  | 90
 
-
 ## Operation Mode
 
 The operation mode defines which contracts are processed by the Alliance Freight. For example you can define that only contracts assigned to your alliance are processed. Any courier contract that is  not in scope of the configured operation mode will be ignored by the freight app and e.g. not show up in the contract list or generate notifications.
@@ -237,7 +229,6 @@ Volume max | Maximum allowed volume in m3 | Validation check
 Days to expire | Recommended days for contracts to expire | Info
 Days to complete | Recommended days for contract completion | Info
 Details | Text with additional instructions for using this pricing | Info
-
 
 > **How to add new locations**:<br>If you are creating a pricing for a new route you may need to first add the locations (stations and/or structures).<br>The easiest way is to create a courier contract between those locations in game and then run contract sync. Those locations will then be added automatically.<br>Alternatively you can use the "Add Location" feature on the main page of the app. This will require you to provide the respective station or structure eve ID.
 

@@ -9,9 +9,9 @@ from django.core.exceptions import ValidationError
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.tests.auth_utils import AuthUtils
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
+from allianceauth.tests.auth_utils import AuthUtils
 
 from esi.models import Token
 from esi.errors import TokenExpiredError, TokenInvalidError
@@ -24,7 +24,14 @@ from ..app_settings import (
     FREIGHT_OPERATION_MODE_CORP_PUBLIC,
     FREIGHT_OPERATION_MODES
 )
-from ..models import Contract, ContractHandler, EveEntity, Location, Pricing
+from ..models import (
+    Contract, 
+    ContractCustomerNotification, 
+    ContractHandler, 
+    EveEntity, 
+    Location, 
+    Pricing
+)
 from .testdata import (
     characters_data, 
     create_locations, 
@@ -40,19 +47,90 @@ logger = set_test_logger(MODULE_PATH, __file__)
 
 class TestPricing(NoSocketsTestCase):
 
-    def setUp(self):                
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
         create_entities_from_characters()
         
         # 1 user
         character = EveCharacter.objects.get(character_id=90000001)        
         alliance = EveEntity.objects.get(id=character.alliance_id)
         
-        self.handler = ContractHandler.objects.create(
+        cls.handler = ContractHandler.objects.create(
             organization=alliance,
             operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE
         )
+        cls.location_1, cls.location_2, cls.location_3 = create_locations()
 
-        self.location_1, self.location_2, self.location_3 = create_locations()
+    @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', False)
+    def test_str(self):        
+        p = Pricing(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=50000000
+        )
+        expected = 'Jita <-> Amamake'
+        self.assertEqual(str(p), expected)
+
+    def test_repr(self):        
+        p = Pricing(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=50000000
+        )
+        expected = (
+            'Pricing(pk={}, '
+            'name=\'Jita IV - Moon 4 - Caldari Navy Assembly Plant '
+            '<-> Amamake - 3 Time Nearly AT Winners\')').format(p.pk)
+        self.assertEqual(repr(p), expected)
+    
+    @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', False)
+    def test_name_from_settings_short(self):        
+        p = Pricing(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=50000000
+        )
+        self.assertEqual(
+            p.name,
+            'Jita <-> Amamake'
+        )
+    
+    def test_name_short(self):        
+        p = Pricing(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=50000000
+        )
+        self.assertEqual(
+            p.name_short,
+            'Jita <-> Amamake'
+        )
+
+    @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', True)
+    def test_name_from_settings_full(self):        
+        p = Pricing(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=50000000
+        )
+        self.assertEqual(
+            p.name,            
+            'Jita IV - Moon 4 - Caldari Navy Assembly Plant <-> ' 
+            'Amamake - 3 Time Nearly AT Winners'
+        )
+
+    def test_name_full(self):        
+        p = Pricing(
+            start_location=self.location_1,
+            end_location=self.location_2,
+            price_base=50000000
+        )
+        self.assertEqual(
+            p.name_full,            
+            'Jita IV - Moon 4 - Caldari Navy Assembly Plant <-> ' 
+            'Amamake - 3 Time Nearly AT Winners'
+        )
 
     def test_create_pricings(self):
         with TempDisconnectPricingSaveHandler():
@@ -146,31 +224,6 @@ class TestPricing(NoSocketsTestCase):
                 is_bidirectional=False
             )       
             p.clean()
-
-    @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', False)
-    def test_name_short(self):        
-        p = Pricing(
-            start_location=self.location_1,
-            end_location=self.location_2,
-            price_base=50000000
-        )
-        self.assertEqual(
-            p.name,
-            'Jita <-> Amamake'
-        )
-
-    @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', True)
-    def test_name_full(self):        
-        p = Pricing(
-            start_location=self.location_1,
-            end_location=self.location_2,
-            price_base=50000000
-        )
-        self.assertEqual(
-            p.name,            
-            'Jita IV - Moon 4 - Caldari Navy Assembly Plant <-> ' 
-            'Amamake - 3 Time Nearly AT Winners'
-        )
 
     def test_name_uni_directional(self):
         p = Pricing(
@@ -467,8 +520,9 @@ class TestPricing(NoSocketsTestCase):
 
 class TestContract(NoSocketsTestCase):
     
-    def setUp(self):
-
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
         for character in characters_data:
             EveCharacter.objects.create(**character)
             EveCorporationInfo.objects.get_or_create(
@@ -481,57 +535,53 @@ class TestContract(NoSocketsTestCase):
             )
         
         # 1 user
-        self.character = EveCharacter.objects.get(character_id=90000001)
-        self.corporation = EveCorporationInfo.objects.get(
-            corporation_id=self.character.corporation_id
-        )
-        
-        self.organization = EveEntity.objects.create(
-            id=self.character.alliance_id,
+        cls.character = EveCharacter.objects.get(character_id=90000001)
+        cls.corporation = EveCorporationInfo.objects.get(
+            corporation_id=cls.character.corporation_id
+        )        
+        cls.organization = EveEntity.objects.create(
+            id=cls.character.alliance_id,
             category=EveEntity.CATEGORY_ALLIANCE,
-            name=self.character.alliance_name
-        )
-        
-        self.user = User.objects.create_user(
-            self.character.character_name,
+            name=cls.character.alliance_name
+        )        
+        cls.user = User.objects.create_user(
+            cls.character.character_name,
             'abc@example.com',
             'password'
         )
-
-        self.main_ownership = CharacterOwnership.objects.create(
-            character=self.character,
+        cls.main_ownership = CharacterOwnership.objects.create(
+            character=cls.character,
             owner_hash='x1',
-            user=self.user
-        )        
-
+            user=cls.user
+        )
         # Locations
-        self.location_1 = Location.objects.create(
+        cls.location_1 = Location.objects.create(
             id=60003760,
             name='Jita IV - Moon 4 - Caldari Navy Assembly Plant',
             solar_system_id=30000142,
             type_id=52678,
             category_id=3
         )
-        self.location_2 = Location.objects.create(
+        cls.location_2 = Location.objects.create(
             id=1022167642188,
             name='Amamake - 3 Time Nearly AT Winners',
             solar_system_id=30002537,
             type_id=35834,
             category_id=65
-        )      
+        )
+        cls.handler = ContractHandler.objects.create(
+            organization=cls.organization,
+            character=cls.main_ownership            
+        )  
 
+    def setUp(self):                
         # create contracts
         with TempDisconnectPricingSaveHandler():
             self.pricing = Pricing.objects.create(
                 start_location=self.location_1,
                 end_location=self.location_2,
                 price_base=500000000
-            )
-        
-        self.handler = ContractHandler.objects.create(
-            organization=self.organization,
-            character=self.main_ownership            
-        )
+            )        
         self.contract = Contract.objects.create(
             handler=self.handler,
             contract_id=1,
@@ -550,37 +600,35 @@ class TestContract(NoSocketsTestCase):
             pricing=self.pricing
         )
     
-    def test_hours_issued_2_completed(self):
-        self.contract.date_completed = \
-            self.contract.date_issued + timedelta(hours=9)
+    def test_str(self):
+        expected = '1: Jita -> Amamake'
+        self.assertEqual(str(self.contract), expected)
 
-        self.assertEqual(
-            self.contract.hours_issued_2_completed,
-            9
+    def test_repr(self):
+        excepted = (
+            'Contract(contract_id=1, start_location=Jita, end_location=Amamake)'
         )
-
+        self.assertEqual(repr(self.contract), excepted)
+    
+    def test_hours_issued_2_completed(self):
+        self.contract.date_completed = (
+            self.contract.date_issued + timedelta(hours=9)
+        )
+        self.assertEqual(self.contract.hours_issued_2_completed, 9)
         self.contract.date_completed = None
         self.assertIsNone(self.contract.hours_issued_2_completed)
-            
-    def test_str(self):
-        self.assertEqual(
-            str(self.contract),
-            '1: Jita -> Amamake'
-        )
-
+    
     def test_date_latest(self):
         # initial contract only had date_issued
         self.assertEqual(
-            self.contract.date_issued, 
-            self.contract.date_latest
+            self.contract.date_issued, self.contract.date_latest
         )
 
         # adding date_accepted to contract
         self.contract.date_accepted = \
             self.contract.date_issued + timedelta(days=1)
         self.assertEqual(
-            self.contract.date_accepted, 
-            self.contract.date_latest
+            self.contract.date_accepted, self.contract.date_latest
         )
 
         # adding date_completed to contract
@@ -609,25 +657,19 @@ class TestContract(NoSocketsTestCase):
 
         contract.acceptor_corporation = self.corporation
         self.assertEqual(
-            contract.acceptor_name,
-            self.corporation.corporation_name
+            contract.acceptor_name, self.corporation.corporation_name
         )
         
         contract.acceptor = self.character
         self.assertEqual(
-            contract.acceptor_name,
-            self.character.character_name
+            contract.acceptor_name, self.character.character_name
         )
 
     def test_get_issues_list(self):
-        self.assertListEqual(
-            self.contract.get_issue_list(),
-            []
-        )
+        self.assertListEqual(self.contract.get_issue_list(), [])
         self.contract.issues = '["one", "two"]'
         self.assertListEqual(
-            self.contract.get_issue_list(),
-            ["one", "two"]
+            self.contract.get_issue_list(), ["one", "two"]
         )
 
     def test_generate_embed_w_pricing(self):
@@ -689,6 +731,13 @@ class TestLocation(NoSocketsTestCase):
             str(self.jita.name), 
             'Jita IV - Moon 4 - Caldari Navy Assembly Plant'
         )
+
+    def test_repr(self):        
+        expected = (
+            'Location(pk={}, name=\'Amamake - 3 Time Nearly AT '
+            'Winners\')'
+        ).format(self.amamake.pk)
+        self.assertEqual(repr(self.amamake), expected)
 
     def test_category(self):
         self.assertEqual(self.jita.category, Location.CATEGORY_STATION_ID)
@@ -1382,72 +1431,180 @@ class TestContractsSync(NoSocketsTestCase):
             ContractHandler.ERRORS_LIST[7][1]
         )
 
-    """
-    # freight.tests.TestRunContractsSync.test_statistics_calculation
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
-    )    
-    @patch(MODULE_PATH + '.esi_client_factory')
-    def test_statistics_calculation(
-            self, 
-            mock_esi_client_factory,             
-        ):
-        # create mocks
-        def get_contracts_page(*args, **kwargs):
-            #returns single page for operation.result(), first with header
-            page_size = 2
-            mock_calls_count = len(mock_operation.mock_calls)
-            start = (mock_calls_count - 1) * page_size
-            stop = start + page_size
-            pages_count = int(math.ceil(len(contracts_data) / page_size))
-            if mock_calls_count == 1:
-                mock_response = Mock()
-                mock_response.headers = {'x-pages': pages_count}
-                return [contracts_data[start:stop], mock_response]
-            else:
-                return contracts_data[start:stop]
-        
-        mock_client = Mock()
-        mock_operation = Mock()
-        mock_operation.result.side_effect = get_contracts_page        
-        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
-        )
-        mock_esi_client_factory.return_value = mock_client                
+    
+class TestEveEntity(NoSocketsTestCase):
 
-        # create test data
-        p = Permission.objects.filter(codename='basic_access').first()
-        self.user.user_permissions.add(p)
-        p = Permission.objects.filter(codename='setup_contract_handler').first()
-        self.user.user_permissions.add(p)
-        p = Permission.objects.filter(codename='view_contract').first()
-        self.user.user_permissions.add(p)
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        create_entities_from_characters()
+        cls.alliance = EveEntity.objects.get(id=93000001)        
+        cls.corporation = EveEntity.objects.get(id=92000001)
+        cls.character = EveEntity.objects.get(id=90000001)
+    
+    def test_str(self):        
+        self.assertEqual(str(self.character), 'Bruce Wayne')
 
-        self.user.save()
-        handler = ContractHandler.objects.create(
-            organization=self.corporation,
-            character=self.main_ownership,
-            operation_mode=FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
-        )
-        
-        # run manager sync
-        self.assertTrue(
-            handler.update_contracts_esi()
-        )
+    def test_repr(self):        
+        expected = (
+            'EveEntity(id={}, '
+            'category=\'character\', '
+            'name=\'Bruce Wayne\')'
+        ).format(self.character.id)
+        self.assertEqual(repr(self.character), expected)
 
-        handler.refresh_from_db()
+    def test_is_alliance(self):
+        self.assertFalse(self.character.is_alliance)
+        self.assertFalse(self.corporation.is_alliance)
+        self.assertTrue(self.alliance.is_alliance)
+
+    def test_is_corporation(self):
+        self.assertFalse(self.character.is_corporation)
+        self.assertTrue(self.corporation.is_corporation)
+        self.assertFalse(self.alliance.is_corporation)
+
+    def test_is_character(self):
+        self.assertTrue(self.character.is_character)
+        self.assertFalse(self.corporation.is_character)
+        self.assertFalse(self.alliance.is_character)
+
+    def test_avatar_url_alliance(self):
+        expected = 'https://images.evetech.net/alliances/93000001/logo?size=128'
+        self.assertEqual(self.alliance.avatar_url, expected)
+
+    def test_avatar_url_corporation(self):
+        expected = (
+            'https://images.evetech.net/corporations/92000001/logo?size=128'
+        )
+        self.assertEqual(self.corporation.avatar_url, expected)
+
+    def test_avatar_url_character(self):
+        expected = (
+            'https://images.evetech.net/characters/90000001/portrait?size=128'
+        )
+        self.assertEqual(self.character.avatar_url, expected)
+
+    def test_get_category_for_operation_mode_1(self):
         self.assertEqual(
-            handler.last_error, 
-            ContractHandler.ERROR_NONE            
+            EveEntity.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE_MY_ALLIANCE
+            ),
+            EveEntity.CATEGORY_ALLIANCE
         )
-        
-        result = self.client.login(
-            username=self.character.character_name, 
-            password='password'
+        self.assertEqual(
+            EveEntity.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE_MY_CORPORATION
+            ),
+            EveEntity.CATEGORY_CORPORATION
+        )
+        self.assertEqual(
+            EveEntity.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
+            ),
+            EveEntity.CATEGORY_CORPORATION
+        )
+        self.assertEqual(
+            EveEntity.get_category_for_operation_mode(
+                FREIGHT_OPERATION_MODE_CORP_PUBLIC
+            ),
+            EveEntity.CATEGORY_CORPORATION
         )
 
-        response = self.client.get(reverse('freight:index'))
+
+class TestContractCustomerNotification(NoSocketsTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        for character in characters_data:
+            EveCharacter.objects.create(**character)
+            EveCorporationInfo.objects.get_or_create(
+                corporation_id=character['corporation_id'],
+                defaults={
+                    'corporation_name': character['corporation_name'],
+                    'corporation_ticker': character['corporation_ticker'],
+                    'member_count': 42
+                }
+            )
         
-        print('hi')
-    """
+        # 1 user
+        cls.character = EveCharacter.objects.get(character_id=90000001)
+        cls.corporation = EveCorporationInfo.objects.get(
+            corporation_id=cls.character.corporation_id
+        )        
+        cls.organization = EveEntity.objects.create(
+            id=cls.character.alliance_id,
+            category=EveEntity.CATEGORY_ALLIANCE,
+            name=cls.character.alliance_name
+        )        
+        cls.user = User.objects.create_user(
+            cls.character.character_name,
+            'abc@example.com',
+            'password'
+        )
+        cls.main_ownership = CharacterOwnership.objects.create(
+            character=cls.character,
+            owner_hash='x1',
+            user=cls.user
+        )
+        # Locations
+        cls.location_1 = Location.objects.create(
+            id=60003760,
+            name='Jita IV - Moon 4 - Caldari Navy Assembly Plant',
+            solar_system_id=30000142,
+            type_id=52678,
+            category_id=3
+        )
+        cls.location_2 = Location.objects.create(
+            id=1022167642188,
+            name='Amamake - 3 Time Nearly AT Winners',
+            solar_system_id=30002537,
+            type_id=35834,
+            category_id=65
+        )
+        cls.handler = ContractHandler.objects.create(
+            organization=cls.organization,
+            character=cls.main_ownership            
+        )  
+
+    def setUp(self):                
+        # create contracts
+        with TempDisconnectPricingSaveHandler():
+            self.pricing = Pricing.objects.create(
+                start_location=self.location_1,
+                end_location=self.location_2,
+                price_base=500000000
+            )        
+        self.contract = Contract.objects.create(
+            handler=self.handler,
+            contract_id=1,
+            collateral=0,
+            date_issued=now(),
+            date_expired=now() + timedelta(days=5),
+            days_to_complete=3,
+            end_location=self.location_2,
+            for_corporation=False,
+            issuer_corporation=self.corporation,
+            issuer=self.character,
+            reward=50000000,
+            start_location=self.location_1,
+            status=Contract.STATUS_OUTSTANDING,
+            volume=50000,
+            pricing=self.pricing
+        )
+        self.notification = ContractCustomerNotification.objects.create(
+            contract=self.contract,
+            status=Contract.STATUS_IN_PROGRESS,
+            date_notified=now()
+        )
+
+    def test_str(self):
+        expected = '{} - in_progress'.format(self.contract.contract_id)
+        self.assertEqual(str(self.notification), expected)
+
+    def test_repr(self):
+        expected = (
+            'ContractCustomerNotification(pk={}, contract_id={}, '
+            'status=in_progress)'
+        ).format(self.notification.pk, self.notification.contract.contract_id)
+        self.assertEqual(repr(self.notification), expected)

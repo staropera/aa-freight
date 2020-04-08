@@ -28,19 +28,23 @@ HTTP_REDIRECT = 302
 
 class TestCalculator(NoSocketsTestCase):
     
-    def setUp(self):
-        _, self.user = create_contract_handler_w_contracts()
-        
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        _, cls.user = create_contract_handler_w_contracts()
+        AuthUtils.add_permission_to_user_by_name(
+            'freight.use_calculator', cls.user
+        )        
         with TempDisconnectPricingSaveHandler():
             jita = Location.objects.get(id=60003760)
             amamake = Location.objects.get(id=1022167642188)      
-            self.pricing = Pricing.objects.create(
+            cls.pricing = Pricing.objects.create(
                 start_location=jita,
                 end_location=amamake,
                 price_base=500000000
             )        
         Contract.objects.update_pricing() 
-        self.factory = RequestFactory()
+        cls.factory = RequestFactory()
 
     def test_index(self):        
         request = self.factory.get(reverse('freight:index'))
@@ -49,10 +53,7 @@ class TestCalculator(NoSocketsTestCase):
         self.assertEqual(response.status_code, HTTP_REDIRECT)
         self.assertEqual(response.url, reverse('freight:calculator'))
 
-    def test_calculator_access_with_permission(self):        
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.use_calculator', self.user
-        )
+    def test_calculator_access_with_permission(self):                
         request = self.factory.get(reverse('freight:calculator'))
         request.user = self.user
         response = views.calculator(request)
@@ -60,15 +61,11 @@ class TestCalculator(NoSocketsTestCase):
 
     def test_calculator_no_access_without_permission(self):
         request = self.factory.get(reverse('freight:calculator'))
-        request.user = self.user
+        request.user = AuthUtils.create_user('Lex Luthor')
         response = views.calculator(request)
         self.assertNotEqual(response.status_code, HTTP_OK)
 
-    def test_calculator_perform_calculation(self):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.use_calculator', self.user
-        )
-        
+    def test_calculator_perform_calculation(self):        
         data = {
             'pricing': self.pricing.pk,
             'volume': 0,
@@ -83,45 +80,53 @@ class TestCalculator(NoSocketsTestCase):
 
 class TestContractList(NoSocketsTestCase):
     
-    def setUp(self):
-        _, self.user = create_contract_handler_w_contracts()
-
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        _, cls.user_1 = create_contract_handler_w_contracts()
+        AuthUtils.add_permission_to_user_by_name(
+            'freight.basic_access', cls.user_1
+        ) 
+        AuthUtils.add_permission_to_user_by_name(
+            'freight.use_calculator', cls.user_1
+        ) 
+        AuthUtils.add_permission_to_user_by_name(
+            'freight.view_contracts', cls.user_1
+        )
         with TempDisconnectPricingSaveHandler():
             jita = Location.objects.get(id=60003760)
             amamake = Location.objects.get(id=1022167642188)      
-            self.pricing = Pricing.objects.create(
+            cls.pricing = Pricing.objects.create(
                 start_location=jita,
                 end_location=amamake,
                 price_base=500000000
             )        
         Contract.objects.update_pricing() 
-        self.factory = RequestFactory()
+        cls.factory = RequestFactory()
+        cls.user_2 = AuthUtils.create_user('Lex Luthor')
+        AuthUtils.add_permission_to_user_by_name(
+            'freight.basic_access', cls.user_2
+        ) 
 
     def test_active_no_access_without_permission(self):
         request = self.factory.get(reverse('freight:contract_list_active'))
-        request.user = self.user
+        request.user = self.user_2
         response = views.contract_list_active(request)
         self.assertNotEqual(response.status_code, HTTP_OK)
 
-    def test_active_access_with_permission(self):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.view_contracts', self.user
-        )        
+    def test_active_access_with_permission(self):               
         request = self.factory.get(reverse('freight:contract_list_active'))
-        request.user = self.user
+        request.user = self.user_1
         
         response = views.contract_list_active(request)
         self.assertEqual(response.status_code, HTTP_OK)
     
-    def test_data_activate(self):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.view_contracts', self.user
-        )
+    def test_data_activate(self):       
         request = self.factory.get(reverse(
             'freight:contract_list_data', 
             args={views.CONTRACT_LIST_ACTIVE}
         ))
-        request.user = self.user
+        request.user = self.user_1
         
         response = views.contract_list_data(
             request, 
@@ -153,7 +158,7 @@ class TestContractList(NoSocketsTestCase):
         request = self.factory.get(reverse(
             'freight:contract_list_data', args={'this_is_not_valid'}
         ))
-        request.user = self.user
+        request.user = self.user_1
         
         with self.assertRaises(ValueError):
             views.contract_list_data(
@@ -162,54 +167,44 @@ class TestContractList(NoSocketsTestCase):
         
     def test_user_no_access_without_permission(self):
         request = self.factory.get(reverse('freight:contract_list_user'))
-        request.user = self.user
+        request.user = self.user_2
         response = views.contract_list_user(request)
         self.assertNotEqual(response.status_code, HTTP_OK)
 
-    def test_user_access_with_permission(self):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.use_calculator', self.user
-        )
-
+    def test_user_access_with_permission(self):        
         request = self.factory.get(reverse('freight:contract_list_user'))
-        request.user = self.user
+        request.user = self.user_1
         
         response = views.contract_list_user(request)
         self.assertEqual(response.status_code, HTTP_OK)
 
     def test_data_user_no_access_without_permission_1(self):
         request = self.factory.get(reverse(
-            'freight:contract_list_data', 
-            args={views.CONTRACT_LIST_USER}
+            'freight:contract_list_data', args={views.CONTRACT_LIST_USER}
         ))
-        request.user = self.user
+        request.user = self.user_2
         
         with self.assertRaises(RuntimeError):
-            views.contract_list_data(request, views.CONTRACT_LIST_USER)
+            views.contract_list_data(request, views.CONTRACT_LIST_USER)        
 
     def test_data_user_no_access_without_permission_2(self):
         request = self.factory.get(reverse(
             'freight:contract_list_data', 
             args={views.CONTRACT_LIST_ACTIVE}
         ))
-        request.user = self.user
+        request.user = self.user_2
         
         with self.assertRaises(RuntimeError):
             views.contract_list_data(request, views.CONTRACT_LIST_ACTIVE)
         
-    def test_data_user(self):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.use_calculator', self.user
-        )
+    def test_data_user(self):        
         request = self.factory.get(reverse(
             'freight:contract_list_data', 
             args={views.CONTRACT_LIST_USER}
         ))
-        request.user = self.user
+        request.user = self.user_1
         
-        response = views.contract_list_data(
-            request, views.CONTRACT_LIST_USER
-        )
+        response = views.contract_list_data(request, views.CONTRACT_LIST_USER)
         self.assertEqual(response.status_code, HTTP_OK)
 
         data = json.loads(response.content.decode('utf-8'))        
@@ -224,19 +219,23 @@ class TestContractList(NoSocketsTestCase):
 
 class TestSetupContractHandler(NoSocketsTestCase):
 
-    def setUp(self):
-        _, self.user = create_contract_handler_w_contracts([])
-        
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        _, cls.user = create_contract_handler_w_contracts([])
+        AuthUtils.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', cls.user
+        )        
         with TempDisconnectPricingSaveHandler():
             jita = Location.objects.get(id=60003760)
             amamake = Location.objects.get(id=1022167642188)      
-            self.pricing = Pricing.objects.create(
+            cls.pricing = Pricing.objects.create(
                 start_location=jita,
                 end_location=amamake,
                 price_base=500000000
             )        
         Contract.objects.update_pricing() 
-        self.factory = RequestFactory()
+        cls.factory = RequestFactory()
     
     @patch(
         MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
@@ -244,10 +243,7 @@ class TestSetupContractHandler(NoSocketsTestCase):
     )
     @patch(MODULE_PATH + '.messages_plus', autospec=True)
     @patch(MODULE_PATH + '.tasks.run_contracts_sync', autospec=True)
-    def test_normal(self, mock_run_contracts_sync, mock_message_plus):        
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.setup_contract_handler', self.user
-        )
+    def test_normal(self, mock_run_contracts_sync, mock_message_plus):
         ContractHandler.objects.all().delete()
         token = Mock(spec=Token)
         token.character_id = self.user.profile.main_character.character_id
@@ -276,10 +272,7 @@ class TestSetupContractHandler(NoSocketsTestCase):
     @patch(MODULE_PATH + '.tasks.run_contracts_sync', autospec=True)
     def test_error_no_alliance_member(
         self, mock_run_contracts_sync, mock_message_plus
-    ):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.setup_contract_handler', self.user
-        )
+    ):       
         ContractHandler.objects.all().delete()
         
         token = Mock(spec=Token)
@@ -310,10 +303,7 @@ class TestSetupContractHandler(NoSocketsTestCase):
     @patch(MODULE_PATH + '.tasks.run_contracts_sync', autospec=True)
     def test_error_character_not_owned(
         self, mock_run_contracts_sync, mock_message_plus
-    ):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.setup_contract_handler', self.user
-        )
+    ):        
         ContractHandler.objects.all().delete()
         token = Mock(spec=Token)
         token_char = EveCharacter.objects.get(character_id=90000005)        
@@ -343,10 +333,7 @@ class TestSetupContractHandler(NoSocketsTestCase):
     @patch(MODULE_PATH + '.tasks.run_contracts_sync', autospec=True)
     def test_error_wrong_operation_mode(
         self, mock_run_contracts_sync, mock_message_plus
-    ):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.setup_contract_handler', self.user
-        )
+    ):       
         token = Mock(spec=Token)
         token.character_id = self.user.profile.main_character.character_id
         request = self.factory.post(
@@ -369,24 +356,28 @@ class TestSetupContractHandler(NoSocketsTestCase):
 
 class TestStatistics(NoSocketsTestCase):
 
-    def setUp(self):
-        _, self.user = create_contract_handler_w_contracts()
-        
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        _, cls.user = create_contract_handler_w_contracts()
+        AuthUtils.add_permission_to_user_by_name(
+            'freight.basic_access', cls.user
+        )
+        AuthUtils.add_permission_to_user_by_name(
+            'freight.view_statistics', cls.user
+        )        
         with TempDisconnectPricingSaveHandler():
             jita = Location.objects.get(id=60003760)
             amamake = Location.objects.get(id=1022167642188)      
-            self.pricing = Pricing.objects.create(
+            cls.pricing = Pricing.objects.create(
                 start_location=jita,
                 end_location=amamake,
                 price_base=500000000
             )        
         Contract.objects.update_pricing() 
-        self.factory = RequestFactory()
+        cls.factory = RequestFactory()
 
     def test_statistics_routes_data(self):        
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.view_statistics', self.user
-        )        
         request = self.factory.get(reverse(
             'freight:statistics_routes_data'
         ))
@@ -396,7 +387,6 @@ class TestStatistics(NoSocketsTestCase):
         self.assertEqual(response.status_code, HTTP_OK)
 
         data = json.loads(response.content.decode('utf-8'))        
-        
         self.assertListEqual(
             data,
             [{
@@ -409,10 +399,7 @@ class TestStatistics(NoSocketsTestCase):
             }]
         )
 
-    def test_statistics_pilots_data(self):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.view_statistics', self.user
-        )
+    def test_statistics_pilots_data(self):        
         request = self.factory.get(reverse(
             'freight:statistics_pilots_data'
         ))
@@ -434,10 +421,7 @@ class TestStatistics(NoSocketsTestCase):
             }]
         )
 
-    def test_statistics_pilot_corporations_data(self):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.view_statistics', self.user
-        )
+    def test_statistics_pilot_corporations_data(self):        
         request = self.factory.get(reverse(
             'freight:statistics_pilot_corporations_data'
         ))
@@ -459,10 +443,7 @@ class TestStatistics(NoSocketsTestCase):
             }]
         )
 
-    def test_statistics_customer_data(self):
-        AuthUtils.add_permission_to_user_by_name(
-            'freight.view_statistics', self.user
-        )
+    def test_statistics_customer_data(self):        
         request = self.factory.get(reverse(
             'freight:statistics_customer_data'
         ))
@@ -487,9 +468,11 @@ class TestStatistics(NoSocketsTestCase):
 
 class TestAddLocation(NoSocketsTestCase):
 
-    def setUp(self):
-        _, self.user = create_contract_handler_w_contracts([])                
-        self.factory = RequestFactory()
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()    
+        _, cls.user = create_contract_handler_w_contracts([])                
+        cls.factory = RequestFactory()
     
     @patch(
         MODULE_PATH + '.FREIGHT_OPERATION_MODE', 

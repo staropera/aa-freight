@@ -15,7 +15,9 @@ from django.urls import reverse
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership, User
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import (
+    EveAllianceInfo, EveCharacter, EveCorporationInfo
+)
 from allianceauth.notifications import notify
 
 from esi.clients import esi_client_factory
@@ -43,6 +45,7 @@ from .managers import (
 )
 from .helpers import EsiSmartRequest
 from .utils import (    
+    app_labels,
     DATETIME_FORMAT,     
     get_site_base_url, 
     get_swagger_spec_path,
@@ -121,10 +124,10 @@ class Location(models.Model):
         return self.name
 
     def __repr__(self) -> str:
-        return '<{}({}): {}>'.format(
+        return '{}(pk={}, name=\'{}\')'.format(
             self.__class__.__name__, 
-            self.id, 
-            str(self)
+            self.pk, 
+            self.name
         )
 
     @property
@@ -255,18 +258,29 @@ class Pricing(models.Model):
         return self.name
 
     def __repr__(self) -> str:
-        return '<{}({}): {}>'.format(
+        return '{}(pk={}, name=\'{}\')'.format(
             self.__class__.__name__, 
-            self.id, 
-            str(self)
+            self.pk, 
+            self.name_full
         )
     
     class Meta:
         unique_together = (('start_location', 'end_location'),)
     
     @property
-    def name(self):
-        if FREIGHT_FULL_ROUTE_NAMES:
+    def name(self) -> str:
+        return self._name(FREIGHT_FULL_ROUTE_NAMES)
+    
+    @property
+    def name_full(self) -> str:
+        return self._name(full_name=True)
+
+    @property
+    def name_short(self) -> str:
+        return self._name(full_name=False)
+    
+    def _name(self, full_name: bool) -> str:
+        if full_name:
             start_name = self.start_location.name
             end_name = self.end_location.name
         else:
@@ -496,8 +510,8 @@ class EveEntity(models.Model):
         (CATEGORY_CORPORATION, 'Corporation'),
         (CATEGORY_CHARACTER, 'Character'),
     ]
-
-    EVE_IMAGE_SERVER_BASE_URL = 'https://imageserver.eveonline.com'
+    
+    AVATAR_SIZE = 128
 
     id = models.IntegerField(        
         primary_key=True,
@@ -517,10 +531,11 @@ class EveEntity(models.Model):
         return self.name
 
     def __repr__(self) -> str:
-        return '<{}({}): {}>'.format(
+        return '{}(id={}, category=\'{}\', name=\'{}\')'.format(
             self.__class__.__name__, 
             self.id, 
-            str(self)
+            self.category,
+            self.name
         )
 
     @property
@@ -538,11 +553,19 @@ class EveEntity(models.Model):
     @property
     def avatar_url(self) -> str:
         """returns the url to an icon image for this organization"""
-        return '{}/{}/{}_128.png'.format(            
-            self.EVE_IMAGE_SERVER_BASE_URL,
-            self.category.title(), 
-            self.id
-        )
+        if self.category == self.CATEGORY_ALLIANCE:
+            return EveAllianceInfo.generic_logo_url(self.id, self.AVATAR_SIZE)
+        
+        elif self.category == self.CATEGORY_CORPORATION:
+            return EveCorporationInfo.generic_logo_url(self.id, self.AVATAR_SIZE)
+
+        elif self.category == self.CATEGORY_CHARACTER:
+            return EveCharacter.generic_portrait_url(self.id, self.AVATAR_SIZE)
+
+        else:
+            raise NotImplementedError(
+                'Avatar URL not implemented for category %s' % self.category
+            )
 
     @classmethod
     def get_category_for_operation_mode(cls, mode: str) -> str:
@@ -701,198 +724,6 @@ class ContractHandler(models.Model):
         self.last_sync = now() 
         self.save()
 
-    def update_contracts_esi(self, force_sync=False, user=None) -> bool:        
-        try:
-            add_prefix = make_logger_prefix(self)
-
-            # abort if operation mode from settings is different
-            if self.operation_mode != FREIGHT_OPERATION_MODE:
-                logger.error(add_prefix(
-                    'Current operation mode not matching the handler'
-                ))           
-                            
-                self.set_sync_status(self.ERROR_OPERATION_MODE_MISMATCH)
-                raise ValueError()
-                    
-            # abort if character is not configured
-            if self.character is None:
-                logger.error(add_prefix('No character configured to sync'))                       
-                self.set_sync_status(self.ERROR_NO_CHARACTER)
-                raise ValueError()
-
-            # abort if character does not have sufficient permissions
-            if not self.character.user.has_perm('freight.setup_contract_handler'):
-                logger.error(add_prefix(
-                    'Character does not have sufficient permission to sync contracts'
-                ))                        
-                self.set_sync_status(self.ERROR_INSUFFICIENT_PERMISSIONS)
-                raise ValueError()
-
-            esi_client = self.esi_client()                
-            try:
-                # fetching data from ESI                
-                contracts_all = EsiSmartRequest.fetch(
-                    'Contracts.get_corporations_corporation_id_contracts',
-                    args={'corporation_id': self.character.character.corporation_id},            
-                    has_pages=True,
-                    esi_client=esi_client,
-                    logger_tag=add_prefix()
-                )   
-                            
-                if settings.DEBUG:
-                    # store to disk (for debugging)
-                    with open('contracts_raw.json', 'w', encoding='utf-8') as f:
-                        json.dump(
-                            contracts_all, 
-                            f, 
-                            cls=DjangoJSONEncoder, 
-                            sort_keys=True, 
-                            indent=4
-                        )
-                            
-                # 1st filter: reduce to courier contracts assigned to handler org
-                contracts_courier = [
-                    x for x in contracts_all 
-                    if x['type'] == 'courier' 
-                    and int(x['assignee_id']) == int(self.organization.id)
-                ]
-
-                # 2nd filter: remove contracts not in scope due to operation mode
-                contracts = list()
-                for contract in contracts_courier:
-                    try:
-                        issuer = EveCharacter.objects.get(
-                            character_id=contract['issuer_id']
-                        )
-                    except EveCharacter.DoesNotExist:
-                        issuer = EveCharacter.objects.create_character(
-                            character_id=contract['issuer_id']
-                        )
-                    
-                    assignee_id = int(contract['assignee_id'])
-                    issuer_corporation_id = int(issuer.corporation_id)
-                    issuer_alliance_id = int(issuer.alliance_id) \
-                        if issuer.alliance_id else None
-                    
-                    if self.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
-                        in_scope = issuer_alliance_id == assignee_id
-                    
-                    elif self.operation_mode == FREIGHT_OPERATION_MODE_MY_CORPORATION:
-                        in_scope = assignee_id == issuer_corporation_id
-                    
-                    elif self.operation_mode == FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE:
-                        in_scope = (
-                            issuer_alliance_id == int(
-                                self.character.character.alliance_id
-                            )
-                        )
-
-                    elif self.operation_mode == FREIGHT_OPERATION_MODE_CORP_PUBLIC:
-                        in_scope = True
-                    
-                    else:
-                        raise NotImplementedError(
-                            'Unsupported operation mode: {}'.format(
-                                self.operation_mode
-                            )
-                        )
-                    if in_scope:
-                        contracts.append(contract)
-
-                # determine if contracts have changed by comparing their hashes
-                new_version_hash = hashlib.md5(
-                    json.dumps(contracts, cls=DjangoJSONEncoder).encode('utf-8')
-                ).hexdigest()
-                if (force_sync 
-                    or new_version_hash != self.version_hash
-                ):
-                    logger.info(add_prefix(
-                        'Storing update with {:,} contracts'.format(
-                            len(contracts)
-                        ))
-                    )
-                    
-                    # update contracts in local DB
-                    with transaction.atomic():                
-                        self.version_hash = new_version_hash
-                        no_errors = True
-                        for contract in contracts:                    
-                            try:
-                                Contract.objects.update_or_create_from_dict(
-                                    handler=self,
-                                    contract=contract,
-                                    esi_client=esi_client
-                                )
-                            except Exception as ex:
-                                logger.exception(add_prefix(
-                                    'An unexpected error ocurred '
-                                    'while trying to load contract '
-                                    '{}: {}'. format(
-                                        contract['contract_id'] 
-                                        if 'contract_id' in contract else 'Unknown',
-                                        ex
-                                    )
-                                ))
-                                no_errors = False                
-                        
-                        if no_errors:
-                            last_error = self.ERROR_NONE
-                        else:
-                            last_error = self.ERROR_UNKNOWN
-                        self.set_sync_status(last_error)
-
-                    Contract.objects.update_pricing()
-
-                else:
-                    logger.info(add_prefix('Contracts are unchanged.'))
-                
-            except Exception as ex:
-                logger.exception(add_prefix(
-                    'An unexpected error ocurred {}'. format(ex)
-                ))            
-                self.set_sync_status(self.ERROR_UNKNOWN)
-                raise ex
-
-        except Exception as ex:
-            success = False
-            error_code = type(ex).__name__
-            
-        else:
-            success = True
-
-        if user:
-            try:
-                message = 'Syncing of contracts for "{}"'.format(
-                    self.organization.name
-                )
-                message += ' in operation mode "{}" {}.\n'.format(
-                    self.operation_mode_friendly,
-                    'completed successfully' if success else 'has failed'
-                )
-                if success:
-                    message += '{:,} contracts synced.'.format(
-                        self.contract_set.count()
-                    )
-                else:
-                    message += 'Error code: {}'.format(error_code)
-                
-                notify(
-                    user=user,
-                    title='Freight: Contracts sync for {}: {}'.format(
-                        self.organization.name,
-                        'OK' if success else 'FAILED'
-                    ),
-                    message=message,
-                    level='success' if success else 'danger'
-                )
-            except Exception as ex:
-                logger.exception(add_prefix(
-                    'An unexpected error ocurred while trying to '
-                    + 'report to user: {}'. format(ex)
-                ))
-        
-        return success
-
     def esi_client(self) -> object:
         """returns an esi client for the contract handler 
         
@@ -934,6 +765,218 @@ class ContractHandler(models.Model):
         return esi_client_factory(
             token=token, spec_file=get_swagger_spec_path()
         )
+
+    def update_contracts_esi(self, force_sync=False, user=None) -> bool:        
+        try:
+            add_prefix = make_logger_prefix(self)
+            self._validate_update_readiness()
+            esi_client = self.esi_client()             
+            try:
+                # fetching data from ESI                
+                contracts = EsiSmartRequest.fetch(
+                    'Contracts.get_corporations_corporation_id_contracts',
+                    args={'corporation_id': self.character.character.corporation_id},
+                    has_pages=True,
+                    esi_client=esi_client,
+                    logger_tag=add_prefix()
+                )   
+                            
+                if settings.DEBUG:
+                    # store to disk (for debugging)
+                    with open('contracts_raw.json', 'w', encoding='utf-8') as f:
+                        json.dump(
+                            contracts, 
+                            f, 
+                            cls=DjangoJSONEncoder, 
+                            sort_keys=True, 
+                            indent=4
+                        )
+                self._process_contracts_from_esi(
+                    contracts, esi_client, force_sync
+                )
+                
+            except Exception as ex:
+                logger.exception(add_prefix(
+                    'An unexpected error ocurred {}'. format(ex)
+                ))            
+                self.set_sync_status(self.ERROR_UNKNOWN)
+                raise ex
+
+        except Exception as ex:
+            success = False
+            error_code = type(ex).__name__
+            
+        else:
+            success = True
+            error_code = None
+
+        if user:
+            self._report_to_user(user, success, error_code)
+        
+        return success
+
+    def _validate_update_readiness(self):
+        add_prefix = make_logger_prefix(self)
+        
+        # abort if operation mode from settings is different
+        if self.operation_mode != FREIGHT_OPERATION_MODE:
+            logger.error(add_prefix(
+                'Current operation mode not matching the handler'
+            ))           
+                        
+            self.set_sync_status(self.ERROR_OPERATION_MODE_MISMATCH)
+            raise ValueError()
+                
+        # abort if character is not configured
+        if self.character is None:
+            logger.error(add_prefix('No character configured to sync'))                       
+            self.set_sync_status(self.ERROR_NO_CHARACTER)
+            raise ValueError()
+
+        # abort if character does not have sufficient permissions
+        if not self.character.user.has_perm(
+            'freight.setup_contract_handler'
+        ):
+            logger.error(add_prefix(
+                'Character does not have sufficient permission to sync contracts'
+            ))                        
+            self.set_sync_status(self.ERROR_INSUFFICIENT_PERMISSIONS)
+            raise ValueError()
+
+    def _process_contracts_from_esi(
+        self, contracts_all: list, esi_client: object, force_sync: bool
+    ):
+        add_prefix = make_logger_prefix(self)
+
+        # 1st filter: reduce to courier contracts assigned to handler org
+        contracts_courier = [
+            x for x in contracts_all 
+            if x['type'] == 'courier' 
+            and int(x['assignee_id']) == int(self.organization.id)
+        ]
+
+        # 2nd filter: remove contracts not in scope due to operation mode
+        contracts = list()
+        for contract in contracts_courier:
+            try:
+                issuer = EveCharacter.objects.get(
+                    character_id=contract['issuer_id']
+                )
+            except EveCharacter.DoesNotExist:
+                issuer = EveCharacter.objects.create_character(
+                    character_id=contract['issuer_id']
+                )
+            
+            assignee_id = int(contract['assignee_id'])
+            issuer_corporation_id = int(issuer.corporation_id)
+            issuer_alliance_id = int(issuer.alliance_id) \
+                if issuer.alliance_id else None
+            
+            if self.operation_mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
+                in_scope = issuer_alliance_id == assignee_id
+            
+            elif self.operation_mode == FREIGHT_OPERATION_MODE_MY_CORPORATION:
+                in_scope = assignee_id == issuer_corporation_id
+            
+            elif self.operation_mode == FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE:
+                in_scope = (
+                    issuer_alliance_id == int(
+                        self.character.character.alliance_id
+                    )
+                )
+
+            elif self.operation_mode == FREIGHT_OPERATION_MODE_CORP_PUBLIC:
+                in_scope = True
+            
+            else:
+                raise NotImplementedError(
+                    'Unsupported operation mode: {}'.format(self.operation_mode)
+                )
+            if in_scope:
+                contracts.append(contract)
+
+        # determine if contracts have changed by comparing their hashes
+        new_version_hash = hashlib.md5(
+            json.dumps(contracts, cls=DjangoJSONEncoder).encode('utf-8')
+        ).hexdigest()
+        if (force_sync or new_version_hash != self.version_hash):
+            self._store_contract_from_esi(
+                contracts, new_version_hash, esi_client
+            )
+
+        else:
+            logger.info(add_prefix('Contracts are unchanged.'))
+
+    def _store_contract_from_esi(
+        self, contracts: list, new_version_hash: str, esi_client: object
+    ) -> None:
+        add_prefix = make_logger_prefix(self)
+        logger.info(add_prefix(
+            'Storing update with {:,} contracts'.format(len(contracts))
+        ))        
+
+        # update contracts in local DB
+        with transaction.atomic():                
+            self.version_hash = new_version_hash
+            no_errors = True
+            for contract in contracts:                    
+                try:
+                    Contract.objects.update_or_create_from_dict(
+                        handler=self,
+                        contract=contract,
+                        esi_client=esi_client
+                    )
+                except Exception as ex:
+                    logger.exception(add_prefix(
+                        'An unexpected error ocurred '
+                        'while trying to load contract '
+                        '{}: {}'. format(
+                            contract['contract_id'] 
+                            if 'contract_id' in contract else 'Unknown',
+                            ex
+                        )
+                    ))
+                    no_errors = False                
+            
+            if no_errors:
+                last_error = self.ERROR_NONE
+            else:
+                last_error = self.ERROR_UNKNOWN
+            self.set_sync_status(last_error)
+
+        Contract.objects.update_pricing()
+
+    def _report_to_user(self, user, success, error_code):
+        add_prefix = make_logger_prefix(self)
+        try:
+            message = 'Syncing of contracts for "{}"'.format(
+                self.organization.name
+            )
+            message += ' in operation mode "{}" {}.\n'.format(
+                self.operation_mode_friendly,
+                'completed successfully' if success else 'has failed'
+            )
+            if success:
+                message += '{:,} contracts synced.'.format(
+                    self.contract_set.count()
+                )
+            else:
+                message += 'Error code: {}'.format(error_code)
+            
+            notify(
+                user=user,
+                title='Freight: Contracts sync for {}: {}'.format(
+                    self.organization.name,
+                    'OK' if success else 'FAILED'
+                ),
+                message=message,
+                level='success' if success else 'danger'
+            )
+        except Exception as ex:
+            logger.exception(add_prefix(
+                'An unexpected error ocurred while trying to '
+                + 'report to user: {}'. format(ex)
+            ))
 
 
 class Contract(models.Model): 
@@ -1053,6 +1096,21 @@ class Contract(models.Model):
     
     objects = ContractManager()
 
+    def __str__(self) -> str:
+        return '{}: {} -> {}'.format(
+            self.contract_id,
+            self.start_location.solar_system_name,
+            self.end_location.solar_system_name
+        )
+
+    def __repr__(self) -> str:
+        return '{}(contract_id={}, start_location={}, end_location={})'.format(
+            self.__class__.__name__, 
+            self.contract_id, 
+            self.start_location.solar_system_name,
+            self.end_location.solar_system_name
+        )
+
     class Meta:
         unique_together = (('handler', 'contract_id'),)
         indexes = [
@@ -1134,20 +1192,6 @@ class Contract(models.Model):
         
         return name
 
-    def __str__(self) -> str:
-        return '{}: {} -> {}'.format(
-            self.contract_id,
-            self.start_location.solar_system_name,
-            self.end_location.solar_system_name
-        )
-
-    def __repr__(self) -> str:
-        return '<{}({}): {}>'.format(
-            self.__class__.__name__, 
-            self.id, 
-            str(self)
-        )
-
     def get_price_check_issues(self, pricing: Pricing) -> list:
         return pricing.get_contract_price_check_issues(
             self.volume,
@@ -1212,11 +1256,12 @@ class Contract(models.Model):
             thumbnail=Thumbnail(self.issuer.portrait_url())
         )        
 
+    def get_logger_tag(self):
+        return make_logger_prefix('contract:{}'.format(self.contract_id))
+    
     def send_pilot_notification(self):
         """sends pilot notification about this contract to the DISCORD webhook"""
-        add_tag = make_logger_prefix(
-            'send_pilot_notification for contract {}'.format(self.contract_id)
-        )        
+        add_tag = self.get_logger_tag()
         if FREIGHT_DISCORD_WEBHOOK_URL:
             if FREIGHT_DISCORD_DISABLE_BRANDING:
                 username = None
@@ -1273,13 +1318,8 @@ class Contract(models.Model):
     def send_customer_notification(self, force_sent=False):
         """sends customer notification about this contract to Discord
         force_sent: send notification even if one has already been sent
-        """
-        add_tag = make_logger_prefix('contract:{}'.format(self.contract_id))
-        if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL \
-            and 'allianceauth.services.modules.discord' \
-                in settings.INSTALLED_APPS:
-            from allianceauth.services.modules.discord.models import DiscordUser
-            
+        """        
+        if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL and 'discord' in app_labels():
             status_to_report = None
             for status in self.STATUS_FOR_CUSTOMER_NOTIFICATION:
                 if (
@@ -1295,125 +1335,125 @@ class Contract(models.Model):
                     break
 
             if status_to_report:
-                issuer_user = User.objects\
-                    .filter(
-                        character_ownerships__character__exact=self.issuer
-                    )\
-                    .first()
-
-                if not issuer_user:
-                    logger.info(add_tag(
-                        'Could not find matching user for issuer'
-                    ))
-                    return
-
-                try:
-                    discord_user = DiscordUser.objects.get(user=issuer_user)
-                    discord_user_id = discord_user.uid
-
-                except DiscordUser.DoesNotExist:
-                    logger.info(add_tag(
-                        'Could not find Discord user for issuer'
-                    ))
-                    return
-                
-                if FREIGHT_DISCORD_DISABLE_BRANDING:
-                    username = None
-                    avatar_url = None
-                else:
-                    username = __title__
-                    avatar_url = self.handler.organization.avatar_url
-
-                hook = Webhook(
-                    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL, 
-                    username=username,
-                    avatar_url=avatar_url
-                )                        
-                with transaction.atomic():            
-                    logger.info(add_tag(
-                        'Trying to sent customer notification'
-                        ' about contract {} on status {}'
-                        ' to {}'.format(
-                            self.contract_id, 
-                            status_to_report,
-                            FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
-                        )
-                    ))
-                    embed = self._generate_embed()
-                                        
-                    contents = '<@{}>\n'.format(
-                        discord_user_id
-                    )                    
-                    if status_to_report == self.STATUS_OUTSTANDING:
-                        contents += 'We have received your contract'                                                
-                        if self.has_pricing_errors:
-                            issues = self.get_issue_list()
-                            contents += ', but we found some issues.\n' \
-                                + 'Please create a new courier contract ' \
-                                + 'and correct the following issues:\n'
-                            for issue in issues:
-                                contents += '• {}\n'.format(issue)
-                        else:                        
-                            contents += (
-                                ' and it will be picked up by '
-                                'one of our pilots shortly.'
-                            )
-                    
-                    elif status_to_report == self.STATUS_IN_PROGRESS:
-                        if self.acceptor_name:
-                            acceptor_text = 'by {} '.format(self.acceptor_name)
-                        else:
-                            acceptor_text = ''
-
-                        contents += 'Your contract has been picked up {}'\
-                            .format(acceptor_text) \
-                            + 'and will be delivered to you shortly.'
-                    
-                    elif status_to_report == self.STATUS_FINISHED:
-                        contents += 'Your contract has been **delivered**.\n' \
-                            + 'Thank you for using our freight service.'
-
-                    elif status_to_report == self.STATUS_FAILED:
-                        contents += 'Your contract has been **failed** {}'\
-                            .format(acceptor_text) \
-                            + 'Thank you for using our freight service.'
-                            
-                    else:
-                        raise NotImplementedError()
-                    
-                    contents += (
-                        '\nClick [here]({}) to check the current '
-                        'status of your contract.').format(urljoin(
-                            get_site_base_url(), 
-                            reverse('freight:contract_list_user')
-                        )
-                    )
-
-                    response = hook.execute(
-                        content=contents, 
-                        embeds=[embed], 
-                        wait_for_response=True
-                    )
-                    if response.status_ok:
-                        ContractCustomerNotification.objects.update_or_create(
-                            contract=self,
-                            status=status_to_report,
-                            defaults={
-                                "date_notified": now()
-                            }
-                        )
-
-                    else:
-                        logger.warn(add_tag(
-                            'Failed to send message. HTTP code: {}'.format(
-                                response.status_code
-                            )
-                        ))
+                self._report_to_customer(status_to_report)
         else:
+            add_tag = self.get_logger_tag()
             logger.debug(add_tag(
                 'FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured or '
                 'Discord services not installed'
             ))
+
+    def _report_to_customer(self, status_to_report):
+        from allianceauth.services.modules.discord.models import DiscordUser
+
+        add_tag = self.get_logger_tag()
+        issuer_user = User.objects\
+            .filter(character_ownerships__character__exact=self.issuer)\
+            .first()
+
+        if not issuer_user:
+            logger.info(add_tag('Could not find matching user for issuer'))
+            return
+
+        try:
+            discord_user = DiscordUser.objects.get(user=issuer_user)
+            discord_user_id = discord_user.uid
+
+        except DiscordUser.DoesNotExist:
+            logger.info(add_tag('Could not find Discord user for issuer'))
+            return
+        
+        if FREIGHT_DISCORD_DISABLE_BRANDING:
+            username = None
+            avatar_url = None
+        else:
+            username = __title__
+            avatar_url = self.handler.organization.avatar_url
+
+        hook = Webhook(
+            FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL, 
+            username=username,
+            avatar_url=avatar_url
+        )                        
+        with transaction.atomic():            
+            logger.info(add_tag(
+                'Trying to sent customer notification'
+                ' about contract {} on status {}'
+                ' to {}'.format(
+                    self.contract_id, 
+                    status_to_report,
+                    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
+                )
+            ))
+            embed = self._generate_embed()
+                                
+            contents = '<@{}>\n'.format(
+                discord_user_id
+            )                    
+            if status_to_report == self.STATUS_OUTSTANDING:
+                contents += 'We have received your contract'
+                if self.has_pricing_errors:
+                    issues = self.get_issue_list()
+                    contents += ', but we found some issues.\n' \
+                        + 'Please create a new courier contract ' \
+                        + 'and correct the following issues:\n'
+                    for issue in issues:
+                        contents += '• {}\n'.format(issue)
+                else:                        
+                    contents += (
+                        ' and it will be picked up by '
+                        'one of our pilots shortly.'
+                    )
+            
+            elif status_to_report == self.STATUS_IN_PROGRESS:
+                if self.acceptor_name:
+                    acceptor_text = 'by {} '.format(self.acceptor_name)
+                else:
+                    acceptor_text = ''
+
+                contents += 'Your contract has been picked up {}'\
+                    .format(acceptor_text) \
+                    + 'and will be delivered to you shortly.'
+            
+            elif status_to_report == self.STATUS_FINISHED:
+                contents += 'Your contract has been **delivered**.\n' \
+                    + 'Thank you for using our freight service.'
+
+            elif status_to_report == self.STATUS_FAILED:
+                contents += 'Your contract has been **failed** {}'\
+                    .format(acceptor_text) \
+                    + 'Thank you for using our freight service.'
+                    
+            else:
+                raise NotImplementedError()
+            
+            contents += (
+                '\nClick [here]({}) to check the current '
+                'status of your contract.').format(urljoin(
+                    get_site_base_url(), 
+                    reverse('freight:contract_list_user')
+                )
+            )
+            response = hook.execute(
+                content=contents, 
+                embeds=[embed], 
+                wait_for_response=True
+            )
+            if response.status_ok:
+                ContractCustomerNotification.objects.update_or_create(
+                    contract=self,
+                    status=status_to_report,
+                    defaults={
+                        "date_notified": now()
+                    }
+                )
+
+            else:
+                logger.warn(add_tag(
+                    'Failed to send message. HTTP code: {}'.format(
+                        response.status_code
+                    )
+                ))
         
 
 class ContractCustomerNotification(models.Model):
@@ -1434,11 +1474,12 @@ class ContractCustomerNotification(models.Model):
         unique_together = (('contract', 'status'),)
 
     def __str__(self):
-        return '{}-{}'.format(self.contract.contract_id, self.status)
+        return '{} - {}'.format(self.contract.contract_id, self.status)
 
     def __repr__(self) -> str:
-        return '<{}({}): {}>'.format(
+        return '{}(pk={}, contract_id={}, status={})'.format(
             self.__class__.__name__, 
-            self.id, 
-            str(self)
+            self.pk, 
+            self.contract.contract_id,
+            self.status
         )

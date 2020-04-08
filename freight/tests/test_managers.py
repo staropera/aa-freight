@@ -32,8 +32,7 @@ class TestEveEntityManager(NoSocketsTestCase):
     
     @classmethod
     def setUpClass(cls):
-        super(TestEveEntityManager, cls).setUpClass()
-
+        super().setUpClass()
         esi_data = dict()
         for character in characters_data:
             esi_data[character['character_id']] = {
@@ -67,66 +66,6 @@ class TestEveEntityManager(NoSocketsTestCase):
         m = Mock()
         m.result.return_value = response
         return m
-
-    @patch('freight.helpers.provider')
-    def test_character_basics(self, mock_provider):
-        mock_provider.client\
-            .Universe.post_universe_names.side_effect = \
-            TestEveEntityManager.esi_post_universe_names
-
-        entity, created = EveEntity.objects.get_or_create_from_esi(id=90000001)
-        self.assertTrue(created)
-        self.assertEqual(
-            str(entity),
-            'Bruce Wayne'
-        )
-        self.assertFalse(entity.is_alliance)
-        self.assertFalse(entity.is_corporation)
-        self.assertTrue(entity.is_character)
-        self.assertEqual(
-            entity.avatar_url,
-            'https://imageserver.eveonline.com/Character/90000001_128.png'
-        )
-
-        entity, created = EveEntity.objects.get_or_create_from_esi(id=90000001)
-        self.assertFalse(created)
-
-    @patch('freight.helpers.provider')
-    def test_corporation_basics(self, mock_provider):
-        mock_provider.client\
-            .Universe.post_universe_names.side_effect = \
-            TestEveEntityManager.esi_post_universe_names
-
-        entity, _ = EveEntity.objects.get_or_create_from_esi(id=92000001)
-        self.assertEqual(
-            str(entity), 'Wayne Enterprise'
-        )
-        self.assertFalse(entity.is_alliance)
-        self.assertTrue(entity.is_corporation)
-        self.assertFalse(entity.is_character)
-        self.assertEqual(
-            entity.avatar_url,
-            'https://imageserver.eveonline.com/Corporation/92000001_128.png'
-        )
-
-    @patch('freight.helpers.provider')
-    def test_alliance_basics(self, mock_provider):
-        mock_provider.client\
-            .Universe.post_universe_names.side_effect = \
-            TestEveEntityManager.esi_post_universe_names
-
-        entity, _ = EveEntity.objects.get_or_create_from_esi(id=93000001)
-        self.assertEqual(
-            str(entity),
-            'Justice League'
-        )
-        self.assertTrue(entity.is_alliance)
-        self.assertFalse(entity.is_corporation)
-        self.assertFalse(entity.is_character)
-        self.assertEqual(
-            entity.avatar_url,
-            'https://imageserver.eveonline.com/Alliance/93000001_128.png'
-        )
 
     @patch('freight.helpers.provider')
     def test_alliance_not_found(self, mock_provider):
@@ -289,14 +228,11 @@ class TestLocationManager(NoSocketsTestCase):
 
 class TestContractManager(NoSocketsTestCase):
 
-    def setUp(self):        
-    
-        _, self.user = create_contract_handler_w_contracts([
-            149409016,
-            149409061,
-            149409062,
-            149409063,
-            149409064
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        _, cls.user = create_contract_handler_w_contracts([
+            149409016, 149409061, 149409062, 149409063, 149409064
         ])
 
     def test_update_pricing_bidirectional(self):
@@ -378,12 +314,14 @@ class TestContractManager(NoSocketsTestCase):
         self.assertIsNone(contract_5.pricing)
 
 
-class TestNotifications(NoSocketsTestCase):
+@patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+@patch('freight.models.Webhook.execute', autospec=True)
+class TestContractManagerNotifications(NoSocketsTestCase):
           
-    def setUp(self):
-
-        self.handler, _ = create_contract_handler_w_contracts()
-        
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.handler, _ = create_contract_handler_w_contracts()        
         # disable pricing signal                
         jita = Location.objects.get(id=60003760)
         amamake = Location.objects.get(id=1022167642188)        
@@ -395,37 +333,31 @@ class TestNotifications(NoSocketsTestCase):
             )
                 
         Contract.objects.update_pricing() 
-
-    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
-    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
-    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)    
     def test_send_pilot_notifications_normal(self, mock_webhook_execute):        
         logger.debug('test_send_pilot_notifications_normal - start')
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 8)
         logger.debug('test_send_pilot_notifications_normal - complete')
-
-    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
-    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
-    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')        
     def test_send_customer_notifications_normal(self, mock_webhook_execute):
         logger.debug('test_send_customer_notifications_normal - start')
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 12)
         logger.debug('test_send_customer_notifications_normal - complete')
 
-    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
-    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
-    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)    
     def test_dont_send_pilot_notifications_for_expired_contracts(
         self, mock_webhook_execute
     ):
@@ -436,12 +368,10 @@ class TestNotifications(NoSocketsTestCase):
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 0)
 
-    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)    
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
-    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
-    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')        
     def test_dont_send_customer_notifications_for_expired_contracts(
         self, mock_webhook_execute
     ):
@@ -451,13 +381,11 @@ class TestNotifications(NoSocketsTestCase):
         x.save()
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 0)
-
-    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
-    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
-    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)    
     def test_send_pilot_notifications_only_once(
         self, mock_webhook_execute
     ):
@@ -471,13 +399,11 @@ class TestNotifications(NoSocketsTestCase):
         # round #2
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 1)
-
-    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
-    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
-    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')        
     def test_send_customer_notifications_only_once_per_state(
         self, mock_webhook_execute
     ):
@@ -491,13 +417,11 @@ class TestNotifications(NoSocketsTestCase):
         # round #2
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 1)
-
-    @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
+    
     @patch('freight.managers.FREIGHT_DISCORD_WEBHOOK_URL', None)
     @patch('freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
     @patch('freight.models.FREIGHT_DISCORD_WEBHOOK_URL', None)
-    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)
-    @patch('freight.models.Webhook.execute', autospec=True)
+    @patch('freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)    
     def test_dont_send_any_notifications_when_no_url_if_set(
         self, mock_webhook_execute
     ):        
