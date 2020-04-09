@@ -775,22 +775,17 @@ class ContractHandler(models.Model):
                 # fetching data from ESI                
                 contracts = EsiSmartRequest.fetch(
                     'Contracts.get_corporations_corporation_id_contracts',
-                    args={'corporation_id': self.character.character.corporation_id},
+                    args={
+                        'corporation_id': self.character.character.corporation_id
+                    },
                     has_pages=True,
                     esi_client=esi_client,
                     logger_tag=add_prefix()
                 )   
                             
                 if settings.DEBUG:
-                    # store to disk (for debugging)
-                    with open('contracts_raw.json', 'w', encoding='utf-8') as f:
-                        json.dump(
-                            contracts, 
-                            f, 
-                            cls=DjangoJSONEncoder, 
-                            sort_keys=True, 
-                            indent=4
-                        )
+                    self._save_contract_to_file(contracts)
+                
                 self._process_contracts_from_esi(
                     contracts, esi_client, force_sync
                 )
@@ -842,6 +837,17 @@ class ContractHandler(models.Model):
             ))                        
             self.set_sync_status(self.ERROR_INSUFFICIENT_PERMISSIONS)
             raise ValueError()
+
+    def _save_contract_to_file(self, contracts):
+        """saves raw contracts to file for debugging"""
+        with open('contracts_raw.json', 'w', encoding='utf-8') as f:
+            json.dump(
+                contracts, 
+                f, 
+                cls=DjangoJSONEncoder, 
+                sort_keys=True, 
+                indent=4
+            )
 
     def _process_contracts_from_esi(
         self, contracts_all: list, esi_client: object, force_sync: bool

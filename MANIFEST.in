@@ -4,5 +4,8 @@ include freight/swagger.json
 recursive-include freight *.py
 recursive-include freight/static *
 recursive-include freight/templates *
-recursive-include freight/templatetags *
+recursive-include freight/templatetags *.py
+recursive-exclude freight/templatetags *.pyc
+recursive-exclude testauth *.*
+recursive-exclude freight/tests *.*
 

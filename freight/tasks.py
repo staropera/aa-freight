@@ -38,7 +38,7 @@ def _get_contract_handler() -> ContractHandler:
 def update_contracts_esi(force_sync=False, user_pk=None) -> None:
     """start syncing contracts"""    
     _get_contract_handler().update_contracts_esi(
-        force_sync, user_pk=_get_user(user_pk)
+        force_sync, user=_get_user(user_pk)
     )
         
 

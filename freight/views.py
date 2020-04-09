@@ -162,17 +162,6 @@ def contract_list_data(request, category):
     return JsonResponse(contracts_data, safe=False)
 
 
-def _get_default_pricing() -> Pricing:
-    """return the default pricing if defined, else the first pricing"""
-    pricing_qs = Pricing.objects.filter(is_active=True)
-    try:
-        pricing = pricing_qs.filter(is_default=True).first()
-    except Pricing.DoesNotExist:
-        pricing = pricing_qs.first()
-    
-    return pricing
-
-
 @login_required
 @permission_required('freight.use_calculator')
 def calculator(request, pricing_pk=None):            
@@ -245,6 +234,17 @@ def _get_pricing_from_pk(pricing_pk: int) -> Pricing:
             pricing = _get_default_pricing()
     else:            
         pricing = _get_default_pricing()
+    return pricing
+
+
+def _get_default_pricing() -> Pricing:
+    """return the default pricing if defined, else the first pricing"""
+    pricing_qs = Pricing.objects.filter(is_active=True)
+    try:
+        pricing = pricing_qs.filter(is_default=True).first()
+    except Pricing.DoesNotExist:
+        pricing = pricing_qs.first()
+    
     return pricing
 
 

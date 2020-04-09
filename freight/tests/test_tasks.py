@@ -5,6 +5,8 @@ from celery import Celery
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
+from esi.errors import TokenInvalidError
+
 from ..tasks import (    
     run_contracts_sync,
     send_contract_notifications,
@@ -26,7 +28,6 @@ def get_invalid_user_pk() -> int:
     return max(User.objects.values_list('pk', flat=True)) + 1
 
 
-@patch(MODULE_PATH + '.ContractHandler.update_contracts_esi')
 class TestUpdateContractsEsi(NoSocketsTestCase):
     
     @classmethod
@@ -34,6 +35,7 @@ class TestUpdateContractsEsi(NoSocketsTestCase):
         super().setUpClass()
         cls.handler, cls.user = create_contract_handler_w_contracts()
 
+    @patch(MODULE_PATH + '.ContractHandler.update_contracts_esi')
     def test_exception_when_no_contract_handler(
         self, mock_update_contracts_esi
     ):
@@ -41,21 +43,32 @@ class TestUpdateContractsEsi(NoSocketsTestCase):
         with self.assertRaises(ObjectDoesNotExist):
             update_contracts_esi()
     
-    def test_minimal_run(self, mock_update_contracts_esi):        
+    @patch(MODULE_PATH + '.ContractHandler.update_contracts_esi')
+    def test_minimal_run(self, mock_update_contracts_esi):
         update_contracts_esi()
         self.assertTrue(mock_update_contracts_esi.called)
     
-    def test_run_with_user(self, mock_update_contracts_esi):        
+    @patch(MODULE_PATH + '.ContractHandler.update_contracts_esi')
+    def test_run_with_user_mocked(self, mock_update_contracts_esi):
         update_contracts_esi(user_pk=self.user.pk)
         self.assertTrue(mock_update_contracts_esi.called)
         args, kwargs = mock_update_contracts_esi.call_args
-        self.assertEqual(kwargs['user_pk'], self.user)
-
-    def test_run_with_invalid_user(self, mock_update_contracts_esi):        
+        self.assertEqual(kwargs['user'], self.user)
+    
+    @patch('freight.models.Token')
+    def test_run_with_user_full(self, mock_Token):
+        """tests that the task can successfully call the model method. 
+        Uses TokenInvalidError as a shortcut to avoid more mocking
+        """
+        mock_Token.objects.filter.side_effect = TokenInvalidError()
+        self.assertFalse(update_contracts_esi(user_pk=self.user.pk))
+        
+    @patch(MODULE_PATH + '.ContractHandler.update_contracts_esi')
+    def test_run_with_invalid_user(self, mock_update_contracts_esi):
         update_contracts_esi(user_pk=get_invalid_user_pk())
         self.assertTrue(mock_update_contracts_esi.called)
         args, kwargs = mock_update_contracts_esi.call_args
-        self.assertIsNone(kwargs['user_pk'])
+        self.assertIsNone(kwargs['user'])
 
 
 @patch(MODULE_PATH + '.Contract.objects.send_notifications')

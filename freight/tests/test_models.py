@@ -1047,9 +1047,7 @@ class TestContractsSync(NoSocketsTestCase):
             return [contracts_data[start:stop], mock_response]
 
         def func_Contracts_objects_update_or_create_from_dict(
-            handler, 
-            contract, 
-            esi_client
+            handler, contract, esi_client
         ):            
             raise RuntimeError('Test exception')
             
@@ -1095,9 +1093,7 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(MODULE_PATH + '.Token')    
     @patch(MODULE_PATH + '.esi_client_factory')
     def test_sync_my_alliance_contracts_only(
-        self, 
-        mock_esi_client_factory,         
-        mock_Token
+        self, mock_esi_client_factory, mock_Token
     ):        
         # create mocks
         def get_contracts_page(*args, **kwargs):
@@ -1164,9 +1160,7 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(MODULE_PATH + '.Token')    
     @patch(MODULE_PATH + '.esi_client_factory')
     def test_sync_my_corporation_contracts_only(
-        self, 
-        mock_esi_client_factory,         
-        mock_Token
+        self, mock_esi_client_factory, mock_Token
     ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
@@ -1206,9 +1200,7 @@ class TestContractsSync(NoSocketsTestCase):
         self.assertTrue(handler.update_contracts_esi())
 
         handler.refresh_from_db()
-        self.assertEqual(
-            handler.last_error, ContractHandler.ERROR_NONE
-        )
+        self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
         
         # should have tried to fetch contracts
         self.assertEqual(mock_operation.result.call_count, 9)
@@ -1239,9 +1231,7 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(MODULE_PATH + '.Token')    
     @patch(MODULE_PATH + '.esi_client_factory')
     def test_sync_corp_in_alliance_contracts_only(
-        self, 
-        mock_esi_client_factory,         
-        mock_Token
+        self, mock_esi_client_factory, mock_Token
     ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
