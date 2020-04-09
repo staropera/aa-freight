@@ -20,6 +20,31 @@ from .utils import LoggerAddTag, make_logger_prefix
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 
 
+class PricingManager(models.Manager):
+
+    def get_default(self):
+        """return the default pricing if defined
+        else the first pricing, which can be None if no pricing exists
+        """
+        pricing_qs = self.filter(is_active=True)        
+        pricing = pricing_qs.filter(is_default=True).first()
+        if not pricing:        
+            pricing = pricing_qs.first()
+        
+        return pricing
+
+    def get_or_default(self, pk: int = None):
+        """returns the pricing for given pk if found else default pricing"""
+        if pk:
+            try:
+                pricing = self.filter(is_active=True).get(pk=pk)
+            except self.model.DoesNotExist:
+                pricing = self.get_default()
+        else:            
+            pricing = self.get_default()
+        return pricing
+
+
 class LocationManager(models.Manager):
     STATION_ID_START = 60000000
     STATION_ID_END = 69999999

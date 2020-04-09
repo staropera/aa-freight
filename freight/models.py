@@ -41,7 +41,7 @@ from .app_settings import (
     FREIGHT_OPERATION_MODE_CORP_PUBLIC
 )
 from .managers import (
-    ContractManager, EveEntityManager, LocationManager, 
+    ContractManager, EveEntityManager, LocationManager, PricingManager
 )
 from .helpers import EsiSmartRequest
 from .utils import (    
@@ -253,6 +253,8 @@ class Pricing(models.Model):
             'Please make sure to only mark one pricing as default.'
         )
     )
+
+    objects = PricingManager()
 
     def __str__(self) -> str:
         return self.name

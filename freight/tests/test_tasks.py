@@ -7,6 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from esi.errors import TokenInvalidError
 
+from . import get_invalid_object_pk
 from ..tasks import (    
     run_contracts_sync,
     send_contract_notifications,
@@ -22,10 +23,6 @@ from ..utils import set_test_logger, NoSocketsTestCase
 MODULE_PATH = 'freight.tasks'
 logger = set_test_logger(MODULE_PATH, __file__)
 app = Celery('myauth')
-
-
-def get_invalid_user_pk() -> int:
-    return max(User.objects.values_list('pk', flat=True)) + 1
 
 
 class TestUpdateContractsEsi(NoSocketsTestCase):
@@ -65,7 +62,7 @@ class TestUpdateContractsEsi(NoSocketsTestCase):
         
     @patch(MODULE_PATH + '.ContractHandler.update_contracts_esi')
     def test_run_with_invalid_user(self, mock_update_contracts_esi):
-        update_contracts_esi(user_pk=get_invalid_user_pk())
+        update_contracts_esi(user_pk=get_invalid_object_pk(User))
         self.assertTrue(mock_update_contracts_esi.called)
         args, kwargs = mock_update_contracts_esi.call_args
         self.assertIsNone(kwargs['user'])

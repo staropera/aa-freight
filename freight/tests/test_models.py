@@ -16,7 +16,7 @@ from allianceauth.tests.auth_utils import AuthUtils
 from esi.models import Token
 from esi.errors import TokenExpiredError, TokenInvalidError
 
-from . import TempDisconnectPricingSaveHandler
+from . import DisconnectPricingSaveHandler
 from ..app_settings import (
     FREIGHT_OPERATION_MODE_MY_ALLIANCE,
     FREIGHT_OPERATION_MODE_MY_CORPORATION,
@@ -133,7 +133,7 @@ class TestPricing(NoSocketsTestCase):
         )
 
     def test_create_pricings(self):
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             # first pricing
             Pricing.objects.create(
                 start_location=self.location_1,
@@ -154,7 +154,7 @@ class TestPricing(NoSocketsTestCase):
             )
 
     def test_create_pricing_no_2nd_bidirectional_allowed(self):
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             Pricing.objects.create(
                 start_location=self.location_1,
                 end_location=self.location_2,
@@ -171,7 +171,7 @@ class TestPricing(NoSocketsTestCase):
                 p.clean()
 
     def test_create_pricing_no_2nd_unidirectional_allowed(self):
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             Pricing.objects.create(
                 start_location=self.location_1,
                 end_location=self.location_2,
@@ -193,7 +193,7 @@ class TestPricing(NoSocketsTestCase):
             """
             
     def test_create_pricing_2nd_must_be_unidirectional_a(self):
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             Pricing.objects.create(
                 start_location=self.location_1,
                 end_location=self.location_2,
@@ -210,7 +210,7 @@ class TestPricing(NoSocketsTestCase):
                 p.clean()
     
     def test_create_pricing_2nd_ok_when_unidirectional(self):
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             Pricing.objects.create(
                 start_location=self.location_1,
                 end_location=self.location_2,
@@ -517,7 +517,7 @@ class TestPricing(NoSocketsTestCase):
         p = Pricing(price_base=50000000)        
         p.clean()
 
-
+    
 class TestContract(NoSocketsTestCase):
     
     @classmethod
@@ -576,7 +576,7 @@ class TestContract(NoSocketsTestCase):
 
     def setUp(self):                
         # create contracts
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             self.pricing = Pricing.objects.create(
                 start_location=self.location_1,
                 end_location=self.location_2,
@@ -1559,7 +1559,7 @@ class TestContractCustomerNotification(NoSocketsTestCase):
 
     def setUp(self):                
         # create contracts
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             self.pricing = Pricing.objects.create(
                 start_location=self.location_1,
                 end_location=self.location_2,

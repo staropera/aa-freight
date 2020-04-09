@@ -31,7 +31,7 @@ class TempDisconnectSignal():
         )
 
 
-class TempDisconnectPricingSaveHandler(TempDisconnectSignal):
+class DisconnectPricingSaveHandler(TempDisconnectSignal):
     def __init__(self):
         super().__init__(
             signal=signals.post_save, 
@@ -106,3 +106,7 @@ def get_random_string(char_count):
         random.choice(string.ascii_uppercase + string.digits) 
         for _ in range(char_count)
     )
+
+
+def get_invalid_object_pk(MyModel) -> int:
+    return max(MyModel.objects.values_list('pk', flat=True)) + 1

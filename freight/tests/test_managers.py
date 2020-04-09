@@ -8,7 +8,7 @@ from django.utils.timezone import now
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.eveonline.providers import ObjectNotFound
 
-from . import TempDisconnectPricingSaveHandler
+from . import DisconnectPricingSaveHandler, get_invalid_object_pk
 from ..app_settings import (
     FREIGHT_OPERATION_MODE_MY_ALLIANCE,
     FREIGHT_OPERATION_MODE_MY_CORPORATION,
@@ -18,7 +18,8 @@ from ..app_settings import (
 from ..models import Contract, EveEntity, Location, Pricing
 from .testdata import (
     characters_data,    
-    create_contract_handler_w_contracts,    
+    create_contract_handler_w_contracts,
+    create_locations,
     structures_data, 
 )
 from ..utils import set_test_logger, NoSocketsTestCase
@@ -27,7 +28,7 @@ from ..utils import set_test_logger, NoSocketsTestCase
 MODULE_PATH = 'freight.managers'
 logger = set_test_logger(MODULE_PATH, __file__)
 
-    
+
 class TestEveEntityManager(NoSocketsTestCase):
     
     @classmethod
@@ -240,7 +241,7 @@ class TestContractManager(NoSocketsTestCase):
         amamake = Location.objects.get(id=1022167642188)
         amarr = Location.objects.get(id=60008494)
 
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             pricing_1 = Pricing.objects.create(
                 start_location=jita,
                 end_location=amamake,
@@ -276,7 +277,7 @@ class TestContractManager(NoSocketsTestCase):
         amamake = Location.objects.get(id=1022167642188)
         amarr = Location.objects.get(id=60008494)
         
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             pricing_1 = Pricing.objects.create(
                 start_location=jita,
                 end_location=amamake,
@@ -325,7 +326,7 @@ class TestContractManagerNotifications(NoSocketsTestCase):
         # disable pricing signal                
         jita = Location.objects.get(id=60003760)
         amamake = Location.objects.get(id=1022167642188)        
-        with TempDisconnectPricingSaveHandler():
+        with DisconnectPricingSaveHandler():
             Pricing.objects.create(
                 start_location=jita,
                 end_location=amamake,
@@ -427,3 +428,58 @@ class TestContractManagerNotifications(NoSocketsTestCase):
     ):        
         Contract.objects.send_notifications(rate_limted=False)        
         self.assertEqual(mock_webhook_execute.call_count, 0)
+
+
+class TestPricingManager(NoSocketsTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.jita, cls.amamake, cls.amarr = create_locations()
+
+        with DisconnectPricingSaveHandler():
+            cls.p1 = Pricing.objects.create(
+                start_location=cls.jita,
+                end_location=cls.amamake,
+                price_base=50000000,
+                is_default=True
+            )
+            cls.p2 = Pricing.objects.create(
+                start_location=cls.jita,
+                end_location=cls.amarr,
+                price_base=10000000
+            )
+
+    def test_default_pricing_no_default_defined(self):                
+        Pricing.objects.all().delete()
+        with DisconnectPricingSaveHandler():
+            p = Pricing.objects.create(
+                start_location=self.jita,
+                end_location=self.amamake,
+                price_base=50000000,
+                is_default=True
+            )
+        expected = p
+        self.assertEqual(Pricing.objects.get_default(), expected)
+
+    def test_default_and_default_defined(self):        
+        expected = self.p1
+        self.assertEqual(Pricing.objects.get_default(), expected)
+
+    def test_default_with_no_pricing_defined(self):                
+        Pricing.objects.all().delete()
+        expected = None
+        self.assertEqual(Pricing.objects.get_default(), expected)
+
+    def test_get_or_default_normal(self):        
+        expected = self.p1
+        self.assertEqual(Pricing.objects.get_or_default(self.p1.pk), expected)
+
+    def test_get_or_default_not_found(self):
+        expected = self.p1
+        invalid_pk = get_invalid_object_pk(Pricing)
+        self.assertEqual(Pricing.objects.get_or_default(invalid_pk), expected)
+
+    def test_get_or_default_with_none(self):        
+        expected = self.p1        
+        self.assertEqual(Pricing.objects.get_or_default(None), expected)

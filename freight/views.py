@@ -167,14 +167,14 @@ def contract_list_data(request, category):
 def calculator(request, pricing_pk=None):            
     from .forms import CalculatorForm
     if request.method != 'POST':
-        pricing = _get_pricing_from_pk(pricing_pk)
+        pricing = Pricing.objects.get_or_default(pricing_pk)
         form = CalculatorForm(initial={'pricing': pricing})
         price = None        
 
     else:
         form = CalculatorForm(request.POST)
         request.POST._mutable = True
-        pricing = _get_pricing_from_pk(form.data['pricing'])
+        pricing = Pricing.objects.get_or_default(form.data['pricing'])
         volume, collateral, price = form.get_calculated_data(pricing)         
 
     if pricing:
@@ -222,30 +222,6 @@ def calculator(request, pricing_pk=None):
             'pricing_price_per_volume_eff': price_per_volume_eff
         }
     )
-
-
-def _get_pricing_from_pk(pricing_pk: int) -> Pricing:
-    if pricing_pk:
-        try:
-            pricing = Pricing.objects \
-                .filter(is_active=True) \
-                .get(pk=pricing_pk)
-        except Pricing.DoesNotExist:
-            pricing = _get_default_pricing()
-    else:            
-        pricing = _get_default_pricing()
-    return pricing
-
-
-def _get_default_pricing() -> Pricing:
-    """return the default pricing if defined, else the first pricing"""
-    pricing_qs = Pricing.objects.filter(is_active=True)
-    try:
-        pricing = pricing_qs.filter(is_default=True).first()
-    except Pricing.DoesNotExist:
-        pricing = pricing_qs.first()
-    
-    return pricing
 
 
 @login_required
