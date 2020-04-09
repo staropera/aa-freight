@@ -240,16 +240,62 @@ class EveEntityManager(models.Manager):
 class ContractManager(models.Manager):
     
     def update_or_create_from_dict(
-        self, 
-        handler: object, 
-        contract: dict, 
-        esi_client: object
-    ):
-        """updates or creates a contract from given dict"""
-        from .models import Location, EveEntity
-        
-        add_prefix = make_logger_prefix(contract['contract_id'])
+        self, handler: object, contract: dict, esi_client: object
+    ) -> tuple:
+        """updates or creates a contract from given dict"""        
+        acceptor, acceptor_corporation = \
+            self._identify_contract_acceptor(contract)
+        issuer_corporation, issuer = \
+            self._identify_contract_issuer(contract)        
+        date_accepted = contract['date_accepted'] \
+            if 'date_accepted' in contract else None
+        date_completed = contract['date_completed'] \
+            if 'date_completed' in contract else None
+        title = contract['title'] if 'title' in contract else None
+        start_location, end_location = \
+            self._identify_locations(contract, esi_client)        
+        obj, created = self.update_or_create(
+            handler=handler,
+            contract_id=contract['contract_id'],
+            defaults={
+                'acceptor': acceptor,
+                'acceptor_corporation': acceptor_corporation,
+                'collateral': contract['collateral'],
+                'date_accepted': date_accepted,
+                'date_completed': date_completed,
+                'date_expired': contract['date_expired'],
+                'date_issued': contract['date_issued'],
+                'days_to_complete': contract['days_to_complete'],
+                'end_location': end_location,
+                'for_corporation': contract['for_corporation'],
+                'issuer_corporation': issuer_corporation,
+                'issuer': issuer,                                
+                'reward': contract['reward'],
+                'start_location': start_location,
+                'status': contract['status'],
+                'title': title,
+                'volume': contract['volume'],
+                'pricing': None,
+                'issues': None
+            }                        
+        )
+        return obj, created
 
+    def _identify_locations(self, contract: dict, esi_client: object) -> tuple:
+        from .models import Location
+
+        start_location, _ = Location.objects.get_or_create_from_esi(
+            esi_client, contract['start_location_id']
+        )
+        end_location, _ = Location.objects.get_or_create_from_esi(
+            esi_client, contract['end_location_id']
+        )
+        return start_location, end_location
+    
+    def _identify_contract_acceptor(self, contract: dict) -> tuple:
+        from .models import EveEntity
+
+        add_prefix = make_logger_prefix(contract['contract_id'])
         if int(contract['acceptor_id']) != 0:
             try:
                 entity, _ = EveEntity.objects.get_or_create_from_esi(
@@ -304,6 +350,9 @@ class ContractManager(models.Manager):
             acceptor = None
             acceptor_corporation = None
 
+        return acceptor, acceptor_corporation
+
+    def _identify_contract_issuer(self, contract) -> tuple:
         try:
             issuer = EveCharacter.objects.get(
                 character_id=contract['issuer_id']
@@ -321,48 +370,9 @@ class ContractManager(models.Manager):
             issuer_corporation = EveCorporationInfo.objects.create_corporation(
                 corp_id=contract['issuer_corporation_id']
             )
-        
-        date_accepted = contract['date_accepted'] \
-            if 'date_accepted' in contract else None
-        date_completed = contract['date_completed'] \
-            if 'date_completed' in contract else None
-        title = contract['title'] if 'title' in contract else None
+        return issuer_corporation, issuer
 
-        start_location, _ = Location.objects.get_or_create_from_esi(
-            esi_client, contract['start_location_id']
-        )
-        end_location, _ = Location.objects.get_or_create_from_esi(
-            esi_client, contract['end_location_id']
-        )
-        
-        obj, created = self.update_or_create(
-            handler=handler,
-            contract_id=contract['contract_id'],
-            defaults={
-                'acceptor': acceptor,
-                'acceptor_corporation': acceptor_corporation,
-                'collateral': contract['collateral'],
-                'date_accepted': date_accepted,
-                'date_completed': date_completed,
-                'date_expired': contract['date_expired'],
-                'date_issued': contract['date_issued'],
-                'days_to_complete': contract['days_to_complete'],
-                'end_location': end_location,
-                'for_corporation': contract['for_corporation'],
-                'issuer_corporation': issuer_corporation,
-                'issuer': issuer,                                
-                'reward': contract['reward'],
-                'start_location': start_location,
-                'status': contract['status'],
-                'title': title,
-                'volume': contract['volume'],
-                'pricing': None,
-                'issues': None
-            }                        
-        )
-        return obj, created
-
-    def update_pricing(self):
+    def update_pricing(self) -> None:
         """Updates contracts with matching pricing"""
         from .models import Pricing
 
@@ -400,7 +410,7 @@ class ContractManager(models.Manager):
                     contract.issues = issues
                     contract.save()
 
-    def send_notifications(self, force_sent=False, rate_limted=True):
+    def send_notifications(self, force_sent=False, rate_limted=True) -> None:
         """Send notifications for outstanding contracts that have pricing"""
         add_tag = make_logger_prefix('send_notifications')
         logger.debug(add_tag('start'))
@@ -441,7 +451,7 @@ class ContractManager(models.Manager):
                 'FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured'
             ))
 
-    def _sent_pilot_notifications(self, contracts_qs, rate_limted, add_tag):
+    def _sent_pilot_notifications(self, contracts_qs, rate_limted, add_tag) -> None:
         logger.info(add_tag(
             'Trying to send pilot notifications for'
             + ' {} contracts'.format(contracts_qs.count())
@@ -461,7 +471,7 @@ class ContractManager(models.Manager):
 
     def _sent_customer_notifications(
         self, contracts_qs, rate_limted, force_sent, add_tag
-    ):
+    ) -> None:
         logger.debug(
             '%s: Checking %d contracts if customer '
             'notifications need to be sent', 

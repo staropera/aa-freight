@@ -1,5 +1,6 @@
 stages:
-- "test"
+- test
+- deploy
 
 before_script:
 - apt-get update
@@ -28,3 +29,16 @@ test-flake8:
   script:  
   - tox -e flake8
 
+deploy-pypi:
+  stage: deploy
+  image: python:3.7-buster
+
+  before_script:
+    - pip install twine
+
+  script:
+    - python setup.py sdist
+    - twine upload dist/*
+
+  only:
+    - tags

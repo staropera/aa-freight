@@ -109,7 +109,7 @@ class TestContractList(NoSocketsTestCase):
         response = views.contract_list_active(request)
         self.assertEqual(response.status_code, HTTP_OK)
     
-    def test_data_activate(self):       
+    def test_active_data_has_all_contracts(self):       
         request = self.factory.get(reverse(
             'freight:contract_list_data', 
             args={views.CONTRACT_LIST_ACTIVE}

@@ -1393,54 +1393,9 @@ class Contract(models.Model):
                     FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL
                 )
             ))
-            embed = self._generate_embed()
-                                
-            contents = '<@{}>\n'.format(
-                discord_user_id
-            )                    
-            if status_to_report == self.STATUS_OUTSTANDING:
-                contents += 'We have received your contract'
-                if self.has_pricing_errors:
-                    issues = self.get_issue_list()
-                    contents += ', but we found some issues.\n' \
-                        + 'Please create a new courier contract ' \
-                        + 'and correct the following issues:\n'
-                    for issue in issues:
-                        contents += '• {}\n'.format(issue)
-                else:                        
-                    contents += (
-                        ' and it will be picked up by '
-                        'one of our pilots shortly.'
-                    )
-            
-            elif status_to_report == self.STATUS_IN_PROGRESS:
-                if self.acceptor_name:
-                    acceptor_text = 'by {} '.format(self.acceptor_name)
-                else:
-                    acceptor_text = ''
-
-                contents += 'Your contract has been picked up {}'\
-                    .format(acceptor_text) \
-                    + 'and will be delivered to you shortly.'
-            
-            elif status_to_report == self.STATUS_FINISHED:
-                contents += 'Your contract has been **delivered**.\n' \
-                    + 'Thank you for using our freight service.'
-
-            elif status_to_report == self.STATUS_FAILED:
-                contents += 'Your contract has been **failed** {}'\
-                    .format(acceptor_text) \
-                    + 'Thank you for using our freight service.'
-                    
-            else:
-                raise NotImplementedError()
-            
-            contents += (
-                '\nClick [here]({}) to check the current '
-                'status of your contract.').format(urljoin(
-                    get_site_base_url(), 
-                    reverse('freight:contract_list_user')
-                )
+            embed = self._generate_embed()                                
+            contents = self._generate_contents(
+                discord_user_id, status_to_report
             )
             response = hook.execute(
                 content=contents, 
@@ -1463,6 +1418,54 @@ class Contract(models.Model):
                     )
                 ))
         
+    def _generate_contents(self, discord_user_id, status_to_report):
+        contents = '<@{}>\n'.format(discord_user_id)                    
+        if status_to_report == self.STATUS_OUTSTANDING:
+            contents += 'We have received your contract'
+            if self.has_pricing_errors:
+                issues = self.get_issue_list()
+                contents += ', but we found some issues.\n' \
+                    + 'Please create a new courier contract ' \
+                    + 'and correct the following issues:\n'
+                for issue in issues:
+                    contents += '• {}\n'.format(issue)
+            else:                        
+                contents += (
+                    ' and it will be picked up by '
+                    'one of our pilots shortly.'
+                )
+        
+        elif status_to_report == self.STATUS_IN_PROGRESS:
+            if self.acceptor_name:
+                acceptor_text = 'by {} '.format(self.acceptor_name)
+            else:
+                acceptor_text = ''
+
+            contents += 'Your contract has been picked up {}'\
+                .format(acceptor_text) \
+                + 'and will be delivered to you shortly.'
+        
+        elif status_to_report == self.STATUS_FINISHED:
+            contents += 'Your contract has been **delivered**.\n' \
+                + 'Thank you for using our freight service.'
+
+        elif status_to_report == self.STATUS_FAILED:
+            contents += 'Your contract has been **failed** {}'\
+                .format(acceptor_text) \
+                + 'Thank you for using our freight service.'
+                
+        else:
+            raise NotImplementedError()
+        
+        contents += (
+            '\nClick [here]({}) to check the current '
+            'status of your contract.').format(urljoin(
+                get_site_base_url(), 
+                reverse('freight:contract_list_user')
+            )
+        )
+        return contents
+
 
 class ContractCustomerNotification(models.Model):
     """record of contract notification to customer about state"""

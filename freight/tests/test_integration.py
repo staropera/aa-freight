@@ -1,6 +1,7 @@
 from django.urls import reverse
 
 from allianceauth.tests.auth_utils import AuthUtils
+
 from django_webtest import WebTest
 
 from . import DisconnectPricingSaveHandler

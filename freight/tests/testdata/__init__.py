@@ -97,6 +97,13 @@ def create_locations():
     return jita, amamake, amarr
 
 
+def create_user_from_character(character: EveCharacter) -> User:
+    user = AuthUtils.create_user(username=character.character_name)    
+    user.profile.main_character = character
+    user.profile.save()
+    return user
+
+
 def create_entities_from_characters():
     for character in characters_data:
         EveCharacter.objects.create(**character)

@@ -77,36 +77,7 @@ def contract_list_data(request, category):
     def character_format(x):
         return x.character_name if x else None
     
-    if category == CONTRACT_LIST_ACTIVE:
-        if not request.user.has_perm('freight.view_contracts'):
-            raise RuntimeError('Insufficient permissions')
-        else:            
-            contracts = Contract.objects\
-                .filter(status__in=[
-                    Contract.STATUS_OUTSTANDING,
-                    Contract.STATUS_IN_PROGRESS
-                ])\
-                .exclude(date_expired__lt=now())\
-                .select_related()
-    elif category == CONTRACT_LIST_USER:
-        if not request.user.has_perm('freight.use_calculator'):
-            raise RuntimeError('Insufficient permissions')
-        else:
-            user_characters = [
-                x.character 
-                for x in request.user.character_ownerships.select_related().all()
-            ]
-            contracts = Contract.objects\
-                .filter(issuer__in=user_characters)\
-                .filter(status__in=[
-                    Contract.STATUS_OUTSTANDING,
-                    Contract.STATUS_IN_PROGRESS,
-                    Contract.STATUS_FINISHED,
-                    Contract.STATUS_FAILED,
-                ])\
-                .select_related()
-    else:
-        raise ValueError('Invalid category: {}'.format(category))
+    contracts = _get_contracts_for_contract_list(category, request)
 
     contracts_data = list()    
     for contract in contracts:                                        
@@ -160,6 +131,45 @@ def contract_list_data(request, category):
         })
 
     return JsonResponse(contracts_data, safe=False)
+
+
+def _get_contracts_for_contract_list(category, request):
+    if category == CONTRACT_LIST_ACTIVE:
+        if not request.user.has_perm('freight.view_contracts'):
+            raise RuntimeError('Insufficient permissions')
+        
+        else:            
+            contracts = Contract.objects\
+                .filter(status__in=[
+                    Contract.STATUS_OUTSTANDING,
+                    Contract.STATUS_IN_PROGRESS
+                ])\
+                .exclude(date_expired__lt=now())\
+                .select_related()
+
+    elif category == CONTRACT_LIST_USER:
+        if not request.user.has_perm('freight.use_calculator'):
+            raise RuntimeError('Insufficient permissions')
+
+        else:
+            user_characters = [
+                x.character 
+                for x in request.user.character_ownerships.select_related().all()
+            ]
+            contracts = Contract.objects\
+                .filter(issuer__in=user_characters)\
+                .filter(status__in=[
+                    Contract.STATUS_OUTSTANDING,
+                    Contract.STATUS_IN_PROGRESS,
+                    Contract.STATUS_FINISHED,
+                    Contract.STATUS_FAILED,
+                ])\
+                .select_related()
+
+    else:
+        raise ValueError('Invalid category: {}'.format(category))
+
+    return contracts
 
 
 @login_required
