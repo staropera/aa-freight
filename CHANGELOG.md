@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-## [1.0.0] - 2020-04-05
+## [1.0.0] - 2020-04-09
 
 **Default pricing**
 
@@ -15,7 +15,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - You can now set a default pricing, which will be preselected in the calculator
 - Contract sync status now shown as traffic light on admin site (under Contract Handler)
-- New setting FREIGHT_CONTRACT_SYNC_GRACE_MINUTES determines at what delay a sync is reported as error
+- New setting FREIGHT_CONTRACT_SYNC_GRACE_MINUTES determines after what time a delayed sync is reported as error
+
+### Fixed
+
+- Sorting on statistics page is now the same for all panels (by contract then rewards)
 
 ## [0.13.1] - 2020-02-02
 
