@@ -780,7 +780,7 @@ class TestContractSendCustomerNotification(NoSocketsTestCase):
         self.contract_1.send_customer_notification()
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
-    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')    
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
     def test_log_error_from_execute(self, mock_webhook_execute):
         mock_webhook_execute.return_value.status_ok = False
         mock_webhook_execute.return_value.status_code = 404
@@ -1357,7 +1357,7 @@ class TestContractsSync(NoSocketsTestCase):
         args, kwargs = mock_notify.call_args
         self.assertEqual(kwargs['level'], 'success')
 
-    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_CORP_PUBLIC)    
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_CORP_PUBLIC)
     @patch(MODULE_PATH + '.Token')
     @patch(
         'freight.managers.EveCorporationInfo.objects.create_corporation', 
@@ -1438,6 +1438,7 @@ class TestContractsSync(NoSocketsTestCase):
             ]
         )
                 
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + '.EsiSmartRequest.fetch')
     @patch(MODULE_PATH + '.ContractHandler.esi_client')
     def test_abort_on_general_exception(self, mock_esi_client, mock_fetch):
@@ -1455,6 +1456,7 @@ class TestContractsSync(NoSocketsTestCase):
         handler.refresh_from_db()
         self.assertEqual(handler.last_error, ContractHandler.ERROR_UNKNOWN)
 
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     def test_operation_mode_friendly(self):
         handler = ContractHandler.objects.create(
             organization=self.alliance,
