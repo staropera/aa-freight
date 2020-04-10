@@ -11,6 +11,7 @@ from django.utils.timezone import now
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
+from allianceauth.services.modules.discord.models import DiscordUser
 from allianceauth.tests.auth_utils import AuthUtils
 
 from esi.models import Token
@@ -36,12 +37,14 @@ from .testdata import (
     characters_data, 
     create_locations, 
     create_entities_from_characters,
+    create_contract_handler_w_contracts,
     contracts_data,    
 )
 from ..utils import set_test_logger, NoSocketsTestCase
 
 
 MODULE_PATH = 'freight.models'
+PATCH_FREIGHT_OPERATION_MODE = MODULE_PATH + '.FREIGHT_OPERATION_MODE'
 logger = set_test_logger(MODULE_PATH, __file__)
 
 
@@ -49,24 +52,17 @@ class TestPricing(NoSocketsTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super().setUpClass()
-        create_entities_from_characters()
-        
-        # 1 user
-        character = EveCharacter.objects.get(character_id=90000001)        
-        alliance = EveEntity.objects.get(id=character.alliance_id)
-        
-        cls.handler = ContractHandler.objects.create(
-            organization=alliance,
-            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE
-        )
-        cls.location_1, cls.location_2, cls.location_3 = create_locations()
+        super().setUpClass()        
+        cls.handler, _ = create_contract_handler_w_contracts()
+        cls.jita = Location.objects.get(id=60003760)
+        cls.amamake = Location.objects.get(id=1022167642188)
+        cls.amarr = Location.objects.get(id=60008494)
 
     @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', False)
     def test_str(self):        
         p = Pricing(
-            start_location=self.location_1,
-            end_location=self.location_2,
+            start_location=self.jita,
+            end_location=self.amamake,
             price_base=50000000
         )
         expected = 'Jita <-> Amamake'
@@ -74,8 +70,8 @@ class TestPricing(NoSocketsTestCase):
 
     def test_repr(self):        
         p = Pricing(
-            start_location=self.location_1,
-            end_location=self.location_2,
+            start_location=self.jita,
+            end_location=self.amamake,
             price_base=50000000
         )
         expected = (
@@ -87,31 +83,25 @@ class TestPricing(NoSocketsTestCase):
     @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', False)
     def test_name_from_settings_short(self):        
         p = Pricing(
-            start_location=self.location_1,
-            end_location=self.location_2,
+            start_location=self.jita,
+            end_location=self.amamake,
             price_base=50000000
         )
-        self.assertEqual(
-            p.name,
-            'Jita <-> Amamake'
-        )
+        self.assertEqual(p.name, 'Jita <-> Amamake')
     
     def test_name_short(self):        
         p = Pricing(
-            start_location=self.location_1,
-            end_location=self.location_2,
+            start_location=self.jita,
+            end_location=self.amamake,
             price_base=50000000
         )
-        self.assertEqual(
-            p.name_short,
-            'Jita <-> Amamake'
-        )
+        self.assertEqual(p.name_short, 'Jita <-> Amamake')
 
     @patch(MODULE_PATH + '.FREIGHT_FULL_ROUTE_NAMES', True)
     def test_name_from_settings_full(self):        
         p = Pricing(
-            start_location=self.location_1,
-            end_location=self.location_2,
+            start_location=self.jita,
+            end_location=self.amamake,
             price_base=50000000
         )
         self.assertEqual(
@@ -122,8 +112,8 @@ class TestPricing(NoSocketsTestCase):
 
     def test_name_full(self):        
         p = Pricing(
-            start_location=self.location_1,
-            end_location=self.location_2,
+            start_location=self.jita,
+            end_location=self.amamake,
             price_base=50000000
         )
         self.assertEqual(
@@ -136,34 +126,34 @@ class TestPricing(NoSocketsTestCase):
         with DisconnectPricingSaveHandler():
             # first pricing
             Pricing.objects.create(
-                start_location=self.location_1,
-                end_location=self.location_2,
+                start_location=self.jita,
+                end_location=self.amamake,
                 price_base=500000000
             )
             # pricing with different route
             Pricing.objects.create(
-                start_location=self.location_3,
-                end_location=self.location_2,
+                start_location=self.amarr,
+                end_location=self.amamake,
                 price_base=250000000
             )
             # pricing with reverse route then pricing 1
             Pricing.objects.create(
-                start_location=self.location_2,
-                end_location=self.location_1,
+                start_location=self.amamake,
+                end_location=self.jita,
                 price_base=350000000
             )
 
     def test_create_pricing_no_2nd_bidirectional_allowed(self):
         with DisconnectPricingSaveHandler():
             Pricing.objects.create(
-                start_location=self.location_1,
-                end_location=self.location_2,
+                start_location=self.jita,
+                end_location=self.amamake,
                 price_base=500000000,
                 is_bidirectional=True
             )
             p = Pricing.objects.create(
-                start_location=self.location_2,
-                end_location=self.location_1,
+                start_location=self.amamake,
+                end_location=self.jita,
                 price_base=500000000,
                 is_bidirectional=True
             )
@@ -173,14 +163,14 @@ class TestPricing(NoSocketsTestCase):
     def test_create_pricing_no_2nd_unidirectional_allowed(self):
         with DisconnectPricingSaveHandler():
             Pricing.objects.create(
-                start_location=self.location_1,
-                end_location=self.location_2,
+                start_location=self.jita,
+                end_location=self.amamake,
                 price_base=500000000,
                 is_bidirectional=True
             )
             p = Pricing.objects.create(
-                start_location=self.location_2,
-                end_location=self.location_1,
+                start_location=self.amamake,
+                end_location=self.jita,
                 price_base=500000000,
                 is_bidirectional=False
             )
@@ -195,14 +185,14 @@ class TestPricing(NoSocketsTestCase):
     def test_create_pricing_2nd_must_be_unidirectional_a(self):
         with DisconnectPricingSaveHandler():
             Pricing.objects.create(
-                start_location=self.location_1,
-                end_location=self.location_2,
+                start_location=self.jita,
+                end_location=self.amamake,
                 price_base=500000000,
                 is_bidirectional=False
             )
             p = Pricing.objects.create(
-                start_location=self.location_2,
-                end_location=self.location_1,
+                start_location=self.amamake,
+                end_location=self.jita,
                 price_base=500000000,
                 is_bidirectional=True
             )
@@ -212,14 +202,14 @@ class TestPricing(NoSocketsTestCase):
     def test_create_pricing_2nd_ok_when_unidirectional(self):
         with DisconnectPricingSaveHandler():
             Pricing.objects.create(
-                start_location=self.location_1,
-                end_location=self.location_2,
+                start_location=self.jita,
+                end_location=self.amamake,
                 price_base=500000000,
                 is_bidirectional=False
             )
             p = Pricing.objects.create(
-                start_location=self.location_2,
-                end_location=self.location_1,
+                start_location=self.amamake,
+                end_location=self.jita,
                 price_base=500000000,
                 is_bidirectional=False
             )       
@@ -227,79 +217,52 @@ class TestPricing(NoSocketsTestCase):
 
     def test_name_uni_directional(self):
         p = Pricing(
-            start_location=self.location_1,
-            end_location=self.location_2,
+            start_location=self.jita,
+            end_location=self.amamake,
             price_base=50000000,
             is_bidirectional=False
         )
-        self.assertEqual(
-            p.name,
-            'Jita -> Amamake'
-        )
+        self.assertEqual(p.name, 'Jita -> Amamake')
 
     def test_get_calculated_price(self):
         p = Pricing()
         p.price_per_volume = 50
-        self.assertEqual(
-            p.get_calculated_price(10, 0), 
-            500
-        )
+        self.assertEqual(p.get_calculated_price(10, 0), 500)
 
         p = Pricing()        
         p.price_per_collateral_percent = 2
-        self.assertEqual(
-            p.get_calculated_price(10, 1000), 
-            20
-        )
+        self.assertEqual(p.get_calculated_price(10, 1000), 20)
 
         p = Pricing()        
         p.price_per_volume = 50
         p.price_per_collateral_percent = 2
-        self.assertEqual(
-            p.get_calculated_price(10, 1000), 
-            520
-        )
+        self.assertEqual(p.get_calculated_price(10, 1000), 520)
 
         p = Pricing()
         p.price_base = 20
-        self.assertEqual(
-            p.get_calculated_price(10, 1000), 
-            20
-        )
+        self.assertEqual(p.get_calculated_price(10, 1000), 20)
 
         p = Pricing()
         p.price_min = 1000
-        self.assertEqual(
-            p.get_calculated_price(10, 1000), 
-            1000
-        )
+        self.assertEqual(p.get_calculated_price(10, 1000), 1000)
 
         p = Pricing()
         p.price_base = 20
         p.price_per_volume = 50
-        self.assertEqual(
-            p.get_calculated_price(10, 1000), 
-            520
-        )
+        self.assertEqual(p.get_calculated_price(10, 1000), 520)
 
         p = Pricing()
         p.price_base = 20
         p.price_per_volume = 50
         p.price_min = 1000
-        self.assertEqual(
-            p.get_calculated_price(10, 1000), 
-            1000
-        )
+        self.assertEqual(p.get_calculated_price(10, 1000), 1000)
 
         p = Pricing()
         p.price_base = 20
         p.price_per_volume = 50
         p.price_per_collateral_percent = 2
         p.price_min = 500
-        self.assertEqual(
-            p.get_calculated_price(10, 1000), 
-            540
-        )
+        self.assertEqual(p.get_calculated_price(10, 1000), 540)
 
         with self.assertRaises(ValueError):            
             p.get_calculated_price(-5, 0)
@@ -309,24 +272,15 @@ class TestPricing(NoSocketsTestCase):
 
         p = Pricing()
         p.price_base = 0    
-        self.assertEqual(
-            p.get_calculated_price(None, None),
-            0
-        )
+        self.assertEqual(p.get_calculated_price(None, None), 0)
 
         p = Pricing()
         p.price_per_volume = 50
-        self.assertEqual(
-            p.get_calculated_price(10, None),
-            500
-        )
+        self.assertEqual(p.get_calculated_price(10, None), 500)
 
         p = Pricing()
         p.price_per_collateral_percent = 2
-        self.assertEqual(
-            p.get_calculated_price(None, 100),
-            2
-        )
+        self.assertEqual(p.get_calculated_price(None, 100), 2)
     
     def test_get_contract_pricing_errors(self):
         p = Pricing()
@@ -384,97 +338,16 @@ class TestPricing(NoSocketsTestCase):
         p.collateral_min = 0
         p.price_base = 500
         p.price_per_collateral_percent = 2
+
         self.assertIsNone(p.get_contract_price_check_issues(350, 0))
-        self.assertEqual(
-            p.get_calculated_price(350, 0),
-            500
-        )
-
-    def test_price_per_volume_modifier_none_if_not_set(self):
-        p = Pricing()
-        self.assertIsNone(p.price_per_volume_modifier())
-        self.assertIsNone(p.price_per_volume_eff())
-
-    def test_price_per_volume_modifier_ignored_if_not_set(self):
-        p = Pricing()
-        p.price_per_volume = 50
-        self.assertEqual(
-            p.get_calculated_price(10, None),
-            500
-        )
-
-    def test_price_per_volume_modifier_not_used(self):
-        self.handler.price_per_volume_modifier = 10
-        self.handler.save()
-
-        p = Pricing()
-        p.price_per_volume = 50
-
-        self.assertIsNone(
-            p.price_per_volume_modifier()
-        )
-
-    def test_price_per_volume_modifier_normal_calc(self):
-        self.handler.price_per_volume_modifier = 10
-        self.handler.save()
-
-        p = Pricing()
-        p.price_per_volume = 50
-        p.use_price_per_volume_modifier = True
-
-        self.assertEqual(
-            p.price_per_volume_eff(),
-            55
-        )
-
-        self.assertEqual(
-            p.get_calculated_price(10, None),
-            550
-        )
-
-    def test_price_per_volume_modifier_normal_calc_2(self):
-        self.handler.price_per_volume_modifier = -10
-        self.handler.save()
-
-        p = Pricing()
-        p.price_per_volume = 50
-        p.use_price_per_volume_modifier = True
-
-        self.assertEqual(
-            p.price_per_volume_eff(),
-            45
-        )
-
-        self.assertEqual(
-            p.get_calculated_price(10, None),
-            450
-        )
-
-    def test_price_per_volume_modifier_price_never_negative(self):
-        self.handler.price_per_volume_modifier = -200
-        self.handler.save()
-
-        p = Pricing()
-        p.price_per_volume = 50
-        p.use_price_per_volume_modifier = True
-
-        self.assertEqual(
-            p.price_per_volume_eff(),
-            0
-        )
-
-    def test_price_per_volume_modifier_no_manager(self):
-        p = Pricing(price_base=50000000)
-        p.use_price_per_volume_modifier = True
-        self.assertIsNone(p.price_per_volume_modifier())
+        self.assertEqual(p.get_calculated_price(350, 0), 500)
 
     def test_requires_volume(self):        
         self.assertTrue(Pricing(price_per_volume=10000).requires_volume())
         self.assertTrue(Pricing(volume_min=10000).requires_volume())
-        self.assertTrue(Pricing(
-            price_per_volume=10000,
-            volume_min=10000
-        ).requires_volume())
+        self.assertTrue(
+            Pricing(price_per_volume=10000, volume_min=10000).requires_volume()
+        )
         self.assertFalse(Pricing().requires_volume())
 
     def test_requires_collateral(self):        
@@ -486,8 +359,7 @@ class TestPricing(NoSocketsTestCase):
         )
         self.assertTrue(
             Pricing(
-                price_per_collateral_percent=2,
-                collateral_min=50000000
+                price_per_collateral_percent=2, collateral_min=50000000
             ).requires_collateral()
         )
         self.assertFalse(Pricing().requires_collateral())
@@ -518,6 +390,75 @@ class TestPricing(NoSocketsTestCase):
         p.clean()
 
     
+class TestPricingPricePerVolumeModifier(NoSocketsTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.handler, _ = create_contract_handler_w_contracts()
+
+    def test_return_none_if_not_set(self):
+        p = Pricing()
+        self.assertIsNone(p.price_per_volume_modifier())
+        self.assertIsNone(p.price_per_volume_eff())
+
+    def test_is_ignored_in_price_calculation_if_not_set(self):
+        p = Pricing()
+        p.price_per_volume = 50
+        self.assertEqual(p.get_calculated_price(10, None), 500)
+
+    def test_returns_none_if_not_set_in_pricing(self):
+        self.handler.price_per_volume_modifier = 10
+        self.handler.save()
+        p = Pricing()
+        p.price_per_volume = 50
+
+        self.assertIsNone(p.price_per_volume_modifier())
+
+    def test_can_calculate_with_plus_value(self):
+        self.handler.price_per_volume_modifier = 10
+        self.handler.save()
+
+        p = Pricing()
+        p.price_per_volume = 50
+        p.use_price_per_volume_modifier = True
+
+        self.assertEqual(p.price_per_volume_eff(), 55)
+        self.assertEqual(p.get_calculated_price(10, None), 550)
+
+    def test_can_calculate_with_negative_value(self):
+        self.handler.price_per_volume_modifier = -10
+        self.handler.save()
+
+        p = Pricing()
+        p.price_per_volume = 50
+        p.use_price_per_volume_modifier = True
+
+        self.assertEqual(p.price_per_volume_eff(), 45)
+        self.assertEqual(p.get_calculated_price(10, None), 450)
+
+    def test_calculated_price_is_never_negative(self):
+        self.handler.price_per_volume_modifier = -200
+        self.handler.save()
+
+        p = Pricing()
+        p.price_per_volume = 50
+        p.use_price_per_volume_modifier = True
+
+        self.assertEqual(p.price_per_volume_eff(), 0)
+
+    def test_returns_none_if_not_set_for_handler(self):        
+        p = Pricing(price_base=50000000)
+        p.use_price_per_volume_modifier = True
+        self.assertIsNone(p.price_per_volume_modifier())
+
+    def test_returns_none_if_no_handler_defined(self):
+        ContractHandler.objects.all().delete()
+        p = Pricing(price_base=50000000)
+        p.use_price_per_volume_modifier = True
+        self.assertIsNone(p.price_per_volume_modifier())
+
+
 class TestContract(NoSocketsTestCase):
     
     @classmethod
@@ -555,14 +496,14 @@ class TestContract(NoSocketsTestCase):
             user=cls.user
         )
         # Locations
-        cls.location_1 = Location.objects.create(
+        cls.jita = Location.objects.create(
             id=60003760,
             name='Jita IV - Moon 4 - Caldari Navy Assembly Plant',
             solar_system_id=30000142,
             type_id=52678,
             category_id=3
         )
-        cls.location_2 = Location.objects.create(
+        cls.amamake = Location.objects.create(
             id=1022167642188,
             name='Amamake - 3 Time Nearly AT Winners',
             solar_system_id=30002537,
@@ -578,8 +519,8 @@ class TestContract(NoSocketsTestCase):
         # create contracts
         with DisconnectPricingSaveHandler():
             self.pricing = Pricing.objects.create(
-                start_location=self.location_1,
-                end_location=self.location_2,
+                start_location=self.jita,
+                end_location=self.amamake,
                 price_base=500000000
             )        
         self.contract = Contract.objects.create(
@@ -589,12 +530,12 @@ class TestContract(NoSocketsTestCase):
             date_issued=now(),
             date_expired=now() + timedelta(days=5),
             days_to_complete=3,
-            end_location=self.location_2,
+            end_location=self.amamake,
             for_corporation=False,
             issuer_corporation=self.corporation,
             issuer=self.character,
             reward=50000000,
-            start_location=self.location_1,
+            start_location=self.jita,
             status=Contract.STATUS_OUTSTANDING,
             volume=50000,
             pricing=self.pricing
@@ -688,34 +629,184 @@ class TestContract(NoSocketsTestCase):
         x = self.contract._generate_embed()
         self.assertIsInstance(x, Embed)
     
-    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
-    @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', False)
-    @patch(MODULE_PATH + '.FREIGHT_DISCORD_MENTIONS', None)
-    @patch(MODULE_PATH + '.Webhook.execute', autospec=True)
-    def test_send_pilot_notification_normal_1(self, mock_webhook_execute):
-        self.contract.send_pilot_notification()
-        self.assertEqual(mock_webhook_execute.call_count, 1)
 
-    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', None)
-    @patch(MODULE_PATH + '.Webhook.execute', autospec=True)
-    def test_send_pilot_notification_no_webhook(self, mock_webhook_execute):
+@patch(MODULE_PATH + '.Webhook.execute', autospec=True)
+class TestContractSendPilotNotification(NoSocketsTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.handler, _ = create_contract_handler_w_contracts()
+        cls.contract = Contract.objects.get(contract_id=149409005)
+        
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', None)    
+    def test_aborts_without_webhook_url(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
         self.contract.send_pilot_notification()
         self.assertEqual(mock_webhook_execute.call_count, 0)
 
     @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', False)
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_MENTIONS', None)    
+    def test_with_branding_and_wo_mentions(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        self.contract.send_pilot_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+    
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
     @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', True)    
-    @patch(MODULE_PATH + '.Webhook.execute', autospec=True)
     @patch(MODULE_PATH + '.FREIGHT_DISCORD_MENTIONS', None)
-    def test_send_pilot_notification_normal_2(self, mock_webhook_execute):
+    def test_wo_branding_and_wo_mentions(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
         self.contract.send_pilot_notification()
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
     @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
-    @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', True)    
-    @patch(MODULE_PATH + '.Webhook.execute', autospec=True)
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', True)        
     @patch(MODULE_PATH + '.FREIGHT_DISCORD_MENTIONS', '@here')
-    def test_send_pilot_notification_normal_3(self, mock_webhook_execute):
+    def test_with_branding_and_with_mentions(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
         self.contract.send_pilot_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', True)
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_MENTIONS', True)    
+    def test_wo_branding_and_with_mentions(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        self.contract.send_pilot_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')    
+    def test_log_error_from_execute(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = False
+        mock_webhook_execute.return_value.status_code = 404
+        self.contract.send_pilot_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+
+@patch(MODULE_PATH + '.Webhook.execute', autospec=True)
+class TestContractSendCustomerNotification(NoSocketsTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.handler, cls.user = create_contract_handler_w_contracts()
+        cls.character = cls.user.profile.main_character
+        cls.corporation = cls.character.corporation
+        cls.contract_1 = Contract.objects.get(contract_id=149409005)
+        cls.contract_2 = Contract.objects.get(contract_id=149409019)
+        cls.contract_3 = Contract.objects.get(contract_id=149409118)
+        cls.jita = Location.objects.get(id=60003760)
+        cls.amamake = Location.objects.get(id=1022167642188)
+        cls.amarr = Location.objects.get(id=60008494)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
+    def test_can_send_outstanding(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        self.contract_1.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
+    def test_can_send_in_progress(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        self.contract_2.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
+    def test_can_send_finished(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        self.contract_3.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
+    def test_can_send_failed(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        my_contract = Contract.objects.create(
+            handler=self.handler,
+            contract_id=9999,
+            collateral=0,
+            date_issued=now(),
+            date_expired=now() + timedelta(days=5),
+            days_to_complete=3,
+            end_location=self.amamake,
+            for_corporation=False,
+            issuer_corporation=self.corporation,
+            issuer=self.character,
+            reward=50000000,
+            start_location=self.jita,
+            status=Contract.STATUS_FAILED,
+            volume=50000
+        )
+        my_contract.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', None)    
+    def test_aborts_without_webhook_url(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        self.contract_1.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 0)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
+    @patch(MODULE_PATH + '.app_labels')
+    def test_aborts_without_discord(self, mock_app_labels, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        mock_app_labels.return_value = []
+        self.contract_1.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 0)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
+    @patch(MODULE_PATH + '.User.objects')
+    def test_aborts_without_issuer(self, mock_objects, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        mock_objects.filter.return_value.first.return_value = None
+        self.contract_1.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 0)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
+    @patch(MODULE_PATH + '.DiscordUser.objects')
+    def test_aborts_without_Discord_user(
+        self, mock_objects, mock_webhook_execute
+    ):
+        mock_webhook_execute.return_value.status_ok = True
+        mock_objects.get.side_effect = DiscordUser.DoesNotExist
+        self.contract_1.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 0)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_DISABLE_BRANDING', True)
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')
+    def test_can_send_wo_branding(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        self.contract_1.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_WEBHOOK_URL', 'url')    
+    def test_log_error_from_execute(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = False
+        mock_webhook_execute.return_value.status_code = 404
+        self.contract_1.send_customer_notification()
+        self.assertEqual(mock_webhook_execute.call_count, 1)
+
+    @patch(MODULE_PATH + '.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL', 'url')    
+    def test_can_send_without_acceptor(self, mock_webhook_execute):
+        mock_webhook_execute.return_value.status_ok = True
+        my_contract = Contract.objects.create(
+            handler=self.handler,
+            contract_id=9999,
+            collateral=0,
+            date_issued=now(),
+            date_expired=now() + timedelta(days=5),
+            days_to_complete=3,
+            end_location=self.amamake,
+            for_corporation=False,
+            issuer_corporation=self.corporation,
+            issuer=self.character,
+            reward=50000000,
+            start_location=self.jita,
+            status=Contract.STATUS_IN_PROGRESS,
+            volume=50000
+        )        
+        my_contract.send_customer_notification()
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
 
@@ -774,25 +865,21 @@ class TestContractHandler(NoSocketsTestCase):
         self.corporation = EveCorporationInfo.objects.get(
             corporation_id=self.character.corporation_id
         )
-        
         self.organization = EveEntity.objects.create(
             id=self.character.alliance_id,
             category=EveEntity.CATEGORY_ALLIANCE,
             name=self.character.alliance_name
         )
-        
         self.user = User.objects.create_user(
             self.character.character_name,
             'abc@example.com',
             'password'
         )
-
         self.main_ownership = CharacterOwnership.objects.create(
             character=self.character,
             owner_hash='x1',
             user=self.user
         )       
-
         self.handler = ContractHandler.objects.create(
             organization=self.organization,
             character=self.main_ownership            
@@ -896,18 +983,14 @@ class TestContractsSync(NoSocketsTestCase):
             self.character.character_name,
             'abc@example.com', 'password'
         )
-
         self.main_ownership = CharacterOwnership.objects.create(
             character=self.character, owner_hash='x1', user=self.user
         )
         create_locations()
         
     # identify wrong operation mode
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_MY_CORPORATION
-    )
-    def test_run_wrong_operation_mode(self):
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_CORPORATION)
+    def test_abort_on_wrong_operation_mode(self):
         handler = ContractHandler.objects.create(
             organization=self.alliance,
             operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
@@ -918,13 +1001,9 @@ class TestContractsSync(NoSocketsTestCase):
         self.assertEqual(
             handler.last_error, ContractHandler.ERROR_OPERATION_MODE_MISMATCH
         )
-
-    # run without char    
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_MY_ALLIANCE
-    )
-    def test_run_no_sync_char(self):
+    
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
+    def test_abort_when_no_sync_char(self):
         handler = ContractHandler.objects.create(
             organization=self.alliance,            
             operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
@@ -938,12 +1017,9 @@ class TestContractsSync(NoSocketsTestCase):
         )
 
     # test expired token
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_MY_ALLIANCE
-    )
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + '.Token')    
-    def test_run_manager_sync_expired_token(self, mock_Token):        
+    def test_abort_when_token_expired(self, mock_Token):        
         mock_Token.objects.filter.side_effect = TokenExpiredError()        
         AuthUtils.add_permission_to_user_by_name(
             'freight.setup_contract_handler', self.user
@@ -962,13 +1038,9 @@ class TestContractsSync(NoSocketsTestCase):
             handler.last_error, ContractHandler.ERROR_TOKEN_EXPIRED            
         )
 
-    # test invalid token
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_MY_ALLIANCE
-    )
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + '.Token')
-    def test_run_manager_sync_invalid_token(self, mock_Token):
+    def test_abort_when_token_invalid(self, mock_Token):
         mock_Token.objects.filter.side_effect = TokenInvalidError()
         AuthUtils.add_permission_to_user_by_name(
             'freight.setup_contract_handler', self.user
@@ -979,7 +1051,6 @@ class TestContractsSync(NoSocketsTestCase):
             operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
         )
         
-        # run manager sync
         self.assertFalse(handler.update_contracts_esi())
 
         handler.refresh_from_db()
@@ -987,15 +1058,9 @@ class TestContractsSync(NoSocketsTestCase):
             handler.last_error, ContractHandler.ERROR_TOKEN_INVALID
         )
 
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_MY_ALLIANCE
-    )
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + '.Token')    
-    def test_run_manager_sync_no_valid_token(
-        self,             
-        mock_Token
-    ):        
+    def test_abort_when_no_token_exists(self, mock_Token):        
         mock_Token.objects.filter.return_value.require_scopes.return_value\
             .require_valid.return_value.first.return_value = None
         
@@ -1006,27 +1071,19 @@ class TestContractsSync(NoSocketsTestCase):
             organization=self.alliance,
             character=self.main_ownership,
             operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
-        )
-        
-        # run manager sync
+        )        
         self.assertFalse(handler.update_contracts_esi())
 
         handler.refresh_from_db()
         self.assertEqual(
-            handler.last_error, ContractHandler.ERROR_TOKEN_INVALID            
+            handler.last_error, ContractHandler.ERROR_TOKEN_INVALID
         )
-
-    # exception occuring for one of the contracts    
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_MY_ALLIANCE
-    )
-    @patch(
-        MODULE_PATH + '.Contract.objects.update_or_create_from_dict'
-    )
+    
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
+    @patch(MODULE_PATH + '.Contract.objects.update_or_create_from_dict')
     @patch(MODULE_PATH + '.Token')    
     @patch(MODULE_PATH + '.esi_client_factory')
-    def test_sync_contract_fails(
+    def test_abort_when_exception_occurs_during_contract_creation(
         self, 
         mock_esi_client_factory,         
         mock_Token,
@@ -1083,24 +1140,21 @@ class TestContractsSync(NoSocketsTestCase):
         self.assertEqual(
             handler.last_error, ContractHandler.ERROR_UNKNOWN            
         )
-        
-    # normal synch of new contracts, mode my_alliance
-    # freight.tests.TestRunContractsSync.test_run_manager_sync_normal_my_alliance    
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_MY_ALLIANCE
-    )
+            
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + '.Token')    
     @patch(MODULE_PATH + '.esi_client_factory')
-    def test_sync_my_alliance_contracts_only(
+    def test_can_sync_contracts_for_my_alliance(
         self, mock_esi_client_factory, mock_Token
     ):        
-        # create mocks
+        current_page = 0
+        
         def get_contracts_page(*args, **kwargs):
             """returns single page for operation.result(), first with header"""
+            nonlocal current_page
             page_size = 2
-            mock_calls_count = len(mock_operation.mock_calls)
-            start = (mock_calls_count - 1) * page_size
+            current_page += 1            
+            start = (current_page - 1) * page_size
             stop = start + page_size
             pages_count = int(math.ceil(len(contracts_data) / page_size))
             mock_response = Mock()
@@ -1128,14 +1182,12 @@ class TestContractsSync(NoSocketsTestCase):
             character=self.main_ownership,
             operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE
         )
-        
-        # run manager sync
+                
         self.assertTrue(handler.update_contracts_esi())
-
-        handler.refresh_from_db()
-        self.assertEqual(
-            handler.last_error, ContractHandler.ERROR_NONE            
-        )
+        
+        # no errors reported
+        handler.refresh_from_db()        
+        self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
         
         # should have tried to fetch contracts
         self.assertEqual(mock_operation.result.call_count, 9)
@@ -1151,16 +1203,19 @@ class TestContractsSync(NoSocketsTestCase):
             contract_ids,
             [149409005, 149409014, 149409006, 149409015]
         )
-
-    # normal synch of new contracts, mode my_corporation
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE',
-        FREIGHT_OPERATION_MODE_MY_CORPORATION
-    )
-    @patch(MODULE_PATH + '.Token')    
+        
+        # 2nd run should not update anything
+        current_page = 0
+        Contract.objects.all().delete()
+        self.assertTrue(handler.update_contracts_esi())
+        self.assertEqual(Contract.objects.count(), 0)
+                    
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_CORPORATION)
+    @patch(MODULE_PATH + '.notify')
+    @patch(MODULE_PATH + '.Token')
     @patch(MODULE_PATH + '.esi_client_factory')
-    def test_sync_my_corporation_contracts_only(
-        self, mock_esi_client_factory, mock_Token
+    def test_sync_contracts_for_my_corporation_and_ignore_notify_exception(
+        self, mock_esi_client_factory, mock_Token, mock_notify
     ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
@@ -1187,6 +1242,8 @@ class TestContractsSync(NoSocketsTestCase):
             .require_valid.return_value\
             .first.return_value = Mock(spec=Token)
 
+        mock_notify.side_effect = RuntimeError
+
         AuthUtils.add_permission_to_user_by_name(
             'freight.setup_contract_handler', self.user
         )
@@ -1197,7 +1254,7 @@ class TestContractsSync(NoSocketsTestCase):
         )
         
         # run manager sync
-        self.assertTrue(handler.update_contracts_esi())
+        self.assertTrue(handler.update_contracts_esi(user=self.user))
 
         handler.refresh_from_db()
         self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
@@ -1223,15 +1280,15 @@ class TestContractsSync(NoSocketsTestCase):
             ]
         )
 
-    # normal synch of new contracts, mode my_corporation
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
-    )
-    @patch(MODULE_PATH + '.Token')    
+        # should have tried to notify user
+        self.assertTrue(mock_notify.called)
+    
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE)
+    @patch(MODULE_PATH + '.notify')
+    @patch(MODULE_PATH + '.Token')
     @patch(MODULE_PATH + '.esi_client_factory')
-    def test_sync_corp_in_alliance_contracts_only(
-        self, mock_esi_client_factory, mock_Token
+    def test_sync_contracts_for_corp_in_alliance_and_report_to_user(
+        self, mock_esi_client_factory, mock_Token, mock_notify
     ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
@@ -1268,12 +1325,10 @@ class TestContractsSync(NoSocketsTestCase):
         )
         
         # run manager sync
-        self.assertTrue(handler.update_contracts_esi())
+        self.assertTrue(handler.update_contracts_esi(user=self.user))
 
         handler.refresh_from_db()
-        self.assertEqual(
-            handler.last_error, ContractHandler.ERROR_NONE            
-        )
+        self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
         
         # should have tried to fetch contracts
         self.assertEqual(mock_operation.result.call_count, 9)
@@ -1297,11 +1352,12 @@ class TestContractsSync(NoSocketsTestCase):
             ]
         )
 
-    # normal synch of new contracts, mode corp_public
-    @patch(
-        MODULE_PATH + '.FREIGHT_OPERATION_MODE', 
-        FREIGHT_OPERATION_MODE_CORP_PUBLIC
-    )    
+        # should have notified user with success
+        self.assertTrue(mock_notify.called)
+        args, kwargs = mock_notify.call_args
+        self.assertEqual(kwargs['level'], 'success')
+
+    @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_CORP_PUBLIC)    
     @patch(MODULE_PATH + '.Token')
     @patch(
         'freight.managers.EveCorporationInfo.objects.create_corporation', 
@@ -1312,7 +1368,7 @@ class TestContractsSync(NoSocketsTestCase):
         side_effect=ObjectNotFound(9999999, 'character')
     )    
     @patch(MODULE_PATH + '.esi_client_factory')
-    def test_sync_corp_public_contracts_only(
+    def test_can_sync_contracts_for_corp_public(
         self, 
         mock_esi_client_factory,         
         mock_EveCharacter_objects_create_character,
@@ -1357,9 +1413,7 @@ class TestContractsSync(NoSocketsTestCase):
         self.assertTrue(handler.update_contracts_esi())
 
         handler.refresh_from_db()
-        self.assertEqual(
-            handler.last_error, ContractHandler.ERROR_NONE
-        )
+        self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
         
         # should have tried to fetch contracts
         self.assertEqual(mock_operation.result.call_count, 9)
@@ -1383,7 +1437,24 @@ class TestContractsSync(NoSocketsTestCase):
                 149409018
             ]
         )
-        
+                
+    @patch(MODULE_PATH + '.EsiSmartRequest.fetch')
+    @patch(MODULE_PATH + '.ContractHandler.esi_client')
+    def test_abort_on_general_exception(self, mock_esi_client, mock_fetch):
+        mock_fetch.side_effect = RuntimeError
+        AuthUtils.add_permission_to_user_by_name(
+            'freight.setup_contract_handler', self.user
+        )
+        handler = ContractHandler.objects.create(
+            organization=self.alliance,
+            character=self.main_ownership,
+            operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+        )        
+        self.assertFalse(handler.update_contracts_esi())
+
+        handler.refresh_from_db()
+        self.assertEqual(handler.last_error, ContractHandler.ERROR_UNKNOWN)
+
     def test_operation_mode_friendly(self):
         handler = ContractHandler.objects.create(
             organization=self.alliance,

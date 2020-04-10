@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+### Fixed
+
+- Customer notification now also works for failed contracts without acceptor
+- Price per volume modifier no longer fails when there is no contract handler
+
 ## [1.0.0] - 2020-04-09
 
 **Default pricing**

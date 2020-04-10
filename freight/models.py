@@ -19,6 +19,7 @@ from allianceauth.eveonline.models import (
     EveAllianceInfo, EveCharacter, EveCorporationInfo
 )
 from allianceauth.notifications import notify
+from allianceauth.services.modules.discord.models import DiscordUser
 
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
@@ -300,12 +301,13 @@ class Pricing(models.Model):
         """returns the effective price per volume modifier or None """
         if not self.use_price_per_volume_modifier:
             modifier = None
-        else:
-            try:
-                handler = ContractHandler.objects.first()
+        
+        else:            
+            handler = ContractHandler.objects.first()
+            if handler:
                 modifier = handler.price_per_volume_modifier
 
-            except ContractManager.DoesNotExist:
+            else:
                 modifier = None
         
         return modifier
@@ -1352,8 +1354,6 @@ class Contract(models.Model):
             ))
 
     def _report_to_customer(self, status_to_report):
-        from allianceauth.services.modules.discord.models import DiscordUser
-
         add_tag = self.get_logger_tag()
         issuer_user = User.objects\
             .filter(character_ownerships__character__exact=self.issuer)\
@@ -1420,13 +1420,19 @@ class Contract(models.Model):
         
     def _generate_contents(self, discord_user_id, status_to_report):
         contents = '<@{}>\n'.format(discord_user_id)                    
+        if self.acceptor_name:
+            acceptor_text = 'by {} '.format(self.acceptor_name)
+        else:
+            acceptor_text = ''
         if status_to_report == self.STATUS_OUTSTANDING:
             contents += 'We have received your contract'
             if self.has_pricing_errors:
                 issues = self.get_issue_list()
-                contents += ', but we found some issues.\n' \
-                    + 'Please create a new courier contract ' \
-                    + 'and correct the following issues:\n'
+                contents += (
+                    ', but we found some issues.\n'
+                    'Please create a new courier contract '
+                    'and correct the following issues:\n'
+                )
                 for issue in issues:
                     contents += '• {}\n'.format(issue)
             else:                        
@@ -1435,24 +1441,23 @@ class Contract(models.Model):
                     'one of our pilots shortly.'
                 )
         
-        elif status_to_report == self.STATUS_IN_PROGRESS:
-            if self.acceptor_name:
-                acceptor_text = 'by {} '.format(self.acceptor_name)
-            else:
-                acceptor_text = ''
-
-            contents += 'Your contract has been picked up {}'\
-                .format(acceptor_text) \
-                + 'and will be delivered to you shortly.'
-        
+        elif status_to_report == self.STATUS_IN_PROGRESS:            
+            contents += (
+                'Your contract has been picked up {}'
+                'and will be delivered to you shortly.'.format(acceptor_text)
+            )
+                
         elif status_to_report == self.STATUS_FINISHED:
-            contents += 'Your contract has been **delivered**.\n' \
-                + 'Thank you for using our freight service.'
+            contents += (
+                'Your contract has been **delivered**.\n' 
+                'Thank you for using our freight service.'
+            )
 
         elif status_to_report == self.STATUS_FAILED:
-            contents += 'Your contract has been **failed** {}'\
-                .format(acceptor_text) \
-                + 'Thank you for using our freight service.'
+            contents += (
+                'Your contract has been **failed** {}'
+                'Thank you for using our freight service.'.format(acceptor_text)
+            )
                 
         else:
             raise NotImplementedError()

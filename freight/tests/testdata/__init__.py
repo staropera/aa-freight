@@ -141,7 +141,7 @@ def create_entities_from_characters():
 
 def create_contract_handler_w_contracts(
     selected_contract_ids: list = None
-):
+) -> tuple:
     """create contract handler with contracts and all related entities"""
     
     create_entities_from_characters()
