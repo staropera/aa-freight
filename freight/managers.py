@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import logging
 from time import sleep
@@ -243,6 +244,12 @@ class ContractManager(models.Manager):
         self, handler: object, contract: dict, esi_client: object
     ) -> tuple:
         """updates or creates a contract from given dict"""        
+        # validate types
+        self._ensure_datetime_type_or_none(contract, 'date_accepted')
+        self._ensure_datetime_type_or_none(contract, 'date_completed')
+        self._ensure_datetime_type_or_none(contract, 'date_expired')
+        self._ensure_datetime_type_or_none(contract, 'date_issued')
+        
         acceptor, acceptor_corporation = \
             self._identify_contract_acceptor(contract)
         issuer_corporation, issuer = \
@@ -280,6 +287,14 @@ class ContractManager(models.Manager):
             }                        
         )
         return obj, created
+
+    @staticmethod
+    def _ensure_datetime_type_or_none(contract: dict, property_name: str):
+        if (
+            contract[property_name] 
+            and not isinstance(contract[property_name], datetime)
+        ):
+            raise TypeError('%s must be of type datetime' % property_name)
 
     def _identify_locations(self, contract: dict, esi_client: object) -> tuple:
         from .models import Location
@@ -351,7 +366,7 @@ class ContractManager(models.Manager):
             acceptor_corporation = None
 
         return acceptor, acceptor_corporation
-
+    
     def _identify_contract_issuer(self, contract) -> tuple:
         try:
             issuer = EveCharacter.objects.get(

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 import inspect
 import json
 import os
@@ -53,16 +53,16 @@ def _load_contract_data() -> list:
             days=7 + randrange(7), hours=randrange(10)
         )
         if 'date_issued' in contract:
-            contract['date_issued'] = date_issued.isoformat()
+            contract['date_issued'] = date_issued
 
         if 'date_accepted' in contract:
-            contract['date_accepted'] = date_accepted.isoformat()
+            contract['date_accepted'] = date_accepted
 
         if 'date_completed' in contract:
-            contract['date_completed'] = date_completed.isoformat()
+            contract['date_completed'] = date_completed
 
         if 'date_expired' in contract:
-            contract['date_expired'] = date_expired.isoformat()
+            contract['date_expired'] = date_expired
 
     return contracts_data
 
@@ -139,6 +139,11 @@ def create_entities_from_characters():
             )
 
 
+def _convert_eve_date_str_to_dt(date_str) -> datetime:
+    return datetime.strptime('%Y-%m-%dT%H:%M:%S%Z', date_str) \
+        if date_str else None
+
+
 def create_contract_handler_w_contracts(
     selected_contract_ids: list = None
 ) -> tuple:
@@ -174,7 +179,7 @@ def create_contract_handler_w_contracts(
         if (not selected_contract_ids 
             or contract['contract_id'] in selected_contract_ids
         ):
-            if contract['type'] == 'courier':
+            if contract['type'] == 'courier':                
                 Contract.objects.update_or_create_from_dict(
                     handler=my_handler,
                     contract=contract,

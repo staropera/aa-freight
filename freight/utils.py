@@ -343,8 +343,7 @@ def get_site_base_url() -> str:
     base_url = 'http://www.example.com'
     if hasattr(settings, 'ESI_SSO_CALLBACK_URL'):            
         match = re.match(
-            r'(.+)\/sso\/callback', 
-            settings.ESI_SSO_CALLBACK_URL
+            r'(.+)\/sso\/callback', settings.ESI_SSO_CALLBACK_URL
         )
         if match:
             base_url = match.group(1)

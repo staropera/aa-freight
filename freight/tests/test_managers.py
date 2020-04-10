@@ -1,11 +1,11 @@
-import datetime
+from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 from bravado.exception import HTTPNotFound, HTTPForbidden
 
-from django.utils.timezone import now
+from django.utils.timezone import now, utc
 
-from allianceauth.eveonline.models import EveCharacter
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 
 from . import DisconnectPricingSaveHandler, get_invalid_object_pk
@@ -54,6 +54,7 @@ class TestEveEntityManager(NoSocketsTestCase):
             EveCharacter.objects.create(**character)
 
         cls.esi_data = esi_data
+        cls.character = EveCharacter.objects.get(character_id=90000001)
     
     @classmethod
     def esi_post_universe_names(cls, *args, **kwargs) -> list:
@@ -69,7 +70,46 @@ class TestEveEntityManager(NoSocketsTestCase):
         return m
 
     @patch('freight.helpers.provider')
-    def test_alliance_not_found(self, mock_provider):
+    def test_can_create_entity(self, mock_provider):
+        mock_provider.client\
+            .Universe.post_universe_names.side_effect = \
+            TestEveEntityManager.esi_post_universe_names
+
+        obj, created = EveEntity.objects.update_or_create_from_esi(id=90000001)
+        self.assertTrue(created)
+        self.assertEqual(obj.id, 90000001)
+        self.assertEqual(obj.name, 'Bruce Wayne')
+        self.assertEqual(obj.category, EveEntity.CATEGORY_CHARACTER)
+
+    @patch('freight.helpers.provider')
+    def test_can_create_entity_when_not_found(self, mock_provider):
+        mock_provider.client\
+            .Universe.post_universe_names.side_effect = \
+            TestEveEntityManager.esi_post_universe_names
+
+        obj, created = EveEntity.objects.get_or_create_from_esi(id=90000001)
+        self.assertTrue(created)
+        self.assertEqual(obj.id, 90000001)
+        self.assertEqual(obj.name, 'Bruce Wayne')
+        self.assertEqual(obj.category, EveEntity.CATEGORY_CHARACTER)
+
+    @patch('freight.helpers.provider')
+    def test_can_update_entity(self, mock_provider):
+        mock_provider.client\
+            .Universe.post_universe_names.side_effect = \
+            TestEveEntityManager.esi_post_universe_names
+        obj, _ = EveEntity.objects.update_or_create_from_esi(id=90000001)
+        obj.name = 'Blue Company'
+        obj.category = EveEntity.CATEGORY_CORPORATION
+
+        obj, created = EveEntity.objects.update_or_create_from_esi(id=90000001)
+        self.assertFalse(created)
+        self.assertEqual(obj.id, 90000001)
+        self.assertEqual(obj.name, 'Bruce Wayne')
+        self.assertEqual(obj.category, EveEntity.CATEGORY_CHARACTER)
+
+    @patch('freight.helpers.provider')
+    def test_raise_exception_if_entity_can_not_be_created(self, mock_provider):
         mock_provider.client\
             .Universe.post_universe_names.side_effect = \
             TestEveEntityManager.esi_post_universe_names
@@ -77,7 +117,7 @@ class TestEveEntityManager(NoSocketsTestCase):
         with self.assertRaises(ObjectNotFound):
             entity, _ = EveEntity.objects.get_or_create_from_esi(id=666)
         
-    def test_get_category_for_operation_mode(self):
+    def test_can_return_category_for_operation_mode(self):
         self.assertEqual(
             EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE_MY_ALLIANCE
@@ -103,29 +143,46 @@ class TestEveEntityManager(NoSocketsTestCase):
             EveEntity.CATEGORY_CORPORATION
         )
 
-    def test_update_or_create_from_evecharacter(self):       
-        character = EveCharacter.objects.get(character_id=90000001)
+    def test_can_create_corporation_from_evecharacter(self):        
         corporation, _ = \
             EveEntity.objects.update_or_create_from_evecharacter(
-                character,
+                self.character,
                 category=EveEntity.CATEGORY_CORPORATION
             )
         self.assertEqual(int(corporation.id), 92000001)
+
+    def test_can_create_alliance_from_evecharacter(self):
         alliance, _ = \
+            EveEntity.objects.update_or_create_from_evecharacter(
+                self.character,
+                category=EveEntity.CATEGORY_ALLIANCE
+            )
+        self.assertEqual(int(alliance.id), 93000001)
+    
+    def test_can_create_character_alliance_from_evecharacter(self):
+        char2, _ = \
+            EveEntity.objects.update_or_create_from_evecharacter(
+                self.character,
+                category=EveEntity.CATEGORY_CHARACTER
+            )
+        self.assertEqual(int(char2.id), 90000001)
+        
+    def test_raises_exception_when_trying_to_create_alliance_from_non_member(
+        self
+    ):
+        character = EveCharacter.objects.get(character_id=90000005)
+        with self.assertRaises(ValueError):
             EveEntity.objects.update_or_create_from_evecharacter(
                 character,
                 category=EveEntity.CATEGORY_ALLIANCE
             )
-        self.assertEqual(int(alliance.id), 93000001)
-        char2, _ = \
-            EveEntity.objects.update_or_create_from_evecharacter(
-                character,
-                category=EveEntity.CATEGORY_CHARACTER
-            )
-        self.assertEqual(int(char2.id), 90000001)
+
+    def test_raises_exception_when_trying_to_create_invalid_category_from_evechar(
+        self
+    ):
         with self.assertRaises(ValueError):
             EveEntity.objects.update_or_create_from_evecharacter(
-                character,
+                self.character,
                 category='xxx'
             )
 
@@ -158,72 +215,153 @@ class TestLocationManager(NoSocketsTestCase):
             m.result.return_value = structures_data[structure_id]
             return m
             
-    def test_update_or_create_from_esi_structure_normal(self):
+    def test_can_create_structure(self):
         esi_client = Mock()
         esi_client.Universe.get_universe_structures_structure_id.side_effect = \
             self.get_universe_structures_structure_id
 
         obj, created = Location.objects.update_or_create_from_esi(
-            esi_client,
-            1000000000001
+            esi_client, 1000000000001
         )
         self.assertTrue(created)
-        self.assertEqual(obj.id, 1000000000001)        
+        self.assertEqual(obj.id, 1000000000001)
+        self.assertEqual(obj.name, "Test Structure Alpha")
+        self.assertEqual(obj.solar_system_id, 30002537)
+        self.assertEqual(obj.type_id, 35832)
 
+    def test_can_update_structure(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_structures_structure_id.side_effect = \
+            self.get_universe_structures_structure_id
+        obj, _ = Location.objects.update_or_create_from_esi(
+            esi_client, 1000000000001
+        )
+        obj.name = 'Not my structure'
+        obj.solar_system_id = 123
+        obj.type_id = 456
+        obj.save()
+        
         obj, created = Location.objects.update_or_create_from_esi(
-            esi_client,
-            1000000000001
+            esi_client, 1000000000001
         )        
         self.assertFalse(created)
+        self.assertEqual(obj.id, 1000000000001)
+        self.assertEqual(obj.name, "Test Structure Alpha")
+        self.assertEqual(obj.solar_system_id, 30002537)
+        self.assertEqual(obj.type_id, 35832)
 
-    def test_update_or_create_from_esi_structure_forbidden(self):
+    def test_can_get_existing_location(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_structures_structure_id.side_effect = \
+            self.get_universe_structures_structure_id
+        obj_created, _ = Location.objects.update_or_create_from_esi(
+            esi_client, 1000000000001
+        )
+       
+        obj, created = Location.objects.get_or_create_from_esi(
+            esi_client, 1000000000001
+        )
+        self.assertFalse(created)
+        self.assertEqual(obj, obj_created)      
+
+    def test_can_create_not_existing_location(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_structures_structure_id.side_effect = \
+            self.get_universe_structures_structure_id
+        
+        obj, created = Location.objects.get_or_create_from_esi(
+            esi_client, 1000000000001
+        )
+        self.assertTrue(created)
+        self.assertEqual(obj.id, 1000000000001)
+        self.assertEqual(obj.name, "Test Structure Alpha")
+        self.assertEqual(obj.solar_system_id, 30002537)
+        self.assertEqual(obj.type_id, 35832)    
+
+    def test_propagates_http_error_on_structure_create(self):
         esi_client = Mock()
         esi_client.Universe.get_universe_structures_structure_id.side_effect = \
             HTTPForbidden(Mock())
 
         with self.assertRaises(HTTPForbidden):
             Location.objects.update_or_create_from_esi(
-                esi_client,
-                42,
-                add_unknown=False
+                esi_client, 42, add_unknown=False
             )
 
+    def test_propagates_exceptions_on_structure_create(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_structures_structure_id.side_effect = \
+            RuntimeError
+
+        with self.assertRaises(RuntimeError):
+            Location.objects.update_or_create_from_esi(
+                esi_client, 42, add_unknown=False
+            )
+
+    def test_creates_skeleton_structure_on_http_error_if_requested(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_structures_structure_id.side_effect = \
+            HTTPForbidden(Mock())
+
         obj, created = Location.objects.update_or_create_from_esi(
-            esi_client,
-            42,
-            add_unknown=True
+            esi_client, 42, add_unknown=True
         )
         self.assertTrue(created)
         self.assertEqual(obj.id, 42)
+
+    def test_does_not_creates_skeleton_structure_on_exceptions_if_requested(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_structures_structure_id.side_effect = \
+            RuntimeError
+
+        with self.assertRaises(RuntimeError):
+            Location.objects.update_or_create_from_esi(
+                esi_client, 42, add_unknown=True
+            )
         
-    def test_update_or_create_from_esi_station_normal(self):
+    def test_can_create_station(self):
         esi_client = Mock()
         esi_client.Universe.get_universe_stations_station_id.side_effect = \
             self.get_universe_stations_station_id
 
         obj, created = Location.objects.update_or_create_from_esi(
-            esi_client,
-            60000001
+            esi_client, 60000001
         )
         self.assertTrue(created)
-        self.assertEqual(obj.id, 60000001)        
-
+        self.assertEqual(obj.id, 60000001)
+        self.assertEqual(obj.name, "Test Station Charlie")
+        self.assertEqual(obj.solar_system_id, 30002537)
+        self.assertEqual(obj.type_id, 99)
+        
+    def test_can_update_station(self):
+        esi_client = Mock()
+        esi_client.Universe.get_universe_stations_station_id.side_effect = \
+            self.get_universe_stations_station_id
         obj, created = Location.objects.update_or_create_from_esi(
-            esi_client,
-            60000001
+            esi_client, 60000001
+        )
+        obj.name = 'Not my station'
+        obj.solar_system_id = 123
+        obj.type_id = 456
+        obj.save()
+        
+        obj, created = Location.objects.update_or_create_from_esi(
+            esi_client, 60000001
         )        
-        self.assertFalse(created)
+        self.assertFalse(created)        
+        self.assertEqual(obj.id, 60000001)
+        self.assertEqual(obj.name, "Test Station Charlie")
+        self.assertEqual(obj.solar_system_id, 30002537)
+        self.assertEqual(obj.type_id, 99)
 
-    def test_update_or_create_from_esi_station_forbidden(self):
+    def test_propagates_http_error_on_station_create(self):
         esi_client = Mock()
         esi_client.Universe.get_universe_stations_station_id.side_effect = \
             HTTPNotFound(Mock())
 
         with self.assertRaises(HTTPNotFound):
             Location.objects.update_or_create_from_esi(
-                esi_client,
-                60000001,
-                add_unknown=False
+                esi_client, 60000001, add_unknown=False
             )
 
 
@@ -232,11 +370,11 @@ class TestContractManager(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        _, cls.user = create_contract_handler_w_contracts([
+        cls.handler, cls.user = create_contract_handler_w_contracts([
             149409016, 149409061, 149409062, 149409063, 149409064
         ])
-
-    def test_update_pricing_bidirectional(self):
+        
+    def test_can_update_pricing_for_bidirectional(self):
         jita = Location.objects.get(id=60003760)
         amamake = Location.objects.get(id=1022167642188)
         amarr = Location.objects.get(id=60008494)
@@ -259,7 +397,7 @@ class TestContractManager(NoSocketsTestCase):
                 end_location=amamake,
                 price_base=250000000,
                 is_bidirectional=True
-            )                
+            )
         Contract.objects.update_pricing()
 
         contract_1 = Contract.objects.get(contract_id=149409016)        
@@ -272,7 +410,7 @@ class TestContractManager(NoSocketsTestCase):
         contract_3 = Contract.objects.get(contract_id=149409062)
         self.assertEqual(contract_3.pricing, pricing_3)
 
-    def test_update_pricing_uni_directional(self):
+    def test_can_update_pricing_for_unidirectional(self):
         jita = Location.objects.get(id=60003760)
         amamake = Location.objects.get(id=1022167642188)
         amarr = Location.objects.get(id=60008494)
@@ -314,6 +452,342 @@ class TestContractManager(NoSocketsTestCase):
         contract_5 = Contract.objects.get(contract_id=149409064)
         self.assertIsNone(contract_5.pricing)
 
+
+class TestContractManagerCreateFromDict(NoSocketsTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.handler, cls.user = create_contract_handler_w_contracts([
+            149409016, 149409061, 149409062, 149409063, 149409064
+        ])
+
+    def test_can_create_outstanding(self):
+        contract_dict = {
+            "acceptor_id": 0,
+            "assignee_id": 93000001,
+            "availability": "personal",
+            "buyout": None,
+            "collateral": 50000000.0,
+            "contract_id": 149409014,
+            "date_accepted": None,
+            "date_completed": None,
+            "date_expired": datetime(2019, 10, 30, 23, tzinfo=utc),
+            "date_issued": datetime(2019, 10, 2, 23, tzinfo=utc),
+            "days_to_complete": 3,
+            "end_location_id": 1022167642188,
+            "for_corporation": False,
+            "issuer_corporation_id": 92000002,
+            "issuer_id": 90000003,
+            "price": 0.0,
+            "reward": 25000000.0,
+            "start_location_id": 60003760,
+            "status": "outstanding",
+            "title": "demo contract",
+            "type": "courier",
+            "volume": 115000.0
+        }
+        obj, created = Contract.objects.update_or_create_from_dict(
+            self.handler, contract_dict, Mock()
+        )
+        self.assertTrue(created)
+        self.assertEqual(obj.contract_id, 149409014)
+        self.assertIsNone(obj.acceptor)
+        self.assertIsNone(obj.acceptor_corporation)
+        self.assertEqual(obj.collateral, 50000000)
+        self.assertIsNone(obj.date_accepted)
+        self.assertIsNone(obj.date_completed)
+        self.assertEqual(
+            obj.date_expired, datetime(2019, 10, 30, 23, tzinfo=utc)
+        )
+        self.assertEqual(
+            obj.date_issued, datetime(2019, 10, 2, 23, tzinfo=utc)
+        )
+        self.assertEqual(obj.days_to_complete, 3)
+        self.assertEqual(obj.end_location_id, 1022167642188)
+        self.assertFalse(obj.for_corporation)
+        self.assertEqual(
+            obj.issuer_corporation, 
+            EveCorporationInfo.objects.get(corporation_id=92000002)
+        )
+        self.assertEqual(
+            obj.issuer, 
+            EveCharacter.objects.get(character_id=90000003)
+        )
+        self.assertEqual(obj.reward, 25000000)
+        self.assertEqual(obj.start_location_id, 60003760)
+        self.assertEqual(obj.status, Contract.STATUS_OUTSTANDING)
+        self.assertEqual(obj.title, "demo contract")
+        self.assertEqual(obj.volume, 115000)
+        self.assertIsNone(obj.pricing)
+        self.assertIsNone(obj.issues)
+
+    def test_can_create_in_progress(self):
+        contract_dict = {
+            "acceptor_id": 90000003,
+            "assignee_id": 90000003,
+            "availability": "personal",
+            "buyout": None,
+            "collateral": 50000000.0,
+            "contract_id": 149409014,
+            "date_accepted": datetime(2019, 10, 3, 23, tzinfo=utc),
+            "date_completed": None,
+            "date_expired": datetime(2019, 10, 30, 23, tzinfo=utc),
+            "date_issued": datetime(2019, 10, 2, 23, tzinfo=utc),
+            "days_to_complete": 3,
+            "end_location_id": 1022167642188,
+            "for_corporation": False,
+            "issuer_corporation_id": 92000002,
+            "issuer_id": 90000003,
+            "price": 0.0,
+            "reward": 25000000.0,
+            "start_location_id": 60003760,
+            "status": "in_progress",
+            "title": "demo contract",
+            "type": "courier",
+            "volume": 115000.0
+        }
+        obj, created = Contract.objects.update_or_create_from_dict(
+            self.handler, contract_dict, Mock()
+        )
+        self.assertTrue(created)
+        self.assertEqual(obj.contract_id, 149409014)        
+        self.assertEqual(
+            obj.acceptor, 
+            EveCharacter.objects.get(character_id=90000003)
+        )
+        self.assertEqual(
+            obj.acceptor_corporation, 
+            EveCorporationInfo.objects.get(corporation_id=92000002)
+        )
+        self.assertEqual(obj.collateral, 50000000)
+        self.assertEqual(
+            obj.date_accepted, datetime(2019, 10, 3, 23, tzinfo=utc)
+        )
+        self.assertIsNone(obj.date_completed)
+        self.assertEqual(
+            obj.date_issued, datetime(2019, 10, 2, 23, tzinfo=utc)
+        )
+        self.assertEqual(
+            obj.date_expired, datetime(2019, 10, 30, 23, tzinfo=utc)
+        )        
+        self.assertEqual(obj.days_to_complete, 3)
+        self.assertEqual(obj.end_location_id, 1022167642188)
+        self.assertFalse(obj.for_corporation)
+        self.assertEqual(
+            obj.issuer_corporation, 
+            EveCorporationInfo.objects.get(corporation_id=92000002)
+        )
+        self.assertEqual(
+            obj.issuer, 
+            EveCharacter.objects.get(character_id=90000003)
+        )
+        self.assertEqual(obj.reward, 25000000)
+        self.assertEqual(obj.start_location_id, 60003760)
+        self.assertEqual(obj.status, Contract.STATUS_IN_PROGRESS)
+        self.assertEqual(obj.title, "demo contract")
+        self.assertEqual(obj.volume, 115000)
+        self.assertIsNone(obj.pricing)
+        self.assertIsNone(obj.issues)
+
+    def test_can_create_finished(self):
+        contract_dict = {
+            "acceptor_id": 90000003,
+            "assignee_id": 90000003,
+            "availability": "personal",
+            "buyout": None,
+            "collateral": 50000000.0,
+            "contract_id": 149409014,
+            "date_accepted": datetime(2019, 10, 3, 23, tzinfo=utc),
+            "date_completed": datetime(2019, 10, 4, 23, tzinfo=utc),
+            "date_expired": datetime(2019, 10, 30, 23, tzinfo=utc),
+            "date_issued": datetime(2019, 10, 2, 23, tzinfo=utc),
+            "days_to_complete": 3,
+            "end_location_id": 1022167642188,
+            "for_corporation": False,
+            "issuer_corporation_id": 92000002,
+            "issuer_id": 90000003,
+            "price": 0.0,
+            "reward": 25000000.0,
+            "start_location_id": 60003760,
+            "status": "finished",
+            "title": "demo contract",
+            "type": "courier",
+            "volume": 115000.0
+        }
+        obj, created = Contract.objects.update_or_create_from_dict(
+            self.handler, contract_dict, Mock()
+        )
+        self.assertTrue(created)
+        self.assertEqual(obj.contract_id, 149409014)        
+        self.assertEqual(
+            obj.acceptor, 
+            EveCharacter.objects.get(character_id=90000003)
+        )
+        self.assertEqual(
+            obj.acceptor_corporation, 
+            EveCorporationInfo.objects.get(corporation_id=92000002)
+        )
+        self.assertEqual(obj.collateral, 50000000)
+        self.assertEqual(
+            obj.date_accepted, datetime(2019, 10, 3, 23, tzinfo=utc)
+        )
+        self.assertEqual(
+            obj.date_completed, datetime(2019, 10, 4, 23, tzinfo=utc)
+        )
+        self.assertEqual(
+            obj.date_issued, datetime(2019, 10, 2, 23, tzinfo=utc)
+        )
+        self.assertEqual(
+            obj.date_expired, datetime(2019, 10, 30, 23, tzinfo=utc)
+        )        
+        self.assertEqual(obj.days_to_complete, 3)
+        self.assertEqual(obj.end_location_id, 1022167642188)
+        self.assertFalse(obj.for_corporation)
+        self.assertEqual(
+            obj.issuer_corporation, 
+            EveCorporationInfo.objects.get(corporation_id=92000002)
+        )
+        self.assertEqual(
+            obj.issuer, 
+            EveCharacter.objects.get(character_id=90000003)
+        )
+        self.assertEqual(obj.reward, 25000000)
+        self.assertEqual(obj.start_location_id, 60003760)
+        self.assertEqual(obj.status, Contract.STATUS_FINISHED)
+        self.assertEqual(obj.title, "demo contract")
+        self.assertEqual(obj.volume, 115000)
+        self.assertIsNone(obj.pricing)
+        self.assertIsNone(obj.issues)
+
+    def test_raises_exception_on_wrong_date_types(self):
+        contract_dict = {
+            "acceptor_id": 90000003,
+            "assignee_id": 90000003,
+            "availability": "personal",
+            "buyout": None,
+            "collateral": 50000000.0,
+            "contract_id": 149409014,
+            "date_accepted": "2019-10-03T23:00:00Z",
+            "date_completed": "2019-10-04T23:00:00Z",
+            "date_expired": "2019-10-30T23:00:00Z",
+            "date_issued": "2019-10-02T23:00:00Z",
+            "days_to_complete": 3,
+            "end_location_id": 1022167642188,
+            "for_corporation": False,
+            "issuer_corporation_id": 92000002,
+            "issuer_id": 90000003,
+            "price": 0.0,
+            "reward": 25000000.0,
+            "start_location_id": 60003760,
+            "status": "finished",
+            "title": "demo contract",
+            "type": "courier",
+            "volume": 115000.0
+        }
+        with self.assertRaises(TypeError):
+            Contract.objects.update_or_create_from_dict(
+                self.handler, contract_dict, Mock()
+            )
+    
+    @patch(MODULE_PATH + '.EveCharacter.objects.create_character')
+    def test_can_create_in_progress_and_creates_acceptor_char(
+        self, mock_create_character
+    ):        
+        def create_character(character_id):
+            return EveCharacter.objects.create(
+                character_id=90000987,
+                character_name='Dummy',
+                corporation_id=92000002,
+                corporation_name="The Planet"
+            )            
+                
+        mock_create_character.side_effect = create_character
+        EveEntity.objects.create(
+            id=90000987,
+            name='Dummy',
+            category=EveEntity.CATEGORY_CHARACTER
+        )
+        contract_dict = {
+            "acceptor_id": 90000987,
+            "assignee_id": 90000987,
+            "availability": "personal",
+            "buyout": None,
+            "collateral": 50000000.0,
+            "contract_id": 149409014,
+            "date_accepted": datetime(2019, 10, 3, 23, tzinfo=utc),
+            "date_completed": None,
+            "date_expired": datetime(2019, 10, 30, 23, tzinfo=utc),
+            "date_issued": datetime(2019, 10, 2, 23, tzinfo=utc),
+            "days_to_complete": 3,
+            "end_location_id": 1022167642188,
+            "for_corporation": False,
+            "issuer_corporation_id": 92000002,
+            "issuer_id": 90000003,
+            "price": 0.0,
+            "reward": 25000000.0,
+            "start_location_id": 60003760,
+            "status": "in_progress",
+            "title": "demo contract",
+            "type": "courier",
+            "volume": 115000.0
+        }
+        obj, created = Contract.objects.update_or_create_from_dict(
+            self.handler, contract_dict, Mock()
+        )
+        self.assertTrue(created)
+        self.assertEqual(obj.contract_id, 149409014)        
+        self.assertEqual(
+            obj.acceptor, 
+            EveCharacter.objects.get(character_id=90000987)
+        )
+        self.assertEqual(
+            obj.acceptor_corporation, 
+            EveCorporationInfo.objects.get(corporation_id=92000002)
+        )
+
+    @patch(MODULE_PATH + '.EveCharacter.objects.create_character')
+    def test_sets_acceptor_to_none_if_it_cant_be_created(
+        self, mock_create_character
+    ):                        
+        mock_create_character.side_effect = RuntimeError
+        EveEntity.objects.create(
+            id=90000987,
+            name='Dummy',
+            category=EveEntity.CATEGORY_CHARACTER
+        )
+        contract_dict = {
+            "acceptor_id": 90000987,
+            "assignee_id": 90000987,
+            "availability": "personal",
+            "buyout": None,
+            "collateral": 50000000.0,
+            "contract_id": 149409014,
+            "date_accepted": datetime(2019, 10, 3, 23, tzinfo=utc),
+            "date_completed": None,
+            "date_expired": datetime(2019, 10, 30, 23, tzinfo=utc),
+            "date_issued": datetime(2019, 10, 2, 23, tzinfo=utc),
+            "days_to_complete": 3,
+            "end_location_id": 1022167642188,
+            "for_corporation": False,
+            "issuer_corporation_id": 92000002,
+            "issuer_id": 90000003,
+            "price": 0.0,
+            "reward": 25000000.0,
+            "start_location_id": 60003760,
+            "status": "in_progress",
+            "title": "demo contract",
+            "type": "courier",
+            "volume": 115000.0
+        }
+        obj, created = Contract.objects.update_or_create_from_dict(
+            self.handler, contract_dict, Mock()
+        )
+        self.assertTrue(created)
+        self.assertEqual(obj.contract_id, 149409014)        
+        self.assertIsNone(obj.acceptor)
+        self.assertIsNone(obj.acceptor_corporation)
+        
 
 @patch('freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS', 48)
 @patch('freight.models.Webhook.execute', autospec=True)
@@ -364,7 +838,7 @@ class TestContractManagerNotifications(NoSocketsTestCase):
     ):
         x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
         Contract.objects.all().exclude(pk=x.pk).delete()
-        x.date_expired = now() - datetime.timedelta(hours=1)
+        x.date_expired = now() - timedelta(hours=1)
         x.save()
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 0)
@@ -378,7 +852,7 @@ class TestContractManagerNotifications(NoSocketsTestCase):
     ):
         x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
         Contract.objects.all().exclude(pk=x.pk).delete()
-        x.date_expired = now() - datetime.timedelta(hours=1)
+        x.date_expired = now() - timedelta(hours=1)
         x.save()
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 0)

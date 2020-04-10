@@ -20,7 +20,8 @@ from ..utils import (
     create_bs_button_html,
     create_bs_glyph_html,
     create_link_html,    
-    add_bs_label_html
+    add_bs_label_html,
+    get_site_base_url
 )
 from ..utils import set_test_logger
 
@@ -304,3 +305,28 @@ class TestHtmlHelper(TestCase):
             ),
             expected
         )
+
+
+class TestGetSiteBaseUrl(NoSocketsTestCase):
+
+    @patch(
+        MODULE_PATH + '.settings.ESI_SSO_CALLBACK_URL', 
+        'https://www.mysite.com/sso/callback'
+    )
+    def test_return_url_if_url_defined_and_valid(self):
+        expected = 'https://www.mysite.com'
+        self.assertEqual(get_site_base_url(), expected)
+
+    @patch(
+        MODULE_PATH + '.settings.ESI_SSO_CALLBACK_URL', 
+        'https://www.mysite.com/not-valid/'
+    )
+    def test_return_dummy_if_url_defined_but_not_valid(self):
+        expected = 'http://www.example.com'
+        self.assertEqual(get_site_base_url(), expected)
+
+    @patch(MODULE_PATH + '.settings')
+    def test_return_dummy_if_url_not_defined(self, mock_settings):
+        delattr(mock_settings, 'ESI_SSO_CALLBACK_URL')
+        expected = 'http://www.example.com'
+        self.assertEqual(get_site_base_url(), expected)
