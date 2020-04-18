@@ -630,7 +630,7 @@ class TestContract(NoSocketsTestCase):
         self.assertIsInstance(x, Embed)
     
 
-@patch(MODULE_PATH + '.Webhook.execute', autospec=True)
+@patch(MODULE_PATH + '.Webhook.execute', spec=True)
 class TestContractSendPilotNotification(NoSocketsTestCase):
 
     @classmethod
@@ -685,7 +685,7 @@ class TestContractSendPilotNotification(NoSocketsTestCase):
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
 
-@patch(MODULE_PATH + '.Webhook.execute', autospec=True)
+@patch(MODULE_PATH + '.Webhook.execute', spec=True)
 class TestContractSendCustomerNotification(NoSocketsTestCase):
 
     @classmethod
@@ -1082,10 +1082,10 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + '.Contract.objects.update_or_create_from_dict')
     @patch(MODULE_PATH + '.Token')    
-    @patch(MODULE_PATH + '.esi_client_factory')
+    @patch('freight.helpers.esi_fetch._esi_client')
     def test_abort_when_exception_occurs_during_contract_creation(
         self, 
-        mock_esi_client_factory,         
+        mock_esi_client,         
         mock_Token,
         mock_Contracts_objects_update_or_create_from_dict
     ):        
@@ -1104,21 +1104,20 @@ class TestContractsSync(NoSocketsTestCase):
             return [contracts_data[start:stop], mock_response]
 
         def func_Contracts_objects_update_or_create_from_dict(
-            handler, contract, esi_client
+            handler, contract, token
         ):            
             raise RuntimeError('Test exception')
             
         mock_Contracts_objects_update_or_create_from_dict\
             .side_effect = func_Contracts_objects_update_or_create_from_dict
-
-        mock_client = Mock()
+        
         mock_operation = Mock()
         mock_operation.result.side_effect = get_contracts_page        
-        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
-        )
-        mock_esi_client_factory.return_value = mock_client        
-
+        mock_esi_client.return_value.Contracts\
+            .get_corporations_corporation_id_contracts = Mock(
+                return_value=mock_operation
+            )
+        
         mock_Token.objects.filter.return_value\
             .require_scopes.return_value\
             .require_valid.return_value\
@@ -1143,9 +1142,9 @@ class TestContractsSync(NoSocketsTestCase):
             
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + '.Token')    
-    @patch(MODULE_PATH + '.esi_client_factory')
+    @patch('freight.helpers.esi_fetch._esi_client')
     def test_can_sync_contracts_for_my_alliance(
-        self, mock_esi_client_factory, mock_Token
+        self, mock_esi_client, mock_Token
     ):        
         current_page = 0
         
@@ -1160,14 +1159,13 @@ class TestContractsSync(NoSocketsTestCase):
             mock_response = Mock()
             mock_response.headers = {'x-pages': pages_count}
             return [contracts_data[start:stop], mock_response]
-            
-        mock_client = Mock()
+                    
         mock_operation = Mock()
         mock_operation.result.side_effect = get_contracts_page        
-        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
-        )
-        mock_esi_client_factory.return_value = mock_client        
+        mock_esi_client.return_value.Contracts\
+            .get_corporations_corporation_id_contracts = Mock(
+                return_value=mock_operation
+            )         
 
         mock_Token.objects.filter.return_value\
             .require_scopes.return_value\
@@ -1213,9 +1211,9 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_CORPORATION)
     @patch(MODULE_PATH + '.notify')
     @patch(MODULE_PATH + '.Token')
-    @patch(MODULE_PATH + '.esi_client_factory')
+    @patch('freight.helpers.esi_fetch._esi_client')
     def test_sync_contracts_for_my_corporation_and_ignore_notify_exception(
-        self, mock_esi_client_factory, mock_Token, mock_notify
+        self, mock_esi_client, mock_Token, mock_notify
     ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
@@ -1229,13 +1227,12 @@ class TestContractsSync(NoSocketsTestCase):
             mock_response.headers = {'x-pages': pages_count}
             return [contracts_data[start:stop], mock_response]
         
-        mock_client = Mock()
         mock_operation = Mock()
         mock_operation.result.side_effect = get_contracts_page        
-        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
-        )
-        mock_esi_client_factory.return_value = mock_client        
+        mock_esi_client.return_value.Contracts\
+            .get_corporations_corporation_id_contracts = Mock(
+                return_value=mock_operation
+            )          
 
         mock_Token.objects.filter.return_value\
             .require_scopes.return_value\
@@ -1286,9 +1283,9 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE)
     @patch(MODULE_PATH + '.notify')
     @patch(MODULE_PATH + '.Token')
-    @patch(MODULE_PATH + '.esi_client_factory')
+    @patch('freight.helpers.esi_fetch._esi_client')
     def test_sync_contracts_for_corp_in_alliance_and_report_to_user(
-        self, mock_esi_client_factory, mock_Token, mock_notify
+        self, mock_esi_client, mock_Token, mock_notify
     ):
         # create mocks
         def get_contracts_page(*args, **kwargs):
@@ -1302,13 +1299,12 @@ class TestContractsSync(NoSocketsTestCase):
             mock_response.headers = {'x-pages': pages_count}
             return [contracts_data[start:stop], mock_response]
         
-        mock_client = Mock()
         mock_operation = Mock()
         mock_operation.result.side_effect = get_contracts_page        
-        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
-        )
-        mock_esi_client_factory.return_value = mock_client        
+        mock_esi_client.return_value.Contracts\
+            .get_corporations_corporation_id_contracts = Mock(
+                return_value=mock_operation
+            )      
 
         mock_Token.objects.filter.return_value\
             .require_scopes.return_value\
@@ -1367,10 +1363,10 @@ class TestContractsSync(NoSocketsTestCase):
         'freight.managers.EveCharacter.objects.create_character', 
         side_effect=ObjectNotFound(9999999, 'character')
     )    
-    @patch(MODULE_PATH + '.esi_client_factory')
+    @patch('freight.helpers.esi_fetch._esi_client')
     def test_can_sync_contracts_for_corp_public(
         self, 
-        mock_esi_client_factory,         
+        mock_esi_client,         
         mock_EveCharacter_objects_create_character,
         mock_EveCorporationInfo_objects_create_corporation,
         mock_Token
@@ -1387,13 +1383,12 @@ class TestContractsSync(NoSocketsTestCase):
             mock_response.headers = {'x-pages': pages_count}
             return [contracts_data[start:stop], mock_response]
         
-        mock_client = Mock()
         mock_operation = Mock()
         mock_operation.result.side_effect = get_contracts_page        
-        mock_client.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
-        )
-        mock_esi_client_factory.return_value = mock_client        
+        mock_esi_client.return_value.Contracts\
+            .get_corporations_corporation_id_contracts = Mock(
+                return_value=mock_operation
+            )      
 
         mock_Token.objects.filter.return_value\
             .require_scopes.return_value\
@@ -1439,9 +1434,9 @@ class TestContractsSync(NoSocketsTestCase):
         )
                 
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
-    @patch(MODULE_PATH + '.EsiSmartRequest.fetch')
-    @patch(MODULE_PATH + '.ContractHandler.esi_client')
-    def test_abort_on_general_exception(self, mock_esi_client, mock_fetch):
+    @patch(MODULE_PATH + '.esi_fetch')
+    @patch(MODULE_PATH + '.ContractHandler.token')
+    def test_abort_on_general_exception(self, mock_token, mock_fetch):
         mock_fetch.side_effect = RuntimeError
         AuthUtils.add_permission_to_user_by_name(
             'freight.setup_contract_handler', self.user

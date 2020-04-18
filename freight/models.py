@@ -21,7 +21,6 @@ from allianceauth.eveonline.models import (
 from allianceauth.notifications import notify
 from allianceauth.services.modules.discord.models import DiscordUser
 
-from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 
@@ -44,12 +43,11 @@ from .app_settings import (
 from .managers import (
     ContractManager, EveEntityManager, LocationManager, PricingManager
 )
-from .helpers import EsiSmartRequest
+from .helpers.esi_fetch import esi_fetch
 from .utils import (    
     app_labels,
     DATETIME_FORMAT,     
-    get_site_base_url, 
-    get_swagger_spec_path,
+    get_site_base_url,
     LoggerAddTag, 
     make_logger_prefix,
 )
@@ -728,14 +726,13 @@ class ContractHandler(models.Model):
         self.last_sync = now() 
         self.save()
 
-    def esi_client(self) -> object:
-        """returns an esi client for the contract handler 
+    def token(self) -> Token:
+        """returns an esi token for the contract handler
         
         raises exception on error
         """
         add_prefix = make_logger_prefix(self)
-        try:
-            # get token    
+        try:            
             token = Token.objects\
                 .filter(
                     user=self.character.user, 
@@ -766,24 +763,22 @@ class ContractHandler(models.Model):
                 raise TokenInvalidError()
 
         logger.info(add_prefix('Fetching ESI client...'))
-        return esi_client_factory(
-            token=token, spec_file=get_swagger_spec_path()
-        )
+        return token
 
     def update_contracts_esi(self, force_sync=False, user=None) -> bool:        
         try:
             add_prefix = make_logger_prefix(self)
             self._validate_update_readiness()
-            esi_client = self.esi_client()             
+            token = self.token()
             try:
                 # fetching data from ESI                
-                contracts = EsiSmartRequest.fetch(
+                contracts = esi_fetch(
                     'Contracts.get_corporations_corporation_id_contracts',
                     args={
                         'corporation_id': self.character.character.corporation_id
                     },
                     has_pages=True,
-                    esi_client=esi_client,
+                    token=token,
                     logger_tag=add_prefix()
                 )   
                             
@@ -791,7 +786,7 @@ class ContractHandler(models.Model):
                     self._save_contract_to_file(contracts)
                 
                 self._process_contracts_from_esi(
-                    contracts, esi_client, force_sync
+                    contracts, token, force_sync
                 )
                 
             except Exception as ex:
@@ -854,7 +849,7 @@ class ContractHandler(models.Model):
             )
 
     def _process_contracts_from_esi(
-        self, contracts_all: list, esi_client: object, force_sync: bool
+        self, contracts_all: list, token: object, force_sync: bool
     ):
         add_prefix = make_logger_prefix(self)
 
@@ -911,14 +906,14 @@ class ContractHandler(models.Model):
         ).hexdigest()
         if (force_sync or new_version_hash != self.version_hash):
             self._store_contract_from_esi(
-                contracts, new_version_hash, esi_client
+                contracts, new_version_hash, token
             )
 
         else:
             logger.info(add_prefix('Contracts are unchanged.'))
 
     def _store_contract_from_esi(
-        self, contracts: list, new_version_hash: str, esi_client: object
+        self, contracts: list, new_version_hash: str, token: Token
     ) -> None:
         add_prefix = make_logger_prefix(self)
         logger.info(add_prefix(
@@ -934,7 +929,7 @@ class ContractHandler(models.Model):
                     Contract.objects.update_or_create_from_dict(
                         handler=self,
                         contract=contract,
-                        esi_client=esi_client
+                        token=token
                     )
                 except Exception as ex:
                     logger.exception(add_prefix(

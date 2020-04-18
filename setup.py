@@ -46,7 +46,7 @@ setup(
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],    
-    python_requires='~=3.5',
+    python_requires='~=3.6',
     install_requires=install_requires,    
     extras_require={
         'testing': testing_extras

@@ -85,9 +85,9 @@ def update_location(location_id: int) -> None:
             )
         )
     else:
-        esi_client = _get_contract_handler().esi_client()
+        token = _get_contract_handler().token()
         Location.objects.update_or_create_from_esi(
-            location_id=location_id, esi_client=esi_client
+            location_id=location_id, token=token
         )
 
 

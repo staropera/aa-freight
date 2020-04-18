@@ -7,12 +7,13 @@ from django.forms import HiddenInput
 from django.http import JsonResponse
 from django.db.models import Count, Sum, Q
 from django.shortcuts import render, redirect
+from django.utils.html import mark_safe
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
+
 from esi.decorators import token_required
-from esi.clients import esi_client_factory
 from esi.models import Token
 
 from . import tasks, __title__
@@ -21,11 +22,7 @@ from .app_settings import (
 )
 from .models import Contract, ContractHandler, EveEntity, Location, Pricing
 from .utils import (
-    get_swagger_spec_path, 
-    DATETIME_FORMAT, 
-    messages_plus, 
-    LoggerAddTag,
-    create_bs_glyph_2_html
+    DATETIME_FORMAT, messages_plus, LoggerAddTag, create_bs_glyph_2_html
 )
 
 
@@ -141,8 +138,7 @@ def _get_contracts_for_contract_list(category, request):
         else:            
             contracts = Contract.objects\
                 .filter(status__in=[
-                    Contract.STATUS_OUTSTANDING,
-                    Contract.STATUS_IN_PROGRESS
+                    Contract.STATUS_OUTSTANDING, Contract.STATUS_IN_PROGRESS
                 ])\
                 .exclude(date_expired__lt=now())\
                 .select_related()
@@ -261,10 +257,12 @@ def setup_contract_handler(request, token):
         except CharacterOwnership.DoesNotExist:
             messages_plus.error(
                 request,
-                'You can only use your main or alt characters to setup '
-                + ' the contract handler. '
-                + 'However, character <strong>{}</strong> is neither. '.format(
-                    token_char.character_name
+                mark_safe(
+                    'You can only use your main or alt characters to setup '
+                    ' the contract handler. '
+                    'However, character <strong>{}</strong> is neither. '.format(
+                        token_char.character_name
+                    )
                 )
             )
             success = False
@@ -275,9 +273,9 @@ def setup_contract_handler(request, token):
             messages_plus.error(
                 request,
                 'There already is a contract handler installed for a '
-                + 'different operation mode. You need to first delete the '
-                + 'existing contract handler in the admin section '
-                + 'before you can set up this app for a different operation mode.'
+                'different operation mode. You need to first delete the '
+                'existing contract handler in the admin section '
+                'before you can set up this app for a different operation mode.'
             )
             success = False
 
@@ -302,15 +300,17 @@ def setup_contract_handler(request, token):
         )        
         messages_plus.success(
             request, 
-            'Contract Handler setup started for '
-            '<strong>{}</strong> organization '
-            'with <strong>{}</strong> as sync character. '
-            'Operation mode: <strong>{}</strong>. '
-            'Started syncing of courier contracts. '
-            'You will receive a report once it is completed.'.format(
-                organization.name, 
-                handler.character.character.character_name,  
-                handler.operation_mode_friendly
+            mark_safe(
+                'Contract Handler setup started for '
+                '<strong>{}</strong> organization '
+                'with <strong>{}</strong> as sync character. '
+                'Operation mode: <strong>{}</strong>. '
+                'Started syncing of courier contracts. '
+                'You will receive a report once it is completed.'.format(
+                    organization.name, 
+                    handler.character.character.character_name,  
+                    handler.operation_mode_friendly
+                )
             )
         )
         
@@ -343,22 +343,19 @@ def add_location_2(request):
         if form.is_valid():
             location_id = form.cleaned_data['location_id']
             try:                
-                client = esi_client_factory(
-                    token=token, 
-                    spec_file=get_swagger_spec_path()
-                )
-            
                 location, created = Location.objects.update_or_create_from_esi(
-                    client, 
-                    location_id,
+                    token=token,
+                    location_id=location_id,
                     add_unknown=False
                 )
                 action_txt = 'Added:' if created else 'Updated:'
                 messages_plus.success(
                     request,
-                    '{} <strong>{}</strong>'.format(
-                        action_txt,                        
-                        location.name
+                    mark_safe(
+                        '{} <strong>{}</strong>'.format(
+                            action_txt,                        
+                            location.name
+                        )
                     )
                 )
                 return redirect('freight:add_location_2')    

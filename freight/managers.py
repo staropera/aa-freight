@@ -10,11 +10,13 @@ from django.db import models, transaction
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 
+from esi.models import Token
+
 from .app_settings import (
     FREIGHT_DISCORD_WEBHOOK_URL, 
-    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,   
+    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
 )
-from .helpers import EsiSmartRequest
+from .helpers.esi_fetch import esi_fetch
 from .utils import LoggerAddTag, make_logger_prefix
 
 
@@ -52,7 +54,7 @@ class LocationManager(models.Manager):
     
     def get_or_create_from_esi(
         self, 
-        esi_client: object, 
+        token: Token,
         location_id: int,
         add_unknown: bool = True
     ) -> tuple:
@@ -63,14 +65,14 @@ class LocationManager(models.Manager):
             created = False
         except Location.DoesNotExist:
             location, created = self.update_or_create_from_esi(
-                esi_client, location_id, add_unknown
+                token=token, location_id=location_id, add_unknown=add_unknown
             )
         
         return location, created
 
     def update_or_create_from_esi(
         self, 
-        esi_client: object, 
+        token: Token, 
         location_id: int, 
         add_unknown: bool = True
     ) -> tuple:
@@ -85,10 +87,9 @@ class LocationManager(models.Manager):
         ):
             logger.info(add_prefix('Fetching station from ESI'))
             try:                
-                station = EsiSmartRequest.fetch(
+                station = esi_fetch(
                     'Universe.get_universe_stations_station_id',
                     args={'station_id': location_id},
-                    esi_client=esi_client,
                     logger_tag=add_prefix()
                 )
                 location, created = self.update_or_create(
@@ -108,10 +109,10 @@ class LocationManager(models.Manager):
             
         else:            
             try:                
-                structure = EsiSmartRequest.fetch(
+                structure = esi_fetch(
                     'Universe.get_universe_structures_structure_id',
                     args={'structure_id': location_id},
-                    esi_client=esi_client,
+                    token=token,
                     logger_tag=add_prefix()
                 )
                 location, created = self.update_or_create(
@@ -165,7 +166,7 @@ class EveEntityManager(models.Manager):
         add_prefix = make_logger_prefix(id)
                 
         try:            
-            response = EsiSmartRequest.fetch(
+            response = esi_fetch(
                 esi_path='Universe.post_universe_names', 
                 args={'ids': [id]},
                 logger_tag=add_prefix()
@@ -241,7 +242,7 @@ class EveEntityManager(models.Manager):
 class ContractManager(models.Manager):
     
     def update_or_create_from_dict(
-        self, handler: object, contract: dict, esi_client: object
+        self, handler: object, contract: dict, token: Token
     ) -> tuple:
         """updates or creates a contract from given dict"""        
         # validate types
@@ -260,7 +261,7 @@ class ContractManager(models.Manager):
             if 'date_completed' in contract else None
         title = contract['title'] if 'title' in contract else None
         start_location, end_location = \
-            self._identify_locations(contract, esi_client)        
+            self._identify_locations(contract, token)        
         obj, created = self.update_or_create(
             handler=handler,
             contract_id=contract['contract_id'],
@@ -296,14 +297,14 @@ class ContractManager(models.Manager):
         ):
             raise TypeError('%s must be of type datetime' % property_name)
 
-    def _identify_locations(self, contract: dict, esi_client: object) -> tuple:
+    def _identify_locations(self, contract: dict, token: Token) -> tuple:
         from .models import Location
 
         start_location, _ = Location.objects.get_or_create_from_esi(
-            esi_client, contract['start_location_id']
+            token, contract['start_location_id']
         )
         end_location, _ = Location.objects.get_or_create_from_esi(
-            esi_client, contract['end_location_id']
+            token, contract['end_location_id']
         )
         return start_location, end_location
     

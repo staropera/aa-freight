@@ -108,7 +108,7 @@ class TestUpdateContractsPricing(NoSocketsTestCase):
         self.assertTrue(mock_update_pricing.called)
 
 
-@patch(MODULE_PATH + '.ContractHandler.esi_client')
+@patch(MODULE_PATH + '.ContractHandler.token')
 @patch(MODULE_PATH + '.Location.objects.update_or_create_from_esi')    
 class TestUpdateLocation(NoSocketsTestCase):
         
@@ -117,20 +117,20 @@ class TestUpdateLocation(NoSocketsTestCase):
         super().setUpClass()
         create_contract_handler_w_contracts()
     
-    def test_normal_run(self, mock_update_or_create_from_esi, mock_esi_client):
+    def test_normal_run(self, mock_update_or_create_from_esi, mock_token):
         update_location(1022167642188)
-        self.assertTrue(mock_esi_client.called)
+        self.assertTrue(mock_token.called)
         self.assertTrue(mock_update_or_create_from_esi.called)
 
     def test_exceptions_are_handled(
-        self, mock_update_or_create_from_esi, mock_esi_client
+        self, mock_update_or_create_from_esi, mock_token
     ):
         update_location(99)
-        self.assertFalse(mock_esi_client.called)
+        self.assertFalse(mock_token.called)
         self.assertFalse(mock_update_or_create_from_esi.called)
 
     def test_update_locations(
-        self, mock_update_or_create_from_esi, mock_esi_client
+        self, mock_update_or_create_from_esi, mock_token
     ):
         app.conf.task_always_eager = True
         update_locations([1022167642188, 60003760])

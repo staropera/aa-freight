@@ -5,7 +5,8 @@ import os
 from random import randrange
 from unittest.mock import Mock
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
+from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership
@@ -144,6 +145,18 @@ def _convert_eve_date_str_to_dt(date_str) -> datetime:
         if date_str else None
 
 
+def add_permission_to_user_by_name(perm, user):
+    perm_parts = perm.split('.')
+    if len(perm_parts) != 2:
+        raise ValueError('Invalid format for permission name')
+
+    p = Permission.objects.get(
+        content_type__app_label=perm_parts[0], codename=perm_parts[1]
+    )                
+    user.user_permissions.add(p)    
+    user = get_object_or_404(User, pk=user.pk)
+
+
 def create_contract_handler_w_contracts(
     selected_contract_ids: list = None
 ) -> tuple:
@@ -155,11 +168,10 @@ def create_contract_handler_w_contracts(
     my_character = EveCharacter.objects.get(character_id=90000001)
     
     my_organization = EveEntity.objects.get(id=my_character.alliance_id)
-    
-    my_user = User.objects.create_user(
-        my_character.character_name, 'abc@example.com', 'password'
-    )    
-    AuthUtils.add_permission_to_user_by_name('freight.basic_access', my_user)
+        
+    User.objects.filter(username=my_character.character_name).delete()
+    my_user = AuthUtils.create_user(my_character.character_name)
+    add_permission_to_user_by_name('freight.basic_access', my_user)
     my_main_ownership = CharacterOwnership.objects.create(
         character=my_character,
         owner_hash='x1',
@@ -183,7 +195,7 @@ def create_contract_handler_w_contracts(
                 Contract.objects.update_or_create_from_dict(
                     handler=my_handler,
                     contract=contract,
-                    esi_client=Mock()
+                    token=Mock()
                 )
 
     # create users and Discord accounts from contract issuers

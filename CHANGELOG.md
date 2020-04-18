@@ -7,10 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.1.0] - 2020-04-18
+
 ### Fixed
 
 - Customer notification now also works for failed contracts without acceptor
 - Price per volume modifier no longer fails when there is no contract handler
+- HTML not parsed in info box ([#30](https://gitlab.com/ErikKalkoken/aa-freight/issues/21))
+- New attempt to reduce the memory leaks in celery workers
+
+### Changed
+
+- Dropped support for Python 3.5. Now requires Python 3.6+ to install.
 
 ## [1.0.0] - 2020-04-09
 
