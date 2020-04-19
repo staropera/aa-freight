@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-## [1.1.0] - 2020-04-18
+## [1.1.0] - 2020-04-19
+
+**Custom app name**
 
 ### Added
 
