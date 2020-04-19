@@ -17,9 +17,7 @@ from ..app_settings import (
 )
 from ..models import Contract, ContractHandler, Location, Pricing
 from .. import views
-from .testdata import (
-    create_contract_handler_w_contracts, add_permission_to_user_by_name
-)
+from .testdata import create_contract_handler_w_contracts
 from ..utils import set_test_logger, NoSocketsTestCase
 
 
@@ -35,11 +33,10 @@ class TestCalculator(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()        
-        _, cls.user = create_contract_handler_w_contracts()
-        add_permission_to_user_by_name(
+        _, cls.user = create_contract_handler_w_contracts()        
+        AuthUtils.add_permission_to_user_by_name(
             'freight.use_calculator', cls.user
-        )
-        print(cls.user.has_perm('freight.use_calculator'))
+        )        
         with DisconnectPricingSaveHandler():
             jita = Location.objects.get(id=60003760)
             amamake = Location.objects.get(id=1022167642188)      
@@ -58,17 +55,12 @@ class TestCalculator(NoSocketsTestCase):
         self.assertEqual(response.status_code, HTTP_REDIRECT)
         self.assertEqual(response.url, reverse('freight:calculator'))
 
-    """
-    # something wrong with setting the Permission for this case - todo
-    #
     def test_calculator_access_with_permission(self):        
         request = self.factory.get(reverse('freight:calculator'))
-        request.user = self.user
-        print(self.user.has_perm('freight.use_calculator'))
+        request.user = self.user        
         response = views.calculator(request)
         self.assertEqual(response.status_code, HTTP_OK)
-    """
-
+    
     def test_calculator_no_access_without_permission(self):
         request = self.factory.get(reverse('freight:calculator'))
         request.user = AuthUtils.create_user('Lex Luthor')

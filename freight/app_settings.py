@@ -1,6 +1,11 @@
 from django.conf import settings
 from .utils import clean_setting
 
+# Name of this app as shown in the Auth sidebar, page titles 
+# and as default avatar name for notifications
+FREIGHT_APP_NAME = \
+    clean_setting('FREIGHT_APP_NAME', 'Alliance Freight', required_type=str)
+
 # Sets the number minutes until a delayed sync will be recognized as error
 FREIGHT_CONTRACT_SYNC_GRACE_MINUTES = \
     clean_setting('FREIGHT_CONTRACT_SYNC_GRACE_MINUTES', 30)
@@ -16,7 +21,7 @@ FREIGHT_DISCORD_WEBHOOK_URL = \
     clean_setting('FREIGHT_DISCORD_WEBHOOK_URL', None, required_type=str)
 
 
-# Will be shown as "user name" instead of "Alliance Freight" 
+# Will be shown as "user name" instead of what is configured as app name
 # for notifications if defined
 FREIGHT_DISCORD_AVATAR_NAME = \
     clean_setting('FREIGHT_DISCORD_AVATAR_NAME', None, required_type=str)

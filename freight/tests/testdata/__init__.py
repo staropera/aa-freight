@@ -170,8 +170,8 @@ def create_contract_handler_w_contracts(
     my_organization = EveEntity.objects.get(id=my_character.alliance_id)
         
     User.objects.filter(username=my_character.character_name).delete()
-    my_user = AuthUtils.create_user(my_character.character_name)
-    add_permission_to_user_by_name('freight.basic_access', my_user)
+    my_user = AuthUtils.create_user(my_character.character_name)    
+    add_permission_to_user_by_name('freight.basic_access', my_user)    
     my_main_ownership = CharacterOwnership.objects.create(
         character=my_character,
         owner_hash='x1',
@@ -179,6 +179,7 @@ def create_contract_handler_w_contracts(
     )
     my_user.profile.main_character = my_character
     my_user.profile.save()
+    my_user = User.objects.get(username=my_character.character_name)
 
     my_handler = ContractHandler.objects.create(
         organization=my_organization,

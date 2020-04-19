@@ -16,9 +16,9 @@ from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
 from esi.decorators import token_required
 from esi.models import Token
 
-from . import tasks, __title__
+from . import tasks
 from .app_settings import (
-    FREIGHT_STATISTICS_MAX_DAYS, FREIGHT_OPERATION_MODE
+    FREIGHT_APP_NAME, FREIGHT_STATISTICS_MAX_DAYS, FREIGHT_OPERATION_MODE
 )
 from .models import Contract, ContractHandler, EveEntity, Location, Pricing
 from .utils import (
@@ -44,7 +44,7 @@ def index(request):
 def contract_list_active(request):
         
     context = {
-        'app_title': __title__,
+        'app_title': FREIGHT_APP_NAME,
         'page_title': 'Active Contracts',
         'category': CONTRACT_LIST_ACTIVE
     }        
@@ -56,7 +56,7 @@ def contract_list_active(request):
 def contract_list_user(request):
         
     context = {
-        'app_title': __title__,
+        'app_title': FREIGHT_APP_NAME,
         'page_title': 'My Contracts',
         'category': CONTRACT_LIST_USER
     }        
@@ -215,7 +215,7 @@ def calculator(request, pricing_pk=None):
     return render(
         request, 'freight/calculator.html', 
         {
-            'app_title': __title__,
+            'app_title': FREIGHT_APP_NAME,
             'page_title': 'Reward Calculator',
             'form': form,             
             'pricing': pricing,
@@ -372,7 +372,7 @@ def add_location_2(request):
     return render(
         request, 'freight/add_location.html', 
         {            
-            'app_title': __title__,
+            'app_title': FREIGHT_APP_NAME,
             'page_title': 'Add / Update Location',
             'form': form,
             'token_char_name': token.character_name
@@ -385,7 +385,7 @@ def add_location_2(request):
 def statistics(request):
 
     context = {
-        'app_title': __title__,
+        'app_title': FREIGHT_APP_NAME,
         'page_title': 'Statistics',
         'max_days': FREIGHT_STATISTICS_MAX_DAYS
     }        

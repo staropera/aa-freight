@@ -24,9 +24,9 @@ from allianceauth.services.modules.discord.models import DiscordUser
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 
-from . import __title__
 from .app_settings import (
-    FREIGHT_FULL_ROUTE_NAMES,             
+    FREIGHT_APP_NAME,
+    FREIGHT_FULL_ROUTE_NAMES,
     FREIGHT_HOURS_UNTIL_STALE_STATUS,
     FREIGHT_DISCORD_WEBHOOK_URL,
     FREIGHT_DISCORD_DISABLE_BRANDING,
@@ -715,7 +715,7 @@ class ContractHandler(models.Model):
         return 'Private ({}) {}'. format(self.organization.name, extra_text)
 
     def set_sync_status(self, error: int = None) -> None:
-        """sets the sync status incl. sync time. 
+        """sets the sync status incl. sync time and saves the object. 
         
         Will set to no error if no error is provided as argument.
         """
@@ -911,6 +911,7 @@ class ContractHandler(models.Model):
 
         else:
             logger.info(add_prefix('Contracts are unchanged.'))
+            self.set_sync_status(ContractHandler.ERROR_NONE)
 
     def _store_contract_from_esi(
         self, contracts: list, new_version_hash: str, token: Token
@@ -1272,7 +1273,7 @@ class Contract(models.Model):
                 username = None
                 avatar_url = None
             else:
-                username = __title__
+                username = FREIGHT_APP_NAME
                 avatar_url = self.handler.organization.avatar_url
 
             hook = Webhook(
@@ -1370,7 +1371,7 @@ class Contract(models.Model):
             username = None
             avatar_url = None
         else:
-            username = __title__
+            username = FREIGHT_APP_NAME
             avatar_url = self.handler.organization.avatar_url
 
         hook = Webhook(

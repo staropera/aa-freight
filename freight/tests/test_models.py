@@ -1202,11 +1202,17 @@ class TestContractsSync(NoSocketsTestCase):
             [149409005, 149409014, 149409006, 149409015]
         )
         
-        # 2nd run should not update anything
+        # 2nd run should not update anything, but reset last_sync
         current_page = 0
-        Contract.objects.all().delete()
+        Contract.objects.all().delete()        
+        handler.last_sync = None
+        handler.last_error = ContractHandler.ERROR_UNKNOWN
+        handler.save()
         self.assertTrue(handler.update_contracts_esi())
         self.assertEqual(Contract.objects.count(), 0)
+        handler.refresh_from_db()
+        self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
+        self.assertIsNotNone(handler.last_sync)
                     
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_CORPORATION)
     @patch(MODULE_PATH + '.notify')

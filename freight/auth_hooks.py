@@ -1,9 +1,8 @@
-from django.utils.translation import ugettext_lazy as _
-
 from allianceauth.services.hooks import MenuItemHook, UrlHook
 from allianceauth import hooks
 
-from . import urls, __title__
+from . import urls
+from .app_settings import FREIGHT_APP_NAME
 
 
 class ExampleMenuItem(MenuItemHook):
@@ -12,7 +11,7 @@ class ExampleMenuItem(MenuItemHook):
         # setup menu entry for sidebar                
         MenuItemHook.__init__(
             self,
-            _(__title__),
+            FREIGHT_APP_NAME,
             'fa fa-truck fa-fw',
             'freight:index',
             navactive=['freight:index']

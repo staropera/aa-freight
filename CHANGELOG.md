@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [1.1.0] - 2020-04-18
 
+### Added
+
+- The default app name ("Alliance Freight") as shown in the sidebar and title can now be customized with a setting
+
 ### Fixed
 
 - Customer notification now also works for failed contracts without acceptor
