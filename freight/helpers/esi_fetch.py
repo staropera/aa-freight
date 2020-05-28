@@ -26,6 +26,7 @@ logger = LoggerAddTag(logging.getLogger(__name__), __title__)
 
 ESI_MAX_RETRIES = 3
 ESI_RETRY_SLEEP_SECS = 1
+ESI_API_TIMEOUT = 10
 
 _my_esi_client = None
 
@@ -285,7 +286,7 @@ def _execute_esi_request(
             operation = getattr(esi_category, esi_method_name)(**args)
             if has_pages:
                 operation.also_return_response = True
-                response_object, response = operation.result()
+                response_object, response = operation.result(timeout=ESI_API_TIMEOUT)
                 if 'x-pages' in response.headers:
                     pages = int(response.headers['x-pages'])
                 else:
