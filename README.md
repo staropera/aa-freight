@@ -2,7 +2,7 @@
 
 This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) (AA) that adds a central freight service.
 
-![release](https://img.shields.io/pypi/v/aa-freight?label=release) ![python](https://img.shields.io/pypi/pyversions/aa-freight) ![django](https://img.shields.io/pypi/djversions/aa-freight?label=django) ![pipeline](https://gitlab.com/ErikKalkoken/aa-freight/badges/master/pipeline.svg) ![coverage](https://gitlab.com/ErikKalkoken/aa-freight/badges/master/coverage.svg) ![license](https://img.shields.io/badge/license-MIT-green)
+![release](https://img.shields.io/pypi/v/aa-freight?label=release) ![python](https://img.shields.io/pypi/pyversions/aa-freight) ![django](https://img.shields.io/pypi/djversions/aa-freight?label=django) ![pipeline](https://gitlab.com/ErikKalkoken/aa-freight/badges/master/pipeline.svg) ![coverage](https://gitlab.com/ErikKalkoken/aa-freight/badges/master/coverage.svg) ![license](https://img.shields.io/badge/license-MIT-green) ![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
 
 ## Contents
 

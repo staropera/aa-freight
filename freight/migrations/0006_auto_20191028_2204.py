@@ -7,13 +7,18 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freight', '0005_auto_20191028_2155'),
+        ("freight", "0005_auto_20191028_2155"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='contracthandler',
-            name='organization',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='freight.EveOrganization'),
+            model_name="contracthandler",
+            name="organization",
+            field=models.OneToOneField(
+                on_delete=django.db.models.deletion.CASCADE,
+                primary_key=True,
+                serialize=False,
+                to="freight.EveOrganization",
+            ),
         ),
     ]

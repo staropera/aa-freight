@@ -6,17 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freight', '0006_auto_20191028_2204'),
+        ("freight", "0006_auto_20191028_2204"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='contracthandler',
-            options={'verbose_name': 'Contract Handler [my_alliance]', 'verbose_name_plural': 'Contract Handler [my_alliance]'},
+            name="contracthandler",
+            options={
+                "verbose_name": "Contract Handler [my_alliance]",
+                "verbose_name_plural": "Contract Handler [my_alliance]",
+            },
         ),
         migrations.AddField(
-            model_name='contracthandler',
-            name='operation_mode',
-            field=models.CharField(choices=[('my_alliance', 'My Alliance'), ('my_corporation', 'My Corporation')], default='my_alliance', help_text='defines what kind of contracts are synced', max_length=32),
+            model_name="contracthandler",
+            name="operation_mode",
+            field=models.CharField(
+                choices=[
+                    ("my_alliance", "My Alliance"),
+                    ("my_corporation", "My Corporation"),
+                ],
+                default="my_alliance",
+                help_text="defines what kind of contracts are synced",
+                max_length=32,
+            ),
         ),
     ]

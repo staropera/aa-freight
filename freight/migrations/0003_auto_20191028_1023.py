@@ -7,43 +7,66 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freight', '0002_auto_20191015_1229'),
+        ("freight", "0002_auto_20191015_1229"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='contract',
-            name='acceptor',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='contract_acceptor', to='eveonline.EveCharacter'),
+            model_name="contract",
+            name="acceptor",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="contract_acceptor",
+                to="eveonline.EveCharacter",
+            ),
         ),
         migrations.AlterField(
-            model_name='contract',
-            name='date_accepted',
+            model_name="contract",
+            name="date_accepted",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='contract',
-            name='date_completed',
+            model_name="contract",
+            name="date_completed",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='contract',
-            name='date_notified',
-            field=models.DateTimeField(blank=True, default=None, help_text='datetime of latest notification, None = none has been sent', null=True),
+            model_name="contract",
+            name="date_notified",
+            field=models.DateTimeField(
+                blank=True,
+                default=None,
+                help_text="datetime of latest notification, None = none has been sent",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='contract',
-            name='issues',
-            field=models.TextField(blank=True, default=None, help_text='List or price check issues as JSON array of strings or None', null=True),
+            model_name="contract",
+            name="issues",
+            field=models.TextField(
+                blank=True,
+                default=None,
+                help_text="List or price check issues as JSON array of strings or None",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='contract',
-            name='pricing',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.SET_DEFAULT, to='freight.Pricing'),
+            model_name="contract",
+            name="pricing",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_DEFAULT,
+                to="freight.Pricing",
+            ),
         ),
         migrations.AlterField(
-            model_name='contract',
-            name='title',
+            model_name="contract",
+            name="title",
             field=models.CharField(blank=True, default=None, max_length=100, null=True),
         ),
     ]

@@ -6,12 +6,15 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freight', '0008_auto_20191030_1547'),
+        ("freight", "0008_auto_20191030_1547"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='contracthandler',
-            options={'verbose_name': 'Contract Handler', 'verbose_name_plural': 'Contract Handler'},
+            name="contracthandler",
+            options={
+                "verbose_name": "Contract Handler",
+                "verbose_name_plural": "Contract Handler",
+            },
         ),
     ]

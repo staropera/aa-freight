@@ -6,18 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freight', '0014_auto_20191214_1712'),
+        ("freight", "0014_auto_20191214_1712"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='pricing',
-            old_name='active',
-            new_name='is_active',
+            model_name="pricing", old_name="active", new_name="is_active",
         ),
         migrations.AddField(
-            model_name='pricing',
-            name='is_bidirectional',
-            field=models.BooleanField(default=True, help_text='Whether this pricing is valid for contracts in either direction or only the one specified'),
+            model_name="pricing",
+            name="is_bidirectional",
+            field=models.BooleanField(
+                default=True,
+                help_text="Whether this pricing is valid for contracts in either direction or only the one specified",
+            ),
         ),
     ]

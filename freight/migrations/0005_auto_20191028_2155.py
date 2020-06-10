@@ -10,31 +10,55 @@ class Migration(migrations.Migration):
     atomic = False
 
     dependencies = [
-        ('freight', '0004_remove_contract_price'),
+        ("freight", "0004_remove_contract_price"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='EveOrganization',
+            name="EveOrganization",
             fields=[
-                ('id', models.IntegerField(primary_key=True, serialize=False, validators=[django.core.validators.MinValueValidator(0)])),
-                ('category', models.CharField(choices=[('alliance', 'Alliance'), ('corporation', 'Corporation')], max_length=32)),
-                ('name', models.CharField(max_length=254)),
+                (
+                    "id",
+                    models.IntegerField(
+                        primary_key=True,
+                        serialize=False,
+                        validators=[django.core.validators.MinValueValidator(0)],
+                    ),
+                ),
+                (
+                    "category",
+                    models.CharField(
+                        choices=[
+                            ("alliance", "Alliance"),
+                            ("corporation", "Corporation"),
+                        ],
+                        max_length=32,
+                    ),
+                ),
+                ("name", models.CharField(max_length=254)),
             ],
         ),
         migrations.RenameField(
-            model_name='contracthandler',
-            old_name='alliance',
-            new_name='organization',
+            model_name="contracthandler", old_name="alliance", new_name="organization",
         ),
         migrations.AlterField(
-            model_name='contract',
-            name='handler',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='freight.ContractHandler', to_field='organization'),
+            model_name="contract",
+            name="handler",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                to="freight.ContractHandler",
+                to_field="organization",
+            ),
         ),
         migrations.AlterField(
-            model_name='contracthandler',
-            name='character',
-            field=models.ForeignKey(default=None, help_text='character used for syncing contracts', null=True, on_delete=django.db.models.deletion.SET_DEFAULT, to='authentication.CharacterOwnership'),
+            model_name="contracthandler",
+            name="character",
+            field=models.ForeignKey(
+                default=None,
+                help_text="character used for syncing contracts",
+                null=True,
+                on_delete=django.db.models.deletion.SET_DEFAULT,
+                to="authentication.CharacterOwnership",
+            ),
         ),
     ]

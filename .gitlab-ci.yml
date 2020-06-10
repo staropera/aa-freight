@@ -24,10 +24,10 @@ test-3.8:
   script:  
   - tox -e py38
 
-test-flake8:
+test-linter:
   image: python:3.8-buster
   script:  
-  - tox -e flake8
+  - tox -e linter
 
 deploy-pypi:
   stage: deploy

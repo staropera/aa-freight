@@ -6,14 +6,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     atomic = False
-    
+
     dependencies = [
-        ('freight', '0013_auto_20191214_1522'),
+        ("freight", "0013_auto_20191214_1522"),
     ]
 
     operations = [
-        migrations.RenameModel(
-            old_name='EveOrganization',
-            new_name='EveEntity',
-        ),
+        migrations.RenameModel(old_name="EveOrganization", new_name="EveEntity",),
     ]
