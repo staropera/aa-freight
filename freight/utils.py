@@ -166,6 +166,7 @@ def clean_setting(
     min_value: int = None,
     max_value: int = None,
     required_type: type = None,
+    choices: list = None,
 ):
     """cleans the input for a custom setting
 
@@ -190,12 +191,14 @@ def clean_setting(
     if not hasattr(settings, name):
         cleaned_value = default_value
     else:
+        dirty_value = getattr(settings, name)
         if (
-            isinstance(getattr(settings, name), required_type)
-            and (min_value is None or getattr(settings, name) >= min_value)
-            and (max_value is None or getattr(settings, name) <= max_value)
+            isinstance(dirty_value, required_type)
+            and (min_value is None or dirty_value >= min_value)
+            and (max_value is None or dirty_value <= max_value)
+            and (choices is None or dirty_value in choices)
         ):
-            cleaned_value = getattr(settings, name)
+            cleaned_value = dirty_value
         else:
             logger.warn(
                 "You setting for {} it not valid. Please correct it. "

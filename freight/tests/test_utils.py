@@ -135,6 +135,22 @@ class TestCleanSetting(TestCase):
         with self.assertRaises(ValueError):
             clean_setting("TEST_SETTING_DUMMY", default_value=None)
 
+    @patch(MODULE_PATH + ".settings")
+    def test_when_value_in_choices_return_it(self, mock_settings):
+        mock_settings.TEST_SETTING_DUMMY = "bravo"
+        result = clean_setting(
+            "TEST_SETTING_DUMMY", default_value="alpha", choices=["alpha", "bravo"]
+        )
+        self.assertEqual(result, "bravo")
+
+    @patch(MODULE_PATH + ".settings")
+    def test_when_value_not_in_choices_return_default(self, mock_settings):
+        mock_settings.TEST_SETTING_DUMMY = "charlie"
+        result = clean_setting(
+            "TEST_SETTING_DUMMY", default_value="alpha", choices=["alpha", "bravo"]
+        )
+        self.assertEqual(result, "alpha")
+
 
 class TestTimeUntil(TestCase):
     def test_timeuntil(self):

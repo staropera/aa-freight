@@ -62,7 +62,7 @@ FREIGHT_HOURS_UNTIL_STALE_STATUS = clean_setting("FREIGHT_HOURS_UNTIL_STALE_STAT
 # Whether to show full location names in the route dropdown of the calculator
 FREIGHT_FULL_ROUTE_NAMES = clean_setting("FREIGHT_FULL_ROUTE_NAMES", False)
 
-# whether created timers are corp restricted on the timerboard
+# whether ESI requests have a timeout
 FREIGHT_ESI_TIMEOUT_ENABLED = clean_setting("FREIGHT_ESI_TIMEOUT_ENABLED", True)
 
 # modes of operation for Alliance Freight

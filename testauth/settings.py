@@ -99,7 +99,6 @@ TEMPLATES = [
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
                 "allianceauth.notifications.context_processors.user_notification_count",
-                "allianceauth.groupmanagement.context_processors.can_manage_groups",
                 "allianceauth.context_processors.auth_settings",
             ],
         },
