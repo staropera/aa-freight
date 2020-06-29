@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.1.3] - 2020-06-30
+
+### Changed
+
+- Update to Font Awesome v5. Thanks to Peter Pfeufer for your contribution!
+
 ## [1.1.2] - 2020-06-10
 
 ### Changed
