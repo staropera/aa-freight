@@ -13,7 +13,7 @@ class ExampleMenuItem(MenuItemHook):
         MenuItemHook.__init__(
             self,
             FREIGHT_APP_NAME,
-            "fa fa-truck fa-fw",
+            "fas fa-truck fa-fw",
             "freight:index",
             navactive=["freight:index"],
         )
