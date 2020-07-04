@@ -284,9 +284,21 @@ def _execute_esi_request(
             operation = getattr(esi_category, esi_method_name)(**args)
             result_args = {"timeout": (5, 30)} if FREIGHT_ESI_TIMEOUT_ENABLED else {}
             if has_pages:
-                operation.also_return_response = True
-                response_object, response = operation.result(**result_args)
-                if "x-pages" in response.headers:
+                if hasattr(operation, "request_config"):
+                    operation.request_config.also_return_response = True
+                    response_object, response = operation.result(**result_args)
+                elif hasattr(operation, "also_return_response"):
+                    operation.also_return_response = True
+                    response_object, response = operation.result(**result_args)
+                else:
+                    logger.warning(
+                        "django-esi API is not fully compatible. "
+                        "Falling back to fetching first page only from ESI"
+                    )
+                    response_object = operation.result(**result_args)
+                    response = None
+
+                if response and "x-pages" in response.headers:
                     pages = int(response.headers["x-pages"])
                 else:
                     pages = 0

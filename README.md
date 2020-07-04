@@ -1,6 +1,6 @@
 # Freight for Alliance Auth
 
-This is a plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) (AA) that adds a central freight service.
+Freight is an [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) (AA) app for running a freight service.
 
 ![release](https://img.shields.io/pypi/v/aa-freight?label=release) ![python](https://img.shields.io/pypi/pyversions/aa-freight) ![django](https://img.shields.io/pypi/djversions/aa-freight?label=django) ![pipeline](https://gitlab.com/ErikKalkoken/aa-freight/badges/master/pipeline.svg) ![coverage](https://gitlab.com/ErikKalkoken/aa-freight/badges/master/coverage.svg) ![license](https://img.shields.io/badge/license-MIT-green) ![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
 
@@ -24,13 +24,13 @@ This app helps running a central freight service for an alliance or corporation.
 
 ## Key Features
 
-Alliance Freight offers the following main features:
+Freight offers the following main features:
 
 - Reward calculator allowing members to easily calculate the correct reward for their a courier contract
 - Page showing the list of currently outstanding courier contracts incl. an indicator if the contract is compliant with the pricing for the respective route ("contract check")
 - Multiple routes can be defined, each with its own pricing.
 - It's possible to have the same pricing for both directions, or to have different pricings for each direction of the same route.
-- Automatic notifications to alliance pilots on Discord informing them about new courier contracts
+- Automatic notifications to freight pilots on Discord informing them about new courier contracts
 - Automatic notifications to contract issuers on Discord informing them about the developing status of their contract or potentially issues
 - Contract issuer can always check the current status of his courier contracts
 - Statistics page showing key performance metrics for routes, pilots, customers
@@ -134,11 +134,11 @@ Once a contract handler is set the app will start fetching contracts. Wait a min
 
 Finally go ahead and define the first pricing of a courier route. See section **Pricing** for details.
 
-That's it. The Alliance Freight app is fully installed and ready to be used.
+That's it. The Freight app is fully installed and ready to be used.
 
 ## Updating
 
-To update your existing installation of Alliance Freight first enable your virtual environment.
+To update your existing installation of Freight first enable your virtual environment.
 
 Then run the following commands from your AA project directory (the one that contains `manage.py`).
 
@@ -162,9 +162,9 @@ Here is a list of available settings for this app. They can be configured by add
 
 Name | Description | Default
 -- | -- | --
-`FREIGHT_APP_NAME`| Name of this app as shown in the Auth sidebar, page titles and as default avatar name for notifications. | `'Alliance Freight'`
+`FREIGHT_APP_NAME`| Name of this app as shown in the Auth sidebar, page titles and as default avatar name for notifications. | `'Freight'`
 `FREIGHT_CONTRACT_SYNC_GRACE_MINUTES`| Sets the number minutes until a delayed sync will be recognized as error  | `30`
-`FREIGHT_DISCORD_DISABLE_BRANDING`| Turns off setting the name and avatar url for the webhook. Notifications will be posted by a bot called "Alliance Freight" with the logo of your organization as avatar image | `False`
+`FREIGHT_DISCORD_DISABLE_BRANDING`| Turns off setting the name and avatar url for the webhook. Notifications will be posted by a bot called "Freight" with the logo of your organization as avatar image | `False`
 `FREIGHT_DISCORD_MENTIONS`| Optional mention string put in front of every notification to create pings: Typical values are: `@here` or `@everyone`. You can also mention roles, however you will need to add the role ID for that. The format is: `<@&role_id>` and you can get the role ID by entering `_<@role_name>` in a channel on Discord. See [this link](https://www.reddit.com/r/discordapp/comments/580qib/how_do_i_mention_a_role_with_webhooks/) for details. | `''`
 `FREIGHT_DISCORD_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications for pilots should appear. | `None`
 `FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL`| Webhook URL for the Discord channel where contract notifications for customers should appear. | `None`
@@ -175,7 +175,7 @@ Name | Description | Default
 
 ## Operation Mode
 
-The operation mode defines which contracts are processed by the Alliance Freight. For example you can define that only contracts assigned to your alliance are processed. Any courier contract that is  not in scope of the configured operation mode will be ignored by the freight app and e.g. not show up in the contract list or generate notifications.
+The operation mode defines which contracts are processed by the Freight. For example you can define that only contracts assigned to your alliance are processed. Any courier contract that is  not in scope of the configured operation mode will be ignored by the freight app and e.g. not show up in the contract list or generate notifications.
 
 The following operation modes are available:
 

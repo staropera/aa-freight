@@ -23,6 +23,7 @@ from .testdata import (
     create_contract_handler_w_contracts,
     create_locations,
     structures_data,
+    BravadoOperationStub,
 )
 from ..utils import set_test_logger, NoSocketsTestCase
 
@@ -59,16 +60,14 @@ class TestEveEntityManager(NoSocketsTestCase):
 
     @classmethod
     def esi_post_universe_names(cls, *args, **kwargs) -> list:
-        response = list()
+        data = list()
         if "ids" not in kwargs:
             raise ValueError("missing parameter: ids")
         for id in kwargs["ids"]:
             if id in cls.esi_data:
-                response.append(cls.esi_data[id])
+                data.append(cls.esi_data[id])
 
-        m = Mock()
-        m.result.return_value = response
-        return m
+        return BravadoOperationStub(data)
 
     @patch("freight.helpers.esi_fetch._esi_client")
     def test_can_create_entity(self, mock_esi_client):
@@ -184,9 +183,7 @@ def get_universe_stations_station_id(*args, **kwargs) -> dict:
     if station_id not in structures_data:
         raise HTTPNotFound
     else:
-        m = Mock()
-        m.result.return_value = structures_data[station_id]
-        return m
+        return BravadoOperationStub(structures_data[station_id])
 
 
 def get_universe_structures_structure_id(*args, **kwargs) -> dict:
@@ -197,9 +194,7 @@ def get_universe_structures_structure_id(*args, **kwargs) -> dict:
     if structure_id not in structures_data:
         raise HTTPNotFound
     else:
-        m = Mock()
-        m.result.return_value = structures_data[structure_id]
-        return m
+        return BravadoOperationStub(structures_data[structure_id])
 
 
 @patch("freight.helpers.esi_fetch._esi_client")

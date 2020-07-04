@@ -11,23 +11,21 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 install_requires = [
-    "django-esi<2.0",
+    "django-esi>=1.5,<3",
     "dhooks-lite>=0.3.0",
     "django-navhelper",
 ]
-
 testing_extras = [
     "allianceauth",
     "coverage",
 ]
-
 setup(
     name="aa-freight",
     version=__version__,
     packages=find_packages(),
     include_package_data=True,
     license="MIT",
-    description="Alliance Auth plugin app for running an alliance freight service",
+    description="Freight is an Alliance Auth app for running a freight service",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://gitlab.com/ErikKalkoken/aa-freight",
@@ -38,7 +36,7 @@ setup(
         "Framework :: Django",
         "Framework :: Django :: 2.2",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",  # example license
+        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3.6",

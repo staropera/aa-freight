@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.1.4] - 2020-07-04
+
+### Added
+
+- Added ability to function with both django-esi 1.x and django-esi 2.x
+
+### Changed
+
+- Changed name from "Alliance Freight" to "Freight" to better reflect that this app works both for an alliance or a corporation
+
 ## [1.1.3] - 2020-06-30
 
 ### Changed
@@ -36,7 +46,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
-- The default app name ("Alliance Freight") as shown in the sidebar and title can now be customized with a setting
+- The default app name ("Freight") as shown in the sidebar and title can now be customized with a setting
 
 ### Fixed
 
@@ -87,7 +97,7 @@ If you already have Pricings for both direction of the same route please make su
 
 ### Fixed
 
-- The pricing matched to a contract is no longer random if two pricings exist for the same route. It will now always pick the first pricing that was created.<br>**Note:** Alliance Freight current does officially not support defining individual pricings for each directions of a route.
+- The pricing matched to a contract is no longer random if two pricings exist for the same route. It will now always pick the first pricing that was created.<br>**Note:** Freight current does officially not support defining individual pricings for each directions of a route.
 
 ## [0.12.4] - 2020-01-27
 

@@ -1,6 +1,5 @@
 from datetime import timedelta
 from unittest.mock import patch, Mock
-import math
 
 from dhooks_lite import Embed
 
@@ -39,6 +38,7 @@ from .testdata import (
     create_entities_from_characters,
     create_contract_handler_w_contracts,
     contracts_data,
+    BravadoOperationStub,
 )
 from ..utils import set_test_logger, NoSocketsTestCase
 
@@ -902,7 +902,6 @@ class TestContractHandler(NoSocketsTestCase):
 
 class TestContractsSync(NoSocketsTestCase):
     def setUp(self):
-
         create_entities_from_characters()
 
         # 1 user
@@ -1000,6 +999,10 @@ class TestContractsSync(NoSocketsTestCase):
         handler.refresh_from_db()
         self.assertEqual(handler.last_error, ContractHandler.ERROR_TOKEN_INVALID)
 
+    @staticmethod
+    def esi_get_corporations_corporation_id_contracts(**kwargs):
+        return BravadoOperationStub(contracts_data)
+
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + ".Contract.objects.update_or_create_from_dict")
     @patch(MODULE_PATH + ".Token")
@@ -1010,31 +1013,16 @@ class TestContractsSync(NoSocketsTestCase):
         mock_Token,
         mock_Contracts_objects_update_or_create_from_dict,
     ):
-        # create mocks
-        def get_contracts_page(*args, **kwargs):
-            """returns single page for operation.result(), first with header"""
-            page_size = 2
-            mock_calls_count = len(mock_operation.mock_calls)
-            start = (mock_calls_count - 1) * page_size
-            stop = start + page_size
-            pages_count = int(math.ceil(len(contracts_data) / page_size))
-            mock_response = Mock()
-            mock_response.headers = {"x-pages": pages_count}
-            return [contracts_data[start:stop], mock_response]
-
-        def func_Contracts_objects_update_or_create_from_dict(handler, contract, token):
+        def func_Contracts_objects_update_or_create_from_dict(*args, **kwargs):
             raise RuntimeError("Test exception")
 
         mock_Contracts_objects_update_or_create_from_dict.side_effect = (
             func_Contracts_objects_update_or_create_from_dict
         )
-
-        mock_operation = Mock()
-        mock_operation.result.side_effect = get_contracts_page
-        mock_esi_client.return_value.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
+        mock_Contracts = mock_esi_client.return_value.Contracts
+        mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
+            self.esi_get_corporations_corporation_id_contracts
         )
-
         mock_Token.objects.filter.return_value.require_scopes.return_value.require_valid.return_value.first.return_value = Mock(
             spec=Token
         )
@@ -1058,26 +1046,10 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(MODULE_PATH + ".Token")
     @patch("freight.helpers.esi_fetch._esi_client")
     def test_can_sync_contracts_for_my_alliance(self, mock_esi_client, mock_Token):
-        current_page = 0
-
-        def get_contracts_page(*args, **kwargs):
-            """returns single page for operation.result(), first with header"""
-            nonlocal current_page
-            page_size = 2
-            current_page += 1
-            start = (current_page - 1) * page_size
-            stop = start + page_size
-            pages_count = int(math.ceil(len(contracts_data) / page_size))
-            mock_response = Mock()
-            mock_response.headers = {"x-pages": pages_count}
-            return [contracts_data[start:stop], mock_response]
-
-        mock_operation = Mock()
-        mock_operation.result.side_effect = get_contracts_page
-        mock_esi_client.return_value.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
+        mock_Contracts = mock_esi_client.return_value.Contracts
+        mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
+            self.esi_get_corporations_corporation_id_contracts
         )
-
         mock_Token.objects.filter.return_value.require_scopes.return_value.require_valid.return_value.first.return_value = Mock(
             spec=Token
         )
@@ -1097,9 +1069,6 @@ class TestContractsSync(NoSocketsTestCase):
         handler.refresh_from_db()
         self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
 
-        # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 9)
-
         # should only contain the right contracts
         contract_ids = [
             x["contract_id"]
@@ -1112,7 +1081,6 @@ class TestContractsSync(NoSocketsTestCase):
         )
 
         # 2nd run should not update anything, but reset last_sync
-        current_page = 0
         Contract.objects.all().delete()
         handler.last_sync = None
         handler.last_error = ContractHandler.ERROR_UNKNOWN
@@ -1130,28 +1098,13 @@ class TestContractsSync(NoSocketsTestCase):
     def test_sync_contracts_for_my_corporation_and_ignore_notify_exception(
         self, mock_esi_client, mock_Token, mock_notify
     ):
-        # create mocks
-        def get_contracts_page(*args, **kwargs):
-            """returns single page for operation.result(), first with header"""
-            page_size = 2
-            mock_calls_count = len(mock_operation.mock_calls)
-            start = (mock_calls_count - 1) * page_size
-            stop = start + page_size
-            pages_count = int(math.ceil(len(contracts_data) / page_size))
-            mock_response = Mock()
-            mock_response.headers = {"x-pages": pages_count}
-            return [contracts_data[start:stop], mock_response]
-
-        mock_operation = Mock()
-        mock_operation.result.side_effect = get_contracts_page
-        mock_esi_client.return_value.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
+        mock_Contracts = mock_esi_client.return_value.Contracts
+        mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
+            self.esi_get_corporations_corporation_id_contracts
         )
-
         mock_Token.objects.filter.return_value.require_scopes.return_value.require_valid.return_value.first.return_value = Mock(
             spec=Token
         )
-
         mock_notify.side_effect = RuntimeError
 
         AuthUtils.add_permission_to_user_by_name(
@@ -1165,12 +1118,8 @@ class TestContractsSync(NoSocketsTestCase):
 
         # run manager sync
         self.assertTrue(handler.update_contracts_esi(user=self.user))
-
         handler.refresh_from_db()
         self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
-
-        # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 9)
 
         # should only contain the right contracts
         contract_ids = [
@@ -1193,24 +1142,10 @@ class TestContractsSync(NoSocketsTestCase):
     def test_sync_contracts_for_corp_in_alliance_and_report_to_user(
         self, mock_esi_client, mock_Token, mock_notify
     ):
-        # create mocks
-        def get_contracts_page(*args, **kwargs):
-            """returns single page for operation.result(), first with header"""
-            page_size = 2
-            mock_calls_count = len(mock_operation.mock_calls)
-            start = (mock_calls_count - 1) * page_size
-            stop = start + page_size
-            pages_count = int(math.ceil(len(contracts_data) / page_size))
-            mock_response = Mock()
-            mock_response.headers = {"x-pages": pages_count}
-            return [contracts_data[start:stop], mock_response]
-
-        mock_operation = Mock()
-        mock_operation.result.side_effect = get_contracts_page
-        mock_esi_client.return_value.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
+        mock_Contracts = mock_esi_client.return_value.Contracts
+        mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
+            self.esi_get_corporations_corporation_id_contracts
         )
-
         mock_Token.objects.filter.return_value.require_scopes.return_value.require_valid.return_value.first.return_value = Mock(
             spec=Token
         )
@@ -1229,9 +1164,6 @@ class TestContractsSync(NoSocketsTestCase):
 
         handler.refresh_from_db()
         self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
-
-        # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 9)
 
         # should only contain the right contracts
         contract_ids = [
@@ -1269,23 +1201,10 @@ class TestContractsSync(NoSocketsTestCase):
         mock_Token,
     ):
         # create mocks
-        def get_contracts_page(*args, **kwargs):
-            """returns single page for operation.result(), first with header"""
-            page_size = 2
-            mock_calls_count = len(mock_operation.mock_calls)
-            start = (mock_calls_count - 1) * page_size
-            stop = start + page_size
-            pages_count = int(math.ceil(len(contracts_data) / page_size))
-            mock_response = Mock()
-            mock_response.headers = {"x-pages": pages_count}
-            return [contracts_data[start:stop], mock_response]
-
-        mock_operation = Mock()
-        mock_operation.result.side_effect = get_contracts_page
-        mock_esi_client.return_value.Contracts.get_corporations_corporation_id_contracts = Mock(
-            return_value=mock_operation
+        mock_Contracts = mock_esi_client.return_value.Contracts
+        mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
+            self.esi_get_corporations_corporation_id_contracts
         )
-
         mock_Token.objects.filter.return_value.require_scopes.return_value.require_valid.return_value.first.return_value = Mock(
             spec=Token
         )
@@ -1301,12 +1220,8 @@ class TestContractsSync(NoSocketsTestCase):
 
         # run manager sync
         self.assertTrue(handler.update_contracts_esi())
-
         handler.refresh_from_db()
         self.assertEqual(handler.last_error, ContractHandler.ERROR_NONE)
-
-        # should have tried to fetch contracts
-        self.assertEqual(mock_operation.result.call_count, 9)
 
         # should only contain the right contracts
         contract_ids = [
