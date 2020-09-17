@@ -39,7 +39,9 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RenameField(
-            model_name="contracthandler", old_name="alliance", new_name="organization",
+            model_name="contracthandler",
+            old_name="alliance",
+            new_name="organization",
         ),
         migrations.AlterField(
             model_name="contract",

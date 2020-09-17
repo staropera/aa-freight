@@ -43,12 +43,12 @@ def esi_fetch(
     will automatically return all pages if requested
 
     Args:
-    - esi_path: Full path of esi route, 
+    - esi_path: Full path of esi route,
     e.g. ``Universe.get_universe_categories_category_id``
     - args: arguments for ESI method as dict, e.g. ``{'category_id': 65}``
     - has_pages: When set to True will assume endpoint supports paging
     - token: esi token from django-esi to be used with request
-    - esi_client: esi client object from django-esi to be used for request 
+    - esi_client: esi client object from django-esi to be used for request
     instead of default esi client from this module
     - logger_tag: every log message will start with this text in brackets
     """
@@ -79,14 +79,14 @@ def esi_fetch_with_localization(
     will automatically return all pages if requested
 
     Args:
-    - esi_path: Full path of esi route, 
+    - esi_path: Full path of esi route,
     e.g. ``Universe.get_universe_categories_category_id``
-    - languages: languages to be retrieved from ESI as codes, 
+    - languages: languages to be retrieved from ESI as codes,
     should match official codes supported by ESI, e.g. ``{'de', 'ko'}``
     - args: arguments for ESI method as dict, e.g. ``{'category_id': 65}``
     - has_pages: When set to True will assume endpoint supports paging
     - token: esi token from django-esi to be used with request
-    - esi_client: esi client object from django-esi to be used for request 
+    - esi_client: esi client object from django-esi to be used for request
     instead of default esi client from this module
     - logger_tag: every log message will start with this text in brackets
     """
@@ -266,7 +266,7 @@ def _execute_esi_request(
     log_message_base: str,
 ):
     """make request to ESI
-    
+
     returns request object and total number of pages to retrieve
     """
     add_prefix = _make_logger_prefix(logger_tag)

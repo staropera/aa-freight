@@ -491,8 +491,14 @@ class EveEntity(models.Model):
 
     AVATAR_SIZE = 128
 
-    id = models.IntegerField(primary_key=True, validators=[MinValueValidator(0)],)
-    category = models.CharField(max_length=32, choices=CATEGORIES_DEF,)
+    id = models.IntegerField(
+        primary_key=True,
+        validators=[MinValueValidator(0)],
+    )
+    category = models.CharField(
+        max_length=32,
+        choices=CATEGORIES_DEF,
+    )
     name = models.CharField(max_length=254)
 
     objects = EveEntityManager()
@@ -666,8 +672,8 @@ class ContractHandler(models.Model):
         return "Private ({}) {}".format(self.organization.name, extra_text)
 
     def set_sync_status(self, error: int = None) -> None:
-        """sets the sync status incl. sync time and saves the object. 
-        
+        """sets the sync status incl. sync time and saves the object.
+
         Will set to no error if no error is provided as argument.
         """
         if not error:
@@ -679,7 +685,7 @@ class ContractHandler(models.Model):
 
     def token(self) -> Token:
         """returns an esi token for the contract handler
-        
+
         raises exception on error
         """
         add_prefix = make_logger_prefix(self)

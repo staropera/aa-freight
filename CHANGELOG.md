@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.2.0] - 2020-09-17
+
+### Added
+
+- Now shows badge with count of outstanding contracts in side bar (only for uses who has that permission)
+- Now shows badge with count of outstanding contracts in menu bar for "my contracts" and "active contracts"
+
+### Fixed
+
+- Will no longer try to install Django 3
+
 ## [1.1.4] - 2020-07-04
 
 ### Added

@@ -33,6 +33,20 @@ CONTRACT_LIST_USER = "user"
 CONTRACT_LIST_ACTIVE = "active"
 
 
+def add_common_context(request, context: dict) -> dict:
+    """adds the common context used by all view"""
+    pending_user_count = Contract.objects.issued_by_user(request.user).pending_count()
+    new_context = {
+        **{
+            "app_title": FREIGHT_APP_NAME,
+            "pending_all_count": Contract.objects.all().pending_count(),
+            "pending_user_count": pending_user_count,
+        },
+        **context,
+    }
+    return new_context
+
+
 @login_required
 @permission_required("freight.basic_access")
 def index(request):
@@ -42,25 +56,25 @@ def index(request):
 @login_required
 @permission_required("freight.view_contracts")
 def contract_list_active(request):
-
     context = {
-        "app_title": FREIGHT_APP_NAME,
         "page_title": "Active Contracts",
         "category": CONTRACT_LIST_ACTIVE,
     }
-    return render(request, "freight/contract_list.html", context)
+    return render(
+        request, "freight/contract_list.html", add_common_context(request, context)
+    )
 
 
 @login_required
 @permission_required("freight.use_calculator")
 def contract_list_user(request):
-
     context = {
-        "app_title": FREIGHT_APP_NAME,
         "page_title": "My Contracts",
         "category": CONTRACT_LIST_USER,
     }
-    return render(request, "freight/contract_list.html", context)
+    return render(
+        request, "freight/contract_list.html", add_common_context(request, context)
+    )
 
 
 @login_required
@@ -153,21 +167,13 @@ def _get_contracts_for_contract_list(category, request):
             raise RuntimeError("Insufficient permissions")
 
         else:
-            user_characters = [
-                x.character
-                for x in request.user.character_ownerships.select_related().all()
-            ]
-            contracts = (
-                Contract.objects.filter(issuer__in=user_characters)
-                .filter(
-                    status__in=[
-                        Contract.STATUS_OUTSTANDING,
-                        Contract.STATUS_IN_PROGRESS,
-                        Contract.STATUS_FINISHED,
-                        Contract.STATUS_FAILED,
-                    ]
-                )
-                .select_related()
+            contracts = Contract.objects.issued_by_user(user=request.user).filter(
+                status__in=[
+                    Contract.STATUS_OUTSTANDING,
+                    Contract.STATUS_IN_PROGRESS,
+                    Contract.STATUS_FINISHED,
+                    Contract.STATUS_FAILED,
+                ]
             )
 
     else:
@@ -185,7 +191,8 @@ def calculator(request, pricing_pk=None):
         pricing = Pricing.objects.get_or_default(pricing_pk)
         form = CalculatorForm(initial={"pricing": pricing})
         price = None
-
+        volume = None
+        collateral = None
     else:
         form = CalculatorForm(request.POST)
         request.POST._mutable = True
@@ -221,22 +228,20 @@ def calculator(request, pricing_pk=None):
         organization_name = None
         availability = None
 
+    context = {
+        "page_title": "Reward Calculator",
+        "form": form,
+        "pricing": pricing,
+        "price": price,
+        "organization_name": organization_name,
+        "collateral": collateral if collateral is not None else 0,
+        "volume": volume if volume is not None else None,
+        "expires_on": expires_on,
+        "availability": availability,
+        "pricing_price_per_volume_eff": price_per_volume_eff,
+    }
     return render(
-        request,
-        "freight/calculator.html",
-        {
-            "app_title": FREIGHT_APP_NAME,
-            "page_title": "Reward Calculator",
-            "form": form,
-            "pricing": pricing,
-            "price": price,
-            "organization_name": organization_name,
-            "collateral": collateral if collateral is not None else 0,
-            "volume": volume if volume is not None else None,
-            "expires_on": expires_on,
-            "availability": availability,
-            "pricing_price_per_volume_eff": price_per_volume_eff,
-        },
+        request, "freight/calculator.html", add_common_context(request, context)
     )
 
 
@@ -258,6 +263,7 @@ def setup_contract_handler(request, token):
         )
         success = False
 
+    owned_char = None
     if success:
         try:
             owned_char = CharacterOwnership.objects.get(
@@ -368,28 +374,26 @@ def add_location_2(request):
                     ),
                 )
 
+    context = {
+        "page_title": "Add / Update Location",
+        "form": form,
+        "token_char_name": token.character_name,
+    }
     return render(
-        request,
-        "freight/add_location.html",
-        {
-            "app_title": FREIGHT_APP_NAME,
-            "page_title": "Add / Update Location",
-            "form": form,
-            "token_char_name": token.character_name,
-        },
+        request, "freight/add_location.html", add_common_context(request, context)
     )
 
 
 @login_required
 @permission_required("freight.view_statistics")
 def statistics(request):
-
     context = {
-        "app_title": FREIGHT_APP_NAME,
         "page_title": "Statistics",
         "max_days": FREIGHT_STATISTICS_MAX_DAYS,
     }
-    return render(request, "freight/statistics.html", context)
+    return render(
+        request, "freight/statistics.html", add_common_context(request, context)
+    )
 
 
 @login_required

@@ -78,7 +78,10 @@ class TestCleanSetting(TestCase):
     @patch(MODULE_PATH + ".settings")
     def test_default_if_not_set(self, mock_settings):
         mock_settings.TEST_SETTING_DUMMY = Mock(spec=None)
-        result = clean_setting("TEST_SETTING_DUMMY", False,)
+        result = clean_setting(
+            "TEST_SETTING_DUMMY",
+            False,
+        )
         self.assertEqual(result, False)
 
     @patch(MODULE_PATH + ".settings")
@@ -90,7 +93,10 @@ class TestCleanSetting(TestCase):
     @patch(MODULE_PATH + ".settings")
     def test_true_stays_true(self, mock_settings):
         mock_settings.TEST_SETTING_DUMMY = True
-        result = clean_setting("TEST_SETTING_DUMMY", False,)
+        result = clean_setting(
+            "TEST_SETTING_DUMMY",
+            False,
+        )
         self.assertEqual(result, True)
 
     @patch(MODULE_PATH + ".settings")

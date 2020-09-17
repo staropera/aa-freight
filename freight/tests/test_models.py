@@ -1129,7 +1129,14 @@ class TestContractsSync(NoSocketsTestCase):
             ).values("contract_id")
         ]
         self.assertCountEqual(
-            contract_ids, [149409016, 149409061, 149409062, 149409063, 149409064,]
+            contract_ids,
+            [
+                149409016,
+                149409061,
+                149409062,
+                149409063,
+                149409064,
+            ],
         )
 
         # should have tried to notify user
@@ -1174,7 +1181,14 @@ class TestContractsSync(NoSocketsTestCase):
         ]
         self.assertCountEqual(
             contract_ids,
-            [149409016, 149409017, 149409061, 149409062, 149409063, 149409064,],
+            [
+                149409016,
+                149409017,
+                149409061,
+                149409062,
+                149409063,
+                149409064,
+            ],
         )
 
         # should have notified user with success

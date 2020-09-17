@@ -353,12 +353,32 @@ class TestLocationManager(NoSocketsTestCase):
             )
 
 
+class TestContractQuerySet(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.handler, cls.user = create_contract_handler_w_contracts(
+            [149409016, 149409061, 149409062, 149409063, 149409064, 149409006]
+        )
+
+    def test_pending_count(self):
+        result = Contract.objects.all().pending_count()
+        self.assertEqual(result, 6)
+
+
 class TestContractManager(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.handler, cls.user = create_contract_handler_w_contracts(
-            [149409016, 149409061, 149409062, 149409063, 149409064]
+            [149409016, 149409061, 149409062, 149409063, 149409064, 149409006]
+        )
+
+    def test_issued_by_user(self):
+        qs = Contract.objects.issued_by_user(user=self.user)
+        self.assertSetEqual(
+            set(qs.values_list("contract_id", flat=True)),
+            {149409016, 149409061, 149409062, 149409063, 149409064},
         )
 
     def test_can_update_pricing_for_bidirectional(self):

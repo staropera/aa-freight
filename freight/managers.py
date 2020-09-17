@@ -5,7 +5,9 @@ from time import sleep
 
 from bravado.exception import HTTPUnauthorized, HTTPForbidden
 
+from django.contrib.auth.models import User
 from django.db import models, transaction
+from django.utils.timezone import now
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
@@ -224,7 +226,28 @@ class EveEntityManager(models.Manager):
         return eve_entity, created
 
 
+class ContractQuerySet(models.QuerySet):
+    def pending_count(self) -> int:
+        """returns the number of pending contacts for this QS"""
+        return (
+            self.filter(status=self.model.STATUS_OUTSTANDING)
+            .exclude(date_expired__lt=now())
+            .count()
+        )
+
+
 class ContractManager(models.Manager):
+    def get_queryset(self) -> models.QuerySet:
+        return ContractQuerySet(self.model, using=self._db)
+
+    def issued_by_user(self, user: User) -> models.QuerySet:
+        """returns QS of contracts issued by a character owned by given user"""
+        return self.filter(
+            issuer__in=EveCharacter.objects.filter(
+                character_ownership__user=user
+            ).select_related("character_ownership__user")
+        )
+
     def update_or_create_from_dict(
         self, handler: object, contract: dict, token: Token
     ) -> tuple:
@@ -311,8 +334,10 @@ class ContractManager(models.Manager):
                             corporation_id=acceptor.corporation_id
                         )
                     except EveCorporationInfo.DoesNotExist:
-                        acceptor_corporation = EveCorporationInfo.objects.create_corporation(
-                            corp_id=acceptor.corporation_id
+                        acceptor_corporation = (
+                            EveCorporationInfo.objects.create_corporation(
+                                corp_id=acceptor.corporation_id
+                            )
                         )
                 elif entity.is_corporation:
                     acceptor = None
@@ -321,8 +346,10 @@ class ContractManager(models.Manager):
                             corporation_id=entity.id
                         )
                     except EveCorporationInfo.DoesNotExist:
-                        acceptor_corporation = EveCorporationInfo.objects.create_corporation(
-                            corp_id=entity.id
+                        acceptor_corporation = (
+                            EveCorporationInfo.objects.create_corporation(
+                                corp_id=entity.id
+                            )
                         )
                 else:
                     raise ValueError(

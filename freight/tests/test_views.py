@@ -181,7 +181,14 @@ class TestContractList(NoSocketsTestCase):
         data = json.loads(response.content.decode("utf-8"))
         contract_ids = {x["contract_id"] for x in data}
         self.assertSetEqual(
-            contract_ids, {149409016, 149409061, 149409062, 149409063, 149409064,}
+            contract_ids,
+            {
+                149409016,
+                149409061,
+                149409062,
+                149409063,
+                149409064,
+            },
         )
 
 

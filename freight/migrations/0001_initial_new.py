@@ -173,7 +173,9 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"unique_together": {("start_location", "end_location")},},
+            options={
+                "unique_together": {("start_location", "end_location")},
+            },
         ),
         migrations.CreateModel(
             name="ContractHandler",
@@ -323,7 +325,8 @@ class Migration(migrations.Migration):
             index=models.Index(fields=["status"], name="freight_con_status_b4eb08_idx"),
         ),
         migrations.AlterUniqueTogether(
-            name="contract", unique_together={("handler", "contract_id")},
+            name="contract",
+            unique_together={("handler", "contract_id")},
         ),
         migrations.AlterField(
             model_name="location",
@@ -481,7 +484,10 @@ class Migration(migrations.Migration):
                 ),
             },
         ),
-        migrations.RemoveField(model_name="contract", name="date_notified",),
+        migrations.RemoveField(
+            model_name="contract",
+            name="date_notified",
+        ),
         migrations.AddField(
             model_name="contract",
             name="issues",

@@ -75,7 +75,7 @@ def generate_token(
 
 def store_as_Token(token: dict, user: object) -> object:
     """Stores a generated token dict as Token object for given user
-    
+
     returns Token object
     """
     from esi.models import Scope, Token

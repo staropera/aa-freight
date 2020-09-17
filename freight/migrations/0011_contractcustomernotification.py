@@ -53,6 +53,8 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"unique_together": {("contract", "status")},},
+            options={
+                "unique_together": {("contract", "status")},
+            },
         ),
     ]

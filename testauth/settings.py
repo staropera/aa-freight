@@ -114,9 +114,15 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -152,7 +158,9 @@ CACHES = {
     "default": {
         "BACKEND": "redis_cache.RedisCache",
         "LOCATION": "localhost:6379",
-        "OPTIONS": {"DB": 1,},
+        "OPTIONS": {
+            "DB": 1,
+        },
     }
 }
 
@@ -220,8 +228,14 @@ LOGGING = {
             "handlers": ["log_file", "console", "notifications"],
             "level": "DEBUG",
         },
-        "django": {"handlers": ["log_file", "console"], "level": "ERROR",},
-        "esi": {"handlers": ["log_file", "console"], "level": "DEBUG",},
+        "django": {
+            "handlers": ["log_file", "console"],
+            "level": "ERROR",
+        },
+        "esi": {
+            "handlers": ["log_file", "console"],
+            "level": "DEBUG",
+        },
     },
 }
 

@@ -3,6 +3,7 @@ from allianceauth import hooks
 
 from . import urls
 from .app_settings import FREIGHT_APP_NAME
+from .models import Contract
 
 
 class ExampleMenuItem(MenuItemHook):
@@ -20,7 +21,12 @@ class ExampleMenuItem(MenuItemHook):
 
     def render(self, request):
         if request.user.has_perm("freight.basic_access"):
+            if request.user.has_perm("freight.view_contracts"):
+                app_count = Contract.objects.all().pending_count()
+                self.count = app_count if app_count and app_count > 0 else None
+
             return MenuItemHook.render(self, request)
+
         return ""
 
 

@@ -37,7 +37,7 @@ class TestCalculatorWeb(WebTest):
 
     def _calculate_price(self, pricing: Pricing, volume=None, collateral=None) -> tuple:
         """Performs a full price query with the calculator
-        
+
         returns tuple of price_str, form, request
         """
         self.app.set_user(self.user)

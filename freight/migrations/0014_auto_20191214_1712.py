@@ -12,5 +12,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameModel(old_name="EveOrganization", new_name="EveEntity",),
+        migrations.RenameModel(
+            old_name="EveOrganization",
+            new_name="EveEntity",
+        ),
     ]

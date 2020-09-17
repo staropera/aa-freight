@@ -11,6 +11,7 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 install_requires = [
+    "Django<3",
     "django-esi>=1.5,<3",
     "dhooks-lite>=0.3.0",
     "django-navhelper",

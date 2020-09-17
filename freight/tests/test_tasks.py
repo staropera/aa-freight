@@ -51,7 +51,7 @@ class TestUpdateContractsEsi(NoSocketsTestCase):
 
     @patch("freight.models.Token")
     def test_run_with_user_full(self, mock_Token):
-        """tests that the task can successfully call the model method. 
+        """tests that the task can successfully call the model method.
         Uses TokenInvalidError as a shortcut to avoid more mocking
         """
         mock_Token.objects.filter.side_effect = TokenInvalidError()
