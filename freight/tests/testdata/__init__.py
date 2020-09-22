@@ -12,9 +12,13 @@ from django.utils.timezone import now
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.tests.auth_utils import AuthUtils
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from allianceauth.services.modules.discord.models import DiscordUser
 
 from ...models import Contract, ContractHandler, Location, EveEntity
+from ...utils import app_labels
+
+if "discord" in app_labels():
+    from allianceauth.services.modules.discord.models import DiscordUser
+
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
@@ -203,6 +207,7 @@ def create_contract_handler_w_contracts(selected_contract_ids: list = None) -> t
                 )
 
     # create users and Discord accounts from contract issuers
+    has_discord = "discord" in app_labels()
     for contract in Contract.objects.all():
         issuer_user = User.objects.filter(
             character_ownerships__character=contract.issuer
@@ -217,8 +222,9 @@ def create_contract_handler_w_contracts(selected_contract_ids: list = None) -> t
                 user=issuer_user,
             )
 
-        DiscordUser.objects.update_or_create(
-            user=issuer_user, defaults={"uid": contract.issuer.character_id}
-        )
+        if has_discord:
+            DiscordUser.objects.update_or_create(
+                user=issuer_user, defaults={"uid": contract.issuer.character_id}
+            )
 
     return my_handler, my_user

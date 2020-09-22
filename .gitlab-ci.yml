@@ -73,6 +73,11 @@ test-38-django31:
   script:  
   - tox -e py38-django31
 
+test-core:
+  extends: .test-py36
+  script:  
+  - tox -e core
+
 deploy-pypi:
   stage: deploy
   image: python:3.7-buster

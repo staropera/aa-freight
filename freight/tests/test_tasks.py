@@ -1,9 +1,8 @@
 from unittest.mock import patch
 
-from celery import Celery
-
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
+from django.test.utils import override_settings
 
 from esi.errors import TokenInvalidError
 
@@ -22,7 +21,6 @@ from ..utils import set_test_logger, NoSocketsTestCase
 
 MODULE_PATH = "freight.tasks"
 logger = set_test_logger(MODULE_PATH, __file__)
-app = Celery("myauth")
 
 
 class TestUpdateContractsEsi(NoSocketsTestCase):
@@ -77,15 +75,14 @@ class TestSendContractNotifications(NoSocketsTestCase):
         self.assertTrue(mock_send_notifications.called)
 
 
+@override_settings(CELERY_ALWAYS_EAGER=True)
 class TestRunContractsSync(NoSocketsTestCase):
     @patch(MODULE_PATH + ".update_contracts_esi")
     @patch(MODULE_PATH + ".send_contract_notifications")
     def test_normal_run(
         self, mock_send_contract_notifications, mock_update_contracts_esi
     ):
-        app.conf.task_always_eager = True
         run_contracts_sync()
-        app.conf.task_always_eager = False
         self.assertTrue(mock_update_contracts_esi.si.called)
         self.assertTrue(mock_send_contract_notifications.si.called)
 
@@ -120,10 +117,9 @@ class TestUpdateLocation(NoSocketsTestCase):
         self.assertFalse(mock_token.called)
         self.assertFalse(mock_update_or_create_from_esi.called)
 
+    @override_settings(CELERY_ALWAYS_EAGER=True)
     def test_update_locations(self, mock_update_or_create_from_esi, mock_token):
-        app.conf.task_always_eager = True
         update_locations([1022167642188, 60003760])
-        app.conf.task_always_eager = False
         self.assertEqual(mock_update_or_create_from_esi.call_count, 2)
         call_args_1, call_args_2 = mock_update_or_create_from_esi.call_args_list
         _, kwargs_1 = call_args_1

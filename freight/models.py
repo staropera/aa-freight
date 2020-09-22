@@ -21,7 +21,6 @@ from allianceauth.eveonline.models import (
     EveCorporationInfo,
 )
 from allianceauth.notifications import notify
-from allianceauth.services.modules.discord.models import DiscordUser
 
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
@@ -51,6 +50,9 @@ from .utils import (
     LoggerAddTag,
     make_logger_prefix,
 )
+
+if "discord" in app_labels():
+    from allianceauth.services.modules.discord.models import DiscordUser
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -1240,7 +1242,7 @@ class Contract(models.Model):
                     status_to_report = status
                     break
 
-            if status_to_report:
+            if "discord" in app_labels() and status_to_report:
                 self._report_to_customer(status_to_report)
         else:
             add_tag = self.get_logger_tag()
@@ -1262,9 +1264,7 @@ class Contract(models.Model):
             return
 
         try:
-            discord_user = DiscordUser.objects.get(user=issuer_user)
-            discord_user_id = discord_user.uid
-
+            discord_user_id = DiscordUser.objects.get(user=issuer_user).uid
         except DiscordUser.DoesNotExist:
             logger.info(add_tag("Could not find Discord user for issuer"))
             return

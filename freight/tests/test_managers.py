@@ -25,7 +25,7 @@ from .testdata import (
     structures_data,
     BravadoOperationStub,
 )
-from ..utils import set_test_logger, NoSocketsTestCase
+from ..utils import app_labels, set_test_logger, NoSocketsTestCase
 
 
 MODULE_PATH = "freight.managers"
@@ -780,35 +780,11 @@ class TestContractManagerNotifications(NoSocketsTestCase):
         self.assertEqual(mock_webhook_execute.call_count, 8)
         logger.debug("test_send_pilot_notifications_normal - complete")
 
-    @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
-    @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
-    @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
-    @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
-    def test_send_customer_notifications_normal(self, mock_webhook_execute):
-        logger.debug("test_send_customer_notifications_normal - start")
-        Contract.objects.send_notifications(rate_limted=False)
-        self.assertEqual(mock_webhook_execute.call_count, 12)
-        logger.debug("test_send_customer_notifications_normal - complete")
-
     @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", "url")
     @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
     @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
     @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
     def test_dont_send_pilot_notifications_for_expired_contracts(
-        self, mock_webhook_execute
-    ):
-        x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
-        Contract.objects.all().exclude(pk=x.pk).delete()
-        x.date_expired = now() - timedelta(hours=1)
-        x.save()
-        Contract.objects.send_notifications(rate_limted=False)
-        self.assertEqual(mock_webhook_execute.call_count, 0)
-
-    @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
-    @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
-    @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
-    @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
-    def test_dont_send_customer_notifications_for_expired_contracts(
         self, mock_webhook_execute
     ):
         x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
@@ -835,30 +811,56 @@ class TestContractManagerNotifications(NoSocketsTestCase):
         self.assertEqual(mock_webhook_execute.call_count, 1)
 
     @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
-    @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
-    @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
-    @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
-    def test_send_customer_notifications_only_once_per_state(
-        self, mock_webhook_execute
-    ):
-        x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
-        Contract.objects.all().exclude(pk=x.pk).delete()
-
-        # round #1
-        Contract.objects.send_notifications(rate_limted=False)
-        self.assertEqual(mock_webhook_execute.call_count, 1)
-
-        # round #2
-        Contract.objects.send_notifications(rate_limted=False)
-        self.assertEqual(mock_webhook_execute.call_count, 1)
-
-    @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
     @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
     @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
     @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
     def test_dont_send_any_notifications_when_no_url_if_set(self, mock_webhook_execute):
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 0)
+
+    if "discord" in app_labels():
+
+        @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
+        @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
+        @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
+        def test_send_customer_notifications_normal(self, mock_webhook_execute):
+            logger.debug("test_send_customer_notifications_normal - start")
+            Contract.objects.send_notifications(rate_limted=False)
+            self.assertEqual(mock_webhook_execute.call_count, 12)
+            logger.debug("test_send_customer_notifications_normal - complete")
+
+        @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
+        @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
+        @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
+        def test_dont_send_customer_notifications_for_expired_contracts(
+            self, mock_webhook_execute
+        ):
+            x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
+            Contract.objects.all().exclude(pk=x.pk).delete()
+            x.date_expired = now() - timedelta(hours=1)
+            x.save()
+            Contract.objects.send_notifications(rate_limted=False)
+            self.assertEqual(mock_webhook_execute.call_count, 0)
+
+        @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
+        @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
+        @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
+        def test_send_customer_notifications_only_once_per_state(
+            self, mock_webhook_execute
+        ):
+            x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
+            Contract.objects.all().exclude(pk=x.pk).delete()
+
+            # round #1
+            Contract.objects.send_notifications(rate_limted=False)
+            self.assertEqual(mock_webhook_execute.call_count, 1)
+
+            # round #2
+            Contract.objects.send_notifications(rate_limted=False)
+            self.assertEqual(mock_webhook_execute.call_count, 1)
 
 
 class TestPricingManager(NoSocketsTestCase):

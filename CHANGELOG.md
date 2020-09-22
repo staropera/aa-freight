@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - Applied "Staticfiles" fix to make it Django 3 compatible
-- Added Django 3.x to test matrix
+- Extended test matrix with Django 3.x and core tests
 
 ## [1.2.1] - 2020-09-21
 

@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory
 from django.urls import reverse
+from django.test import TestCase
 
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.tests.auth_utils import AuthUtils
@@ -407,7 +408,7 @@ class TestStatistics(NoSocketsTestCase):
         )
 
 
-class TestAddLocation(NoSocketsTestCase):
+class TestAddLocation(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
