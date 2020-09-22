@@ -1,4 +1,5 @@
 stages:
+- build
 - test
 - deploy
 
@@ -9,25 +10,68 @@ before_script:
 - python -V
 - pip install tox
 
-test-3.6:
-  image: python:3.6-buster
-  script:  
-  - tox -e py36
-
-test-3.7:
-  image: python:3.7-buster
-  script:  
-  - tox -e py37
-
-test-3.8:
-  image: python:3.8-buster
-  script:  
-  - tox -e py38
-
 test-linter:
+  stage: build
   image: python:3.8-buster
   script:  
   - tox -e linter
+
+.test-py36:
+  stage: test
+  image: python:3.6-buster
+  
+.test-py37:
+  stage: test
+  image: python:3.7-buster
+  
+.test-py38:
+  stage: test
+  image: python:3.8-buster
+  
+test-36-django22:
+  extends: .test-py36
+  script:  
+  - tox -e py36-django22
+
+test-36-django30:
+  extends: .test-py36
+  script:  
+  - tox -e py36-django30
+
+test-36-django31:
+  extends: .test-py36
+  script:  
+  - tox -e py36-django31
+
+test-37-django22:
+  extends: .test-py37
+  script:  
+  - tox -e py37-django22
+
+test-37-django30:
+  extends: .test-py37
+  script:  
+  - tox -e py37-django30
+
+test-37-django31:
+  extends: .test-py37
+  script:  
+  - tox -e py37-django31
+
+test-38-django22:
+  extends: .test-py38
+  script:  
+  - tox -e py38-django22
+
+test-38-django30:
+  extends: .test-py38
+  script:  
+  - tox -e py38-django30
+
+test-38-django31:
+  extends: .test-py38
+  script:  
+  - tox -e py38-django31
 
 deploy-pypi:
   stage: deploy
