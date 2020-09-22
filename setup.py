@@ -10,16 +10,6 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
 # allow setup.py to be run from any path
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
-install_requires = [
-    "Django<3",
-    "django-esi>=1.5,<3",
-    "dhooks-lite>=0.3.0",
-    "django-navhelper",
-]
-testing_extras = [
-    "allianceauth",
-    "coverage",
-]
 setup(
     name="aa-freight",
     version=__version__,
@@ -36,7 +26,7 @@ setup(
         "Environment :: Web Environment",
         "Framework :: Django",
         "Framework :: Django :: 2.2",
-        "Intended Audience :: Developers",
+        "Intended Audience :: End Users/Desktop",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python",
@@ -47,6 +37,14 @@ setup(
         "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     ],
     python_requires="~=3.6",
-    install_requires=install_requires,
-    extras_require={"testing": testing_extras},
+    install_requires=[
+        "allianceauth>=2.7.3",
+        "dhooks-lite>=0.5.0",
+        "django-navhelper",
+    ],
+    extras_require={
+        "testing": [
+            "django-webtest",
+        ]
+    },
 )
