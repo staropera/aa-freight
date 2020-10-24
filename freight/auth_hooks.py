@@ -16,7 +16,7 @@ class ExampleMenuItem(MenuItemHook):
             FREIGHT_APP_NAME,
             "fas fa-truck fa-fw",
             "freight:index",
-            navactive=["freight:index"],
+            navactive=["freight:"],
         )
 
     def render(self, request):
