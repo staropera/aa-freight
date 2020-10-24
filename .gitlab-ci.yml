@@ -1,5 +1,5 @@
 stages:
-- build
+- lint
 - test
 - deploy
 
@@ -10,8 +10,8 @@ before_script:
 - python -V
 - pip install tox
 
-test-linter:
-  stage: build
+linter:
+  stage: lint
   image: python:3.8-buster
   script:  
   - tox -e linter
@@ -33,11 +33,6 @@ test-36-django22:
   script:  
   - tox -e py36-django22
 
-test-36-django30:
-  extends: .test-py36
-  script:  
-  - tox -e py36-django30
-
 test-36-django31:
   extends: .test-py36
   script:  
@@ -48,11 +43,6 @@ test-37-django22:
   script:  
   - tox -e py37-django22
 
-test-37-django30:
-  extends: .test-py37
-  script:  
-  - tox -e py37-django30
-
 test-37-django31:
   extends: .test-py37
   script:  
@@ -62,11 +52,6 @@ test-38-django22:
   extends: .test-py38
   script:  
   - tox -e py38-django22
-
-test-38-django30:
-  extends: .test-py38
-  script:  
-  - tox -e py38-django30
 
 test-38-django31:
   extends: .test-py38

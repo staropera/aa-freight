@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.2.3] - 2020-10-24
+
+### Changed
+
+- Remove Django 3.0 from test matrix
+
+### Fixed
+
+- Side menu highlighting now works correctly
+
+Thanks to Peter Pfeufer for the contribution!
+
 ## [1.2.2] - 2020-09-22
 
 ### Changed

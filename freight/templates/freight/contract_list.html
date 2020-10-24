@@ -54,9 +54,8 @@
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}    
     
-    <!--load JS for filterDropDown plugin -->
-    <script type="text/javascript" src="{% static 'freight/filterDropDown.min.js' %}">
-    </script>
+    <!--load JS for filterDropDown plugin -->    
+    <script type="application/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
 {% endblock %}
 
 {% block extra_css %}
