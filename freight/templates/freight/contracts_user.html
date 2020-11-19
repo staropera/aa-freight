@@ -30,10 +30,9 @@
 {% endblock %}
 
 {% block extra_javascript %}
-    {% include 'bundles/datatables-js.html' %}
 
-    <script type="application/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
-    <script type="application/javascript" src="{% static 'freight/contracts.js' %}"></script>
+    {% include "freight/contracts_js_includes.html" %}
+
     <script type="application/javascript">
         $(document).ready(function(){
             create_contracts_data_table(
@@ -46,8 +45,8 @@
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
 
-    <link href="{% static 'freight/kalkoken.css' %}" type="text/css" rel="stylesheet">
-    <link href="{% static 'freight/contracts.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'freight/css/kalkoken.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'freight/css/contracts.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_script %}

@@ -1135,8 +1135,8 @@ class Contract(models.Model):
         desc += "**Route**: {} <-> {}\n".format(
             self.start_location.solar_system_name, self.end_location.solar_system_name
         )
-        desc += "**Reward**: {:,.0f} M ISK\n".format(self.reward / 1000000)
-        desc += "**Collateral**: {:,.0f} M ISK\n".format(self.collateral / 1000000)
+        desc += "**Reward**: {:,.0f} ISK\n".format(self.reward)
+        desc += "**Collateral**: {:,.0f} ISK\n".format(self.collateral)
         desc += "**Volume**: {:,.0f} m3\n".format(self.volume)
         desc += "**Status**: {}\n".format(self.status)
         if self.pricing:

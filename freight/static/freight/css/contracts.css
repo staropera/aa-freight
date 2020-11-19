@@ -1,0 +1,23 @@
+.dotted-underline {
+    text-decoration: underline dotted;
+}
+
+/*
+* styling for all contract tables
+*/
+.tab-contract thead tr th,
+.tab-contract tbody tr td
+{
+    text-align: left;
+    vertical-align: top;
+}
+.tab-contract tbody td:nth-child(4) {
+    text-align: right;
+}
+.tab-contract tbody td:nth-child(5) {
+    text-align: right;
+}
+
+.tab-contract tbody td:nth-child(6) {
+    text-align: right;
+}

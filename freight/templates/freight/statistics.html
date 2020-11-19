@@ -6,140 +6,141 @@
 
 {% block details %}
 
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <h3 class="panel-title">Routes</h3>
-        </div>
-        <div class="panel-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-width-fix" id="tab_routes">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Contracts</th>
-                            <th>Rewards&nbsp;(ISK)</th>
-                            <th>Collaterals&nbsp;(ISK)</th>
-                            <th>Volume&nbsp;(m3)</th>
-                            <th>Pilots</th>
-                            <th>Customers</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                    <tfoot>
-                        <tr class="success">
-                            <th>TOTALS</th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                        </tr>
-				</tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active"><a href="#routes" aria-controls="routes" role="tab" data-toggle="tab">Routes</a></li>
+        <li role="presentation"><a href="#pilots" aria-controls="pilots" role="tab" data-toggle="tab">Pilots</a></li>
+        <li role="presentation"><a href="#pilot_corporations" aria-controls="pilot_corporations" role="tab" data-toggle="tab">Pilot Corporations</a></li>
+        <li role="presentation"><a href="#customers" aria-controls="customers" role="tab" data-toggle="tab">Customers</a></li>
+    </ul>
 
+    <!-- Tabs -->
     <div class="panel panel-default">
-        <div class="panel-heading">
-            <h3 class="panel-title">Pilots</h3>
-        </div>
         <div class="panel-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-width-fix" id="tab_pilots">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Corporation</th>
-                            <th>Contracts</th>
-                            <th>Rewards&nbsp;(ISK)</th>
-                            <th>Collaterals&nbsp;(ISK)</th>
-                            <th>Volume&nbsp;(m3)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                     <tfoot>
-                        <tr class="success">
-                            <th>TOTALS</th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                        </tr>
-				    </tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
+            <div class="tab-content">
 
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <h3 class="panel-title">Pilot Corporations</h3>
-        </div>
-        <div class="panel-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-width-fix" id="tab_pilot_corporations">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Alliance</th>
-                            <th>Contracts</th>
-                            <th>Rewards&nbsp;(ISK)</th>
-                            <th>Collaterals&nbsp;(ISK)</th>
-                            <th>Volume&nbsp;(m3)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                     <tfoot>
-                        <tr class="success">
-                            <th>TOTALS</th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                        </tr>
-				    </tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
+                <!-- Route -->
+                <div role="tabpanel" class="tab-pane active" id="routes">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-width-fix" id="tab_routes">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Contracts</th>
+                                    <th>Rewards&nbsp;(ISK)</th>
+                                    <th>Collaterals&nbsp;(ISK)</th>
+                                    <th>Volume&nbsp;(m3)</th>
+                                    <th>Pilots</th>
+                                    <th>Customers</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            <tfoot>
+                                <tr class="success">
+                                    <th>TOTALS</th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                        </tfoot>
+                        </table>
+                    </div>
+                </div>
 
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <h3 class="panel-title">Customers</h3>
-        </div>
-        <div class="panel-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-width-fix" id="tab_customers">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Corporation</th>
-                            <th>Contracts</th>
-                            <th>Rewards&nbsp;(ISK)</th>
-                            <th>Collaterals&nbsp;(ISK)</th>
-                            <th>Volume&nbsp;(m3)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                    <tfoot>
-                    <tr class="success">
-                        <th>TOTALS</th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                    </tr>
-                </tfoot>
-                </table>
+                <!-- Pilots -->
+                <div role="tabpanel" class="tab-pane" id="pilots">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-width-fix" id="tab_pilots">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Corporation</th>
+                                    <th>Contracts</th>
+                                    <th>Rewards&nbsp;(ISK)</th>
+                                    <th>Collaterals&nbsp;(ISK)</th>
+                                    <th>Volume&nbsp;(m3)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            <tfoot>
+                                <tr class="success">
+                                    <th>TOTALS</th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pilot Corporations -->
+                <div role="tabpanel" class="tab-pane" id="pilot_corporations">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-width-fix" id="tab_pilot_corporations">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Alliance</th>
+                                    <th>Contracts</th>
+                                    <th>Rewards&nbsp;(ISK)</th>
+                                    <th>Collaterals&nbsp;(ISK)</th>
+                                    <th>Volume&nbsp;(m3)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            <tfoot>
+                                <tr class="success">
+                                    <th>TOTALS</th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pilot Corporations -->
+                <div role="tabpanel" class="tab-pane" id="customers">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-width-fix" id="tab_customers">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Corporation</th>
+                                    <th>Contracts</th>
+                                    <th>Rewards&nbsp;(ISK)</th>
+                                    <th>Collaterals&nbsp;(ISK)</th>
+                                    <th>Volume&nbsp;(m3)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            <tfoot>
+                                <tr class="success">
+                                    <th>TOTALS</th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -273,8 +274,7 @@
                 }
             });
 
-
-        $('#tab_pilot_corporations').DataTable({
+            $('#tab_pilot_corporations').DataTable({
                 ajax: {
                     url: '{% url 'freight:statistics_pilot_corporations_data' %}',
                     dataSrc: '',
@@ -324,7 +324,6 @@
                     }
                 }
             });
-
 
             $('#tab_customers').DataTable({
                 ajax: {
@@ -384,8 +383,8 @@
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
 
-    <link href="{% static 'freight/kalkoken.css' %}" type="text/css" rel="stylesheet">
-    <link href="{% static 'freight/statistics.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'freight/css/kalkoken.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'freight/css/statistics.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_script %}

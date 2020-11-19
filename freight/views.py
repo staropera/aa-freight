@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.db import models
 from django.db.models import Count, Sum, Q
 from django.shortcuts import render, redirect
-from django.utils.html import mark_safe
+from django.utils.html import mark_safe, format_html
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership
@@ -24,7 +24,7 @@ from .app_settings import (
     FREIGHT_OPERATION_MODE,
 )
 from .models import Contract, ContractHandler, EveEntity, Location, Pricing
-from .utils import DATETIME_FORMAT, messages_plus, LoggerAddTag, create_bs_glyph_2_html
+from .utils import DATETIME_FORMAT, messages_plus, LoggerAddTag
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -103,42 +103,76 @@ def contract_list_data(request, category) -> JsonResponse:
         if contract.has_pricing:
             route_name = contract.pricing.name
             if not contract.has_pricing_errors:
-                glyph = "ok"
-                color = "green"
                 tooltip_text = route_name
+                icon_html = format_html(
+                    '<span class="{}"><i class="fas fa-check" title="{}"></i></span>',
+                    "text-success",
+                    tooltip_text,
+                )
             else:
-                glyph = "warning-sign"
-                color = "red"
                 tooltip_text = "{}\n{}".format(
                     route_name, "\n".join(contract.get_issue_list())
                 )
-            pricing_check = create_bs_glyph_2_html(glyph, tooltip_text, color)
+                icon_html = format_html(
+                    (
+                        '<span class="{}">'
+                        '<i class="fas fa-exclamation-triangle" title="{}"></i>'
+                        "</span>"
+                    ),
+                    "text-danger",
+                    tooltip_text,
+                )
+
+            pricing_check = icon_html
         else:
             route_name = ""
             pricing_check = "-"
 
-        if contract.title:
-            notes = create_bs_glyph_2_html("envelope", contract.title)
+        if contract.title or settings.DEBUG:
+            if settings.DEBUG:
+                title = "{}{}".format(
+                    f"{contract.title} " if contract.title else "", contract.contract_id
+                )
+            else:
+                title = contract.title
+
+            notes = format_html('<i class="far fa-envelope" title="{}"></i>', title)
         else:
             notes = ""
 
-        if settings.DEBUG:
-            notes += " {}".format(contract.contract_id)
+        start_location_html = format_html(
+            '<span class="dotted-underline" title="{}">{}</span> {}',
+            contract.start_location,
+            contract.start_location.solar_system_name,
+            notes,
+        )
+        end_location_html = format_html(
+            '<span class="dotted-underline" title="{}">{}</span>',
+            contract.end_location,
+            contract.end_location.solar_system_name,
+        )
 
         contracts_data.append(
             {
                 "contract_id": contract.contract_id,
-                "status": contract.status,
-                "start_location": str(contract.start_location),
-                "end_location": str(contract.end_location),
-                "reward": "{:,.0f}".format(contract.reward / 1000000),
-                "collateral": "{:,.0f}".format(contract.collateral / 1000000),
-                "volume": "{:,.0f}".format(contract.volume / 1000),
-                "date_issued": datetime_format(contract.date_issued),
-                "date_expired": datetime_format(contract.date_expired),
+                "status": str(contract.status),
+                "start_location": {
+                    "display": start_location_html,
+                    "sort": contract.start_location.name,
+                },
+                "end_location": {
+                    "display": end_location_html,
+                    "sort": contract.end_location.name,
+                },
+                "reward": contract.reward,
+                "collateral": contract.collateral,
+                "volume": contract.volume,
+                "date_issued": contract.date_issued.isoformat(),
+                "date_expired": contract.date_expired.isoformat(),
                 "issuer": character_format(contract.issuer),
-                "notes": notes,
-                "date_accepted": datetime_format(contract.date_accepted),
+                "date_accepted": contract.date_accepted.isoformat()
+                if contract.date_accepted
+                else None,
                 "acceptor": contract.acceptor_name,
                 "has_pricing": contract.has_pricing,
                 "has_pricing_errors": contract.has_pricing_errors,

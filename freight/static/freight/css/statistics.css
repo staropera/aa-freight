@@ -1,0 +1,46 @@
+#tab_routes thead tr th,
+#tab_routes tfoot tr th,
+#tab_pilots thead tr th,
+#tab_pilots tfoot tr th,
+#tab_pilot_corporations thead tr th,
+#tab_pilot_corporations tfoot tr th,
+#tab_customers thead tr th,
+#tab_customers tfoot tr th
+{
+    text-align: left;
+    vertical-align: top;
+}
+
+#tab_routes tbody tr td, #tab_routes tfoot tr th {
+    text-align: right;
+}
+#tab_routes tbody td:nth-child(1), #tab_routes tfoot th:nth-child(1) {
+    text-align: left;
+}
+
+#tab_pilots tbody tr td, #tab_pilots tfoot tr th {
+    text-align: right;
+}
+#tab_pilots tbody td:nth-child(1),
+#tab_pilots tfoot th:nth-child(1),
+#tab_pilots tbody td:nth-child(2) {
+    text-align: left;
+}
+
+#tab_pilot_corporations tbody tr td, #tab_pilot_corporations tfoot tr th {
+    text-align: right;
+}
+#tab_pilot_corporations tbody td:nth-child(1),
+#tab_pilot_corporations tfoot th:nth-child(1),
+#tab_pilot_corporations tbody td:nth-child(2) {
+    text-align: left;
+}
+
+#tab_customers tbody tr td, #tab_customers tfoot tr th {
+    text-align: right;
+}
+#tab_customers tbody td:nth-child(1),
+#tab_customers tfoot th:nth-child(1),
+#tab_customers tbody td:nth-child(2) {
+    text-align: left;
+}

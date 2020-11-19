@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.3-0] - 2020-11-19
+
 ### Added
 
 - Volume now shown with statistics ([#32](https://gitlab.com/ErikKalkoken/aa-freight/issues/32))
@@ -14,7 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- Layout modernized and aligned with other Kalkoken apps
+- Layout modernized and style aligned with other Kalkoken apps
+- Numbers shown (e.g. reward, collateral) are no longer abbreviated
 
 ## [1.2.3] - 2020-10-24
 

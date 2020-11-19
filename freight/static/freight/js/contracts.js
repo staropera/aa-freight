@@ -1,18 +1,48 @@
 /* creates a dataTable object for a contracts table*/
 function create_contracts_data_table(tab_name, view_url) {
+    const DATETIME_FORMAT_2 = 'YYYY-MMM-DD HH:mm'
     var columns = [
         { data: 'status' },
-        { data: 'start_location' },
-        { data: 'end_location' },
-        { data: 'reward' },
-        { data: 'collateral' },
-        { data: 'volume' },
+        {
+            data: 'start_location',
+            render: {
+                _: 'display',
+                sort: 'sort'
+            }
+        },
+        {
+            data: 'end_location',
+            render: {
+                _: 'display',
+                sort: 'sort'
+            }
+        },
+        {
+            data: 'reward',
+            render: $.fn.dataTable.render.number(',', '.', 0)
+        },
+        {
+            data: 'collateral',
+            render: $.fn.dataTable.render.number(',', '.', 0)
+        },
+        {
+            data: 'volume',
+            render: $.fn.dataTable.render.number(',', '.', 0)
+        },
         { data: 'pricing_check' },
-        { data: 'date_issued' },
-        { data: 'date_expired' },
+        {
+            data: 'date_issued',
+            render: $.fn.dataTable.render.moment(moment.ISO_8601, DATETIME_FORMAT_2)
+        },
+        {
+            data: 'date_expired',
+            render: $.fn.dataTable.render.moment(moment.ISO_8601, DATETIME_FORMAT_2)
+        },
         { data: 'issuer' },
-        { data: 'notes' },
-        { data: 'date_accepted' },
+        {
+            data: 'date_accepted',
+            render: $.fn.dataTable.render.moment(moment.ISO_8601, DATETIME_FORMAT_2)
+        },
         { data: 'acceptor' },
 
         /* hidden columns for filter */
@@ -20,13 +50,13 @@ function create_contracts_data_table(tab_name, view_url) {
     ];
     var columnDefs = [
         { "orderable": false, "targets": [6] },
-        { "visible": false, "targets": [13] }
+        { "visible": false, "targets": [12] }
     ];
     var order = [[7, "desc"]];
     var filterDropDown = {
         columns: [
             {
-                idx: 13,
+                idx: 12,
                 title: 'Route'
             },
             {
@@ -36,7 +66,7 @@ function create_contracts_data_table(tab_name, view_url) {
                 idx: 9
             },
             {
-                idx: 12
+                idx: 11
             }
         ],
         bootstrap: true,

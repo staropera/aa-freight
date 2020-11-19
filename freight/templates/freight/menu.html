@@ -33,7 +33,10 @@
                 {% if perms.freight.view_contracts %}
                     <li class="{% navactive request 'freight:contract_list_all' %}">
                         <a href="{% url 'freight:contract_list_all' %}">
-                            All Contracts
+                            All Contracts&nbsp;
+                            {% if pending_all_count > 0 %}
+                                <span class="badge">{{ pending_all_count }}</span>
+                            {% endif %}
                         </a>
                     </li>
                 {% endif %}
