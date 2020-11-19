@@ -5,12 +5,12 @@
 {% load freight_filters %}
 
 {% block details %}
-    
+
     <div class="panel panel-primary">
         <div class="panel-heading">
             <h3 class="panel-title">Routes</h3>
         </div>
-        <div class="panel-body">        
+        <div class="panel-body">
             <div class="table-responsive">
                 <table class="table table-striped" id="tab_routes">
                     <thead>
@@ -19,12 +19,13 @@
                             <th>Contracts</th>
                             <th>Rewards<br>M&nbsp;ISK</th>
                             <th>Collaterals<br>M&nbsp;ISK</th>
+                            <th>Volume<br>K&nbsp;m3</th>
                             <th>Pilots</th>
                             <th>Customers</th>
                         </tr>
                     </thead>
-                    <tbody>                   
-                    </tbody> 
+                    <tbody>
+                    </tbody>
                     <tfoot>
                         <tr class="success">
                             <th>Totals</th>
@@ -33,18 +34,19 @@
                             <th></th>
                             <th></th>
                             <th></th>
+                            <th></th>
                         </tr>
-				</tfoot>              
+				</tfoot>
                 </table>
             </div>
         </div>
     </div>
 
-    <div class="panel panel-primary">   
+    <div class="panel panel-primary">
         <div class="panel-heading">
             <h3 class="panel-title">Pilots</h3>
         </div>
-        <div class="panel-body">        
+        <div class="panel-body">
             <div class="table-responsive">
                 <table class="table table-striped" id="tab_pilots">
                     <thead>
@@ -53,30 +55,32 @@
                             <th>Corporation</th>
                             <th>Contracts</th>
                             <th>Rewards<br>M&nbsp;ISK</th>
-                            <th>Collaterals<br>M&nbsp;ISK</th>                     
+                            <th>Collaterals<br>M&nbsp;ISK</th>
+                            <th>Volume<br>K&nbsp;m3</th>
                         </tr>
                     </thead>
-                    <tbody>                   
-                    </tbody>  
+                    <tbody>
+                    </tbody>
                      <tfoot>
                         <tr class="success">
                             <th>Totals</th>
                             <th></th>
-                            <th></th>                           
+                            <th></th>
+                            <th></th>
                             <th></th>
                             <th></th>
                         </tr>
-				    </tfoot>                 
+				    </tfoot>
                 </table>
             </div>
         </div>
     </div>
 
-    <div class="panel panel-primary">   
+    <div class="panel panel-primary">
         <div class="panel-heading">
             <h3 class="panel-title">Pilot Corporations</h3>
         </div>
-        <div class="panel-body">        
+        <div class="panel-body">
             <div class="table-responsive">
                 <table class="table table-striped" id="tab_pilot_corporations">
                     <thead>
@@ -85,30 +89,32 @@
                             <th>Alliance</th>
                             <th>Contracts</th>
                             <th>Rewards<br>M&nbsp;ISK</th>
-                            <th>Collaterals<br>M&nbsp;ISK</th>                     
+                            <th>Collaterals<br>M&nbsp;ISK</th>
+                            <th>Volume<br>K&nbsp;m3</th>
                         </tr>
                     </thead>
-                    <tbody>                   
-                    </tbody>  
+                    <tbody>
+                    </tbody>
                      <tfoot>
                         <tr class="success">
                             <th>Totals</th>
                             <th></th>
-                            <th></th>                           
+                            <th></th>
+                            <th></th>
                             <th></th>
                             <th></th>
                         </tr>
-				    </tfoot>                 
+				    </tfoot>
                 </table>
             </div>
         </div>
     </div>
-    
-    <div class="panel panel-primary">   
+
+    <div class="panel panel-primary">
         <div class="panel-heading">
             <h3 class="panel-title">Customers</h3>
         </div>
-        <div class="panel-body">        
+        <div class="panel-body">
             <div class="table-responsive">
                 <table class="table table-striped" id="tab_customers">
                     <thead>
@@ -117,20 +123,22 @@
                             <th>Corporation</th>
                             <th>Contracts</th>
                             <th>Rewards<br>M&nbsp;ISK</th>
-                            <th>Collaterals<br>M&nbsp;ISK</th>                     
+                            <th>Collaterals<br>M&nbsp;ISK</th>
+                            <th>Volume<br>K&nbsp;m3</th>
                         </tr>
                     </thead>
-                    <tbody>                   
+                    <tbody>
                     </tbody>
                     <tfoot>
                     <tr class="success">
                         <th>Totals</th>
                         <th></th>
-                        <th></th>                           
+                        <th></th>
+                        <th></th>
                         <th></th>
                         <th></th>
                     </tr>
-                </tfoot>                
+                </tfoot>
                 </table>
             </div>
         </div>
@@ -138,194 +146,183 @@
 
     <p class="text-muted">
         Statistics calculated for all contracts finished withn the last {{ max_days }} days
-    </p>  
-    
+    </p>
+
 {% endblock %}
 
 {% block extra_javascript %}
-    {% include 'bundles/datatables-js.html' %}        
+    {% include 'bundles/datatables-js.html' %}
+
+    <script type="application/javascript">
+        // Remove the formatting to get integer data for summation
+        function intVal(i)
+        {
+            return typeof i === 'string'
+                ? i.replace(/[\$,]/g, '')*1
+                : typeof i === 'number'
+                    ? i
+                    : 0;
+        };
+
+        $(document).ready(function(){
+            $('#tab_routes').DataTable({
+                ajax: {
+                    url: '{% url 'freight:statistics_routes_data' %}',
+                    dataSrc: '',
+                    cache: false
+                },
+                columns: [
+                    { data: 'name' },
+                    { data: 'contracts' },
+                    { data: 'rewards' },
+                    { data: 'collaterals' },
+                    { data: 'volume' },
+                    { data: 'pilots' },
+                    { data: 'customers' }
+                ],
+                order: [ [ 1, "desc" ], [ 2, "desc" ] ],
+                footerCallback: function ( row, data, start, end, display )
+                {
+                    var api = this.api(), data;
+
+                    var total = [];
+                    for (i = 1; i < 7; i++)
+                    {
+                        total[i] = api
+                            .column( i )
+                            .data()
+                            .reduce( function (a, b) {
+                                return intVal(a) + intVal(b);
+                            }, 0 );
+                    }
+                    for (i = 1; i < 7; i++)
+                    {
+                        $( api.column( i ).footer() ).html(total[i].toLocaleString());
+                    }
+                }
+            });
+
+            $('#tab_pilots').DataTable({
+                ajax: {
+                    url: '{% url 'freight:statistics_pilots_data' %}',
+                    dataSrc: '',
+                    cache: false
+                },
+
+                columns: [
+                    { data: 'name' },
+                    { data: 'corporation' },
+                    { data: 'contracts' },
+                    { data: 'rewards' },
+                    { data: 'collaterals' },
+                    { data: 'volume' }
+                ],
+                order: [ [ 2, "desc" ], [ 3, "desc" ] ],
+                footerCallback: function ( row, data, start, end, display )
+                {
+                    var api = this.api(), data;
+
+                    var total = [];
+                    for (i = 2; i < 6; i++)
+                    {
+                        total[i] = api
+                            .column( i )
+                            .data()
+                            .reduce( function (a, b) {
+                                return intVal(a) + intVal(b);
+                            }, 0 );
+                    }
+                    for (i = 2; i < 6; i++)
+                    {
+                        $( api.column( i ).footer() ).html(total[i].toLocaleString());
+                    }
+                }
+            });
+
+
+        $('#tab_pilot_corporations').DataTable({
+                ajax: {
+                    url: '{% url 'freight:statistics_pilot_corporations_data' %}',
+                    dataSrc: '',
+                    cache: false
+                },
+
+                columns: [
+                    { data: 'name' },
+                    { data: 'alliance' },
+                    { data: 'contracts' },
+                    { data: 'rewards' },
+                    { data: 'collaterals' },
+                    { data: 'volume' }
+                ],
+                order: [ [ 2, "desc" ], [ 3, "desc" ] ],
+                footerCallback: function ( row, data, start, end, display )
+                {
+                    var api = this.api(), data;
+
+                    var total = [];
+                    for (i = 2; i < 6; i++)
+                    {
+                        total[i] = api
+                            .column( i )
+                            .data()
+                            .reduce( function (a, b) {
+                                return intVal(a) + intVal(b);
+                            }, 0 );
+                    }
+                    for (i = 2; i < 6; i++)
+                    {
+                        $( api.column( i ).footer() ).html(total[i].toLocaleString());
+                    }
+                }
+            });
+
+
+            $('#tab_customers').DataTable({
+                ajax: {
+                    url: '{% url 'freight:statistics_customer_data' %}',
+                    dataSrc: '',
+                    cache: false
+                },
+
+                columns: [
+                    { data: 'name' },
+                    { data: 'corporation' },
+                    { data: 'contracts' },
+                    { data: 'rewards' },
+                    { data: 'collaterals' },
+                    { data: 'volume' }
+                ],
+                order: [ [ 2, "desc" ], [ 3, "desc" ] ],
+                footerCallback: function ( row, data, start, end, display )
+                {
+                    var api = this.api(), data;
+
+                    var total = [];
+                    for (i = 2; i < 6; i++)
+                    {
+                        total[i] = api
+                            .column( i )
+                            .data()
+                            .reduce( function (a, b) {
+                                return intVal(a) + intVal(b);
+                            }, 0 );
+                    }
+                    for (i = 2; i < 6; i++)
+                    {
+                        $( api.column( i ).footer() ).html(total[i].toLocaleString());
+                    }
+                }
+            });
+        });
+    </script>
 {% endblock %}
 
 {% block extra_css %}
-    {% include 'bundles/datatables-css.html' %}    
+    {% include 'bundles/datatables-css.html' %}
 
     <link href="{% static 'freight/statistics.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_script %}
-    
-    // Remove the formatting to get integer data for summation
-    function intVal(i) 
-    {
-        return typeof i === 'string' 
-            ? i.replace(/[\$,]/g, '')*1 
-            : typeof i === 'number' 
-                ? i 
-                : 0;
-    };
-
-    $(document).ready(function(){        
-        $('#tab_routes').DataTable({
-            ajax: {
-                url: '{% url 'freight:statistics_routes_data' %}',
-                dataSrc: '',
-                cache: false
-            },
-
-            columns: [
-                { data: 'name' },
-                { data: 'contracts' },
-                { data: 'rewards' },
-                { data: 'collaterals' },
-                { data: 'pilots' },
-                { data: 'customers' }                
-            ],
-
-            order: [ [ 1, "desc" ], [ 2, "desc" ] ],
-
-            footerCallback: function ( row, data, start, end, display )
-            {
-                var api = this.api(), data;
-                        
-                var total = [];
-                for (i = 1; i < 6; i++)
-                {
-                    total[i] = api
-                        .column( i )
-                        .data()
-                        .reduce( function (a, b) {
-                            return intVal(a) + intVal(b);
-                        }, 0 );
-                }
-                
-                for (i = 1; i < 6; i++)
-                {
-                    $( api.column( i ).footer() ).html(total[i].toLocaleString());
-                }
-            }
-
-        });
-
-        $('#tab_pilots').DataTable({
-            ajax: {
-                url: '{% url 'freight:statistics_pilots_data' %}',
-                dataSrc: '',
-                cache: false
-            },
-
-            columns: [
-                { data: 'name' },
-                { data: 'corporation' },
-                { data: 'contracts' },
-                { data: 'rewards' },
-                { data: 'collaterals' }              
-            ],
-
-            order: [ [ 2, "desc" ], [ 3, "desc" ] ],
-
-            footerCallback: function ( row, data, start, end, display )
-            {
-                var api = this.api(), data;
-                        
-                var total = [];
-                for (i = 2; i < 5; i++)
-                {
-                    total[i] = api
-                        .column( i )
-                        .data()
-                        .reduce( function (a, b) {
-                            return intVal(a) + intVal(b);
-                        }, 0 );
-                }
-                
-                for (i = 2; i < 5; i++)
-                {
-                    $( api.column( i ).footer() ).html(total[i].toLocaleString());
-                }
-            }
-
-        });
-
-
-       $('#tab_pilot_corporations').DataTable({
-            ajax: {
-                url: '{% url 'freight:statistics_pilot_corporations_data' %}',
-                dataSrc: '',
-                cache: false
-            },
-
-            columns: [
-                { data: 'name' },
-                { data: 'alliance' },
-                { data: 'contracts' },
-                { data: 'rewards' },
-                { data: 'collaterals' }              
-            ],
-
-            order: [ [ 2, "desc" ], [ 3, "desc" ] ],
-
-            footerCallback: function ( row, data, start, end, display )
-            {
-                var api = this.api(), data;
-                        
-                var total = [];
-                for (i = 2; i < 5; i++)
-                {
-                    total[i] = api
-                        .column( i )
-                        .data()
-                        .reduce( function (a, b) {
-                            return intVal(a) + intVal(b);
-                        }, 0 );
-                }
-                
-                for (i = 2; i < 5; i++)
-                {
-                    $( api.column( i ).footer() ).html(total[i].toLocaleString());
-                }
-            }
-
-        });
-
-
-        $('#tab_customers').DataTable({
-            ajax: {
-                url: '{% url 'freight:statistics_customer_data' %}',
-                dataSrc: '',
-                cache: false
-            },
-
-            columns: [
-                { data: 'name' },
-                { data: 'corporation' },
-                { data: 'contracts' },
-                { data: 'rewards' },
-                { data: 'collaterals' }              
-            ],
-
-            order: [ [ 2, "desc" ], [ 3, "desc" ] ],
-
-            footerCallback: function ( row, data, start, end, display )
-            {
-                var api = this.api(), data;
-                        
-                var total = [];
-                for (i = 2; i < 5; i++)
-                {
-                    total[i] = api
-                        .column( i )
-                        .data()
-                        .reduce( function (a, b) {
-                            return intVal(a) + intVal(b);
-                        }, 0 );
-                }
-                
-                for (i = 2; i < 5; i++)
-                {
-                    $( api.column( i ).footer() ).html(total[i].toLocaleString());
-                }
-            }
-
-        });
-    });
 {% endblock %}

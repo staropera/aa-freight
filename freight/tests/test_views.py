@@ -93,10 +93,10 @@ class TestContractList(NoSocketsTestCase):
         self.assertNotEqual(response.status_code, HTTP_OK)
 
     """ issue with setting permission - todo
-    def test_active_access_with_permission(self):               
+    def test_active_access_with_permission(self):
         request = self.factory.get(reverse('freight:contract_list_active'))
         request.user = self.user_1
-        
+
         response = views.contract_list_active(request)
         self.assertEqual(response.status_code, HTTP_OK)
     """
@@ -306,8 +306,13 @@ class TestStatistics(NoSocketsTestCase):
     def setUpClass(cls):
         super().setUpClass()
         _, cls.user = create_contract_handler_w_contracts()
-        AuthUtils.add_permission_to_user_by_name("freight.basic_access", cls.user)
-        AuthUtils.add_permission_to_user_by_name("freight.view_statistics", cls.user)
+        # expected contracts to load: 149409118, 149409218, 149409318
+        cls.user = AuthUtils.add_permission_to_user_by_name(
+            "freight.basic_access", cls.user
+        )
+        cls.user = AuthUtils.add_permission_to_user_by_name(
+            "freight.view_statistics", cls.user
+        )
         with DisconnectPricingSaveHandler():
             jita = Location.objects.get(id=60003760)
             amamake = Location.objects.get(id=1022167642188)
@@ -331,6 +336,7 @@ class TestStatistics(NoSocketsTestCase):
                 {
                     "contracts": "3",
                     "collaterals": "3,000",
+                    "volume": "345",
                     "pilots": "1",
                     "name": "Jita <-> Amamake",
                     "customers": "1",
@@ -354,6 +360,7 @@ class TestStatistics(NoSocketsTestCase):
                 {
                     "collaterals": "3,000",
                     "rewards": "300",
+                    "volume": "345",
                     "corporation": "Wayne Enterprise",
                     "contracts": "3",
                     "name": "Bruce Wayne",
@@ -378,6 +385,7 @@ class TestStatistics(NoSocketsTestCase):
                 {
                     "name": "Wayne Enterprise",
                     "rewards": "300",
+                    "volume": "345",
                     "alliance": "",
                     "collaterals": "3,000",
                     "contracts": "3",
@@ -400,6 +408,7 @@ class TestStatistics(NoSocketsTestCase):
                 {
                     "collaterals": "3,000",
                     "rewards": "300",
+                    "volume": "345",
                     "corporation": "Wayne Enterprise",
                     "contracts": "3",
                     "name": "Robin",

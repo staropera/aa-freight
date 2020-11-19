@@ -5,8 +5,7 @@ import os
 from random import randrange
 from unittest.mock import Mock
 
-from django.contrib.auth.models import User, Permission
-from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
 from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership
@@ -158,18 +157,6 @@ def _convert_eve_date_str_to_dt(date_str) -> datetime:
     return datetime.strptime("%Y-%m-%dT%H:%M:%S%Z", date_str) if date_str else None
 
 
-def add_permission_to_user_by_name(perm, user):
-    perm_parts = perm.split(".")
-    if len(perm_parts) != 2:
-        raise ValueError("Invalid format for permission name")
-
-    p = Permission.objects.get(
-        content_type__app_label=perm_parts[0], codename=perm_parts[1]
-    )
-    user.user_permissions.add(p)
-    user = get_object_or_404(User, pk=user.pk)
-
-
 def create_contract_handler_w_contracts(selected_contract_ids: list = None) -> tuple:
     """create contract handler with contracts and all related entities"""
 
@@ -177,19 +164,16 @@ def create_contract_handler_w_contracts(selected_contract_ids: list = None) -> t
 
     # 1 user
     my_character = EveCharacter.objects.get(character_id=90000001)
-
     my_organization = EveEntity.objects.get(id=my_character.alliance_id)
-
     User.objects.filter(username=my_character.character_name).delete()
     my_user = AuthUtils.create_user(my_character.character_name)
-    add_permission_to_user_by_name("freight.basic_access", my_user)
+    my_user = AuthUtils.add_permission_to_user_by_name("freight.basic_access", my_user)
     my_main_ownership = CharacterOwnership.objects.create(
         character=my_character, owner_hash="x1", user=my_user
     )
     my_user.profile.main_character = my_character
     my_user.profile.save()
     my_user = User.objects.get(username=my_character.character_name)
-
     my_handler = ContractHandler.objects.create(
         organization=my_organization, character=my_main_ownership
     )

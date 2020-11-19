@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+### Added
+
+- Volume now shown with statistics ([#32](https://gitlab.com/ErikKalkoken/aa-freight/issues/32))
+
 ## [1.2.3] - 2020-10-24
 
 ### Changed
@@ -375,7 +379,7 @@ In case you already ran into this issue you can fix this by rewinding migrations
 - Pricing: Routes can now have a fix price of 0 ISK ([#1](https://gitlab.com/ErikKalkoken/aa-freight/issues/1))
 
 ### Changed
-  
+
 - Calculator: Routes with just a base price will be shown as "Fix price" in calculator
 
 - Calculator: Volume and/or collateral no longer shown if not needed for price calculation
@@ -385,13 +389,13 @@ In case you already ran into this issue you can fix this by rewinding migrations
 - Calculator: Contracts with 0 ISK collateral now correctly displayed ([#2](https://gitlab.com/ErikKalkoken/aa-freight/issues/2))
 
 ## [0.1.5] - 2019-10-23
-  
+
 ### Added
 
 - Notifications: Ability to enable pinging of contract notifications with `@here` or `@everyone`
 
 ## [0.1.4] - 2019-10-22
-  
+
 ### Fixed
 
 - Contract sync aborted when acceptor was an Eve character unknown to AA

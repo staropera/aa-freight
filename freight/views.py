@@ -159,7 +159,14 @@ def _get_contracts_for_contract_list(category, request):
                     ]
                 )
                 .exclude(date_expired__lt=now())
-                .select_related()
+                .select_related(
+                    "acceptor",
+                    "acceptor_corporation",
+                    "end_location",
+                    "issuer",
+                    "start_location",
+                    "pricing",
+                )
             )
 
     elif category == CONTRACT_LIST_USER:
@@ -401,15 +408,17 @@ def statistics(request):
 def statistics_routes_data(request):
     """returns totals for statistics as JSON"""
 
-    cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
-    finished_contracts = Q(contract__status__exact=Contract.STATUS_FINISHED) & Q(
+    cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
+    finished_contracts = Q(contract__status=Contract.STATUS_FINISHED) & Q(
         contract__date_completed__gte=cutoff_date
     )
     route_totals = (
-        Pricing.objects.select_related()
-        .annotate(contracts_count=Count("contract", filter=finished_contracts))
+        Pricing.objects.annotate(
+            contracts_count=Count("contract", filter=finished_contracts)
+        )
         .annotate(rewards=Sum("contract__reward", filter=finished_contracts))
         .annotate(collaterals=Sum("contract__collateral", filter=finished_contracts))
+        .annotate(volume=Sum("contract__volume", filter=finished_contracts))
         .annotate(
             pilots=Count("contract__acceptor", distinct=True, filter=finished_contracts)
         )
@@ -433,12 +442,18 @@ def statistics_routes_data(request):
             else:
                 collaterals = 0
 
+            if route.volume:
+                volume = route.volume / 1000
+            else:
+                volume = 0
+
             totals.append(
                 {
                     "name": route.name,
                     "contracts": "{:,}".format(route.contracts_count),
                     "rewards": "{:,.0f}".format(rewards),
                     "collaterals": "{:,.0f}".format(collaterals),
+                    "volume": "{:,.0f}".format(volume),
                     "pilots": "{:,}".format(route.pilots),
                     "customers": "{:,}".format(route.customers),
                 }
@@ -452,20 +467,19 @@ def statistics_routes_data(request):
 def statistics_pilots_data(request):
     """returns totals for statistics as JSON"""
 
-    cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
-
-    finished_contracts = Q(
-        contract_acceptor__status__exact=Contract.STATUS_FINISHED
-    ) & Q(contract_acceptor__date_completed__gte=cutoff_date)
+    cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
+    finished_contracts = Q(contract_acceptor__status=Contract.STATUS_FINISHED) & Q(
+        contract_acceptor__date_completed__gte=cutoff_date
+    )
 
     pilot_totals = (
-        EveCharacter.objects.exclude(contract_acceptor__exact=None)
-        .select_related()
+        EveCharacter.objects.exclude(contract_acceptor__isnull=True)
         .annotate(contracts_count=Count("contract_acceptor", filter=finished_contracts))
         .annotate(rewards=Sum("contract_acceptor__reward", filter=finished_contracts))
         .annotate(
             collaterals=Sum("contract_acceptor__collateral", filter=finished_contracts)
         )
+        .annotate(volume=Sum("contract_acceptor__volume", filter=finished_contracts))
     )
 
     totals = list()
@@ -481,6 +495,11 @@ def statistics_pilots_data(request):
             else:
                 collaterals = 0
 
+            if pilot.volume:
+                volume = pilot.volume / 1000
+            else:
+                volume = 0
+
             totals.append(
                 {
                     "name": pilot.character_name,
@@ -488,6 +507,7 @@ def statistics_pilots_data(request):
                     "contracts": "{:,}".format(pilot.contracts_count),
                     "rewards": "{:,.0f}".format(rewards),
                     "collaterals": "{:,.0f}".format(collaterals),
+                    "volume": "{:,.0f}".format(volume),
                 }
             )
 
@@ -499,15 +519,14 @@ def statistics_pilots_data(request):
 def statistics_pilot_corporations_data(request):
     """returns totals for statistics as JSON"""
 
-    cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
-
+    cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
     finished_contracts = Q(
-        contract_acceptor_corporation__status__exact=Contract.STATUS_FINISHED
+        contract_acceptor_corporation__status=Contract.STATUS_FINISHED
     ) & Q(contract_acceptor_corporation__date_completed__gte=cutoff_date)
 
     corporation_totals = (
-        EveCorporationInfo.objects.exclude(contract_acceptor_corporation__exact=None)
-        .select_related()
+        EveCorporationInfo.objects.exclude(contract_acceptor_corporation__isnull=True)
+        .prefetch_related("alliance")
         .annotate(
             contracts_count=Count(
                 "contract_acceptor_corporation", filter=finished_contracts
@@ -521,6 +540,11 @@ def statistics_pilot_corporations_data(request):
         .annotate(
             collaterals=Sum(
                 "contract_acceptor_corporation__collateral", filter=finished_contracts
+            )
+        )
+        .annotate(
+            volume=Sum(
+                "contract_acceptor_corporation__volume", filter=finished_contracts
             )
         )
     )
@@ -538,15 +562,22 @@ def statistics_pilot_corporations_data(request):
             else:
                 collaterals = 0
 
+            if corporation.volume:
+                volume = corporation.volume / 1000
+            else:
+                volume = 0
+
+            alliance = (
+                corporation.alliance.alliance_name if corporation.alliance else ""
+            )
             totals.append(
                 {
                     "name": corporation.corporation_name,
-                    "alliance": corporation.alliance.alliance_name
-                    if corporation.alliance
-                    else "",
+                    "alliance": alliance,
                     "contracts": "{:,}".format(corporation.contracts_count),
                     "rewards": "{:,.0f}".format(rewards),
                     "collaterals": "{:,.0f}".format(collaterals),
+                    "volume": "{:,.0f}".format(volume),
                 }
             )
 
@@ -558,18 +589,18 @@ def statistics_pilot_corporations_data(request):
 def statistics_customer_data(request):
     """returns totals for statistics as JSON"""
 
-    cutoff_date = now() - datetime.timedelta(FREIGHT_STATISTICS_MAX_DAYS)
-    finished_contracts = Q(contract_issuer__status__exact=Contract.STATUS_FINISHED) & Q(
+    cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
+    finished_contracts = Q(contract_issuer__status=Contract.STATUS_FINISHED) & Q(
         contract_issuer__date_completed__gte=cutoff_date
     )
     customer_totals = (
-        EveCharacter.objects.exclude(contract_issuer__exact=None)
-        .select_related()
+        EveCharacter.objects.exclude(contract_issuer__isnull=True)
         .annotate(contracts_count=Count("contract_issuer", filter=finished_contracts))
         .annotate(rewards=Sum("contract_issuer__reward", filter=finished_contracts))
         .annotate(
             collaterals=Sum("contract_issuer__collateral", filter=finished_contracts)
         )
+        .annotate(volume=Sum("contract_issuer__volume", filter=finished_contracts))
     )
 
     totals = list()
@@ -585,6 +616,11 @@ def statistics_customer_data(request):
             else:
                 collaterals = 0
 
+            if customer.volume:
+                volume = customer.volume / 1000
+            else:
+                volume = 0
+
             totals.append(
                 {
                     "name": customer.character_name,
@@ -592,6 +628,7 @@ def statistics_customer_data(request):
                     "contracts": "{:,}".format(customer.contracts_count),
                     "rewards": "{:,.0f}".format(rewards),
                     "collaterals": "{:,.0f}".format(collaterals),
+                    "volume": "{:,.0f}".format(volume),
                 }
             )
 
