@@ -122,7 +122,7 @@ class TestContractList(TestCase):
         response = views.contract_list_data(request, views.CONTRACT_LIST_ACTIVE)
         self.assertEqual(response.status_code, HTTP_OK)
 
-        data = json.loads(response.content.decode("utf-8"))
+        data = json_response_to_python(response)
         contract_ids = {x["contract_id"] for x in data}
         self.assertSetEqual(
             contract_ids,
@@ -200,7 +200,7 @@ class TestContractList(TestCase):
         response = views.contract_list_data(request, views.CONTRACT_LIST_USER)
         self.assertEqual(response.status_code, HTTP_OK)
 
-        data = json.loads(response.content.decode("utf-8"))
+        data = json_response_to_python(response)
         contract_ids = {x["contract_id"] for x in data}
         self.assertSetEqual(
             contract_ids,
@@ -350,18 +350,18 @@ class TestStatistics(NoSocketsTestCase):
         response = views.statistics_routes_data(request)
         self.assertEqual(response.status_code, HTTP_OK)
 
-        data = json.loads(response.content.decode("utf-8"))
+        data = json_response_to_python(response)
         self.assertListEqual(
             data,
             [
                 {
-                    "contracts": "3",
-                    "collaterals": "3,000",
-                    "volume": "345",
-                    "pilots": "1",
+                    "contracts": 3,
+                    "rewards": 300000000,
+                    "collaterals": 3000000000,
+                    "volume": 345000.0,
+                    "pilots": 1,
                     "name": "Jita <-> Amamake",
-                    "customers": "1",
-                    "rewards": "300",
+                    "customers": 1,
                 }
             ],
         )
@@ -373,17 +373,17 @@ class TestStatistics(NoSocketsTestCase):
         response = views.statistics_pilots_data(request)
         self.assertEqual(response.status_code, HTTP_OK)
 
-        data = json.loads(response.content.decode("utf-8"))
+        data = json_response_to_python(response)
 
         self.assertListEqual(
             data,
             [
                 {
-                    "collaterals": "3,000",
-                    "rewards": "300",
-                    "volume": "345",
+                    "rewards": 300000000,
+                    "collaterals": 3000000000,
+                    "volume": 345000.0,
                     "corporation": "Wayne Enterprise",
-                    "contracts": "3",
+                    "contracts": 3,
                     "name": "Bruce Wayne",
                 }
             ],
@@ -398,18 +398,18 @@ class TestStatistics(NoSocketsTestCase):
         response = views.statistics_pilot_corporations_data(request)
         self.assertEqual(response.status_code, HTTP_OK)
 
-        data = json.loads(response.content.decode("utf-8"))
+        data = json_response_to_python(response)
 
         self.assertListEqual(
             data,
             [
                 {
                     "name": "Wayne Enterprise",
-                    "rewards": "300",
-                    "volume": "345",
+                    "rewards": 300000000,
+                    "collaterals": 3000000000,
+                    "volume": 345000.0,
                     "alliance": "",
-                    "collaterals": "3,000",
-                    "contracts": "3",
+                    "contracts": 3,
                 }
             ],
         )
@@ -421,17 +421,17 @@ class TestStatistics(NoSocketsTestCase):
         response = views.statistics_customer_data(request)
         self.assertEqual(response.status_code, HTTP_OK)
 
-        data = json.loads(response.content.decode("utf-8"))
+        data = json_response_to_python(response)
 
         self.assertListEqual(
             data,
             [
                 {
-                    "collaterals": "3,000",
-                    "rewards": "300",
-                    "volume": "345",
+                    "rewards": 300000000,
+                    "collaterals": 3000000000,
+                    "volume": 345000.0,
                     "corporation": "Wayne Enterprise",
-                    "contracts": "3",
+                    "contracts": 3,
                     "name": "Robin",
                 }
             ],

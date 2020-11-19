@@ -17,9 +17,9 @@
                         <tr>
                             <th>Name</th>
                             <th>Contracts</th>
-                            <th>Rewards<br>M&nbsp;ISK</th>
-                            <th>Collaterals<br>M&nbsp;ISK</th>
-                            <th>Volume<br>K&nbsp;m3</th>
+                            <th>Rewards&nbsp;(ISK)</th>
+                            <th>Collaterals&nbsp;(ISK)</th>
+                            <th>Volume&nbsp;(m3)</th>
                             <th>Pilots</th>
                             <th>Customers</th>
                         </tr>
@@ -28,7 +28,7 @@
                     </tbody>
                     <tfoot>
                         <tr class="success">
-                            <th>Totals</th>
+                            <th>TOTALS</th>
                             <th></th>
                             <th></th>
                             <th></th>
@@ -54,16 +54,16 @@
                             <th>Name</th>
                             <th>Corporation</th>
                             <th>Contracts</th>
-                            <th>Rewards<br>M&nbsp;ISK</th>
-                            <th>Collaterals<br>M&nbsp;ISK</th>
-                            <th>Volume<br>K&nbsp;m3</th>
+                            <th>Rewards&nbsp;(ISK)</th>
+                            <th>Collaterals&nbsp;(ISK)</th>
+                            <th>Volume&nbsp;(m3)</th>
                         </tr>
                     </thead>
                     <tbody>
                     </tbody>
                      <tfoot>
                         <tr class="success">
-                            <th>Totals</th>
+                            <th>TOTALS</th>
                             <th></th>
                             <th></th>
                             <th></th>
@@ -88,16 +88,16 @@
                             <th>Name</th>
                             <th>Alliance</th>
                             <th>Contracts</th>
-                            <th>Rewards<br>M&nbsp;ISK</th>
-                            <th>Collaterals<br>M&nbsp;ISK</th>
-                            <th>Volume<br>K&nbsp;m3</th>
+                            <th>Rewards&nbsp;(ISK)</th>
+                            <th>Collaterals&nbsp;(ISK)</th>
+                            <th>Volume&nbsp;(m3)</th>
                         </tr>
                     </thead>
                     <tbody>
                     </tbody>
                      <tfoot>
                         <tr class="success">
-                            <th>Totals</th>
+                            <th>TOTALS</th>
                             <th></th>
                             <th></th>
                             <th></th>
@@ -122,16 +122,16 @@
                             <th>Name</th>
                             <th>Corporation</th>
                             <th>Contracts</th>
-                            <th>Rewards<br>M&nbsp;ISK</th>
-                            <th>Collaterals<br>M&nbsp;ISK</th>
-                            <th>Volume<br>K&nbsp;m3</th>
+                            <th>Rewards&nbsp;(ISK)</th>
+                            <th>Collaterals&nbsp;(ISK)</th>
+                            <th>Volume&nbsp;(m3)</th>
                         </tr>
                     </thead>
                     <tbody>
                     </tbody>
                     <tfoot>
                     <tr class="success">
-                        <th>Totals</th>
+                        <th>TOTALS</th>
                         <th></th>
                         <th></th>
                         <th></th>
@@ -173,12 +173,30 @@
                 },
                 columns: [
                     { data: 'name' },
-                    { data: 'contracts' },
-                    { data: 'rewards' },
-                    { data: 'collaterals' },
-                    { data: 'volume' },
-                    { data: 'pilots' },
-                    { data: 'customers' }
+                    {
+                        data: 'contracts',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'rewards',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'collaterals',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'volume',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'pilots',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'customers',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
                 ],
                 order: [ [ 1, "desc" ], [ 2, "desc" ] ],
                 footerCallback: function ( row, data, start, end, display )
@@ -197,7 +215,9 @@
                     }
                     for (i = 1; i < 7; i++)
                     {
-                        $( api.column( i ).footer() ).html(total[i].toLocaleString());
+                        $( api.column( i ).footer() ).html(
+                            Math.round(total[i]).toLocaleString()
+                        );
                     }
                 }
             });
@@ -212,10 +232,22 @@
                 columns: [
                     { data: 'name' },
                     { data: 'corporation' },
-                    { data: 'contracts' },
-                    { data: 'rewards' },
-                    { data: 'collaterals' },
-                    { data: 'volume' }
+                    {
+                        data: 'contracts',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'rewards',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'collaterals',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'volume',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
                 ],
                 order: [ [ 2, "desc" ], [ 3, "desc" ] ],
                 footerCallback: function ( row, data, start, end, display )
@@ -234,7 +266,9 @@
                     }
                     for (i = 2; i < 6; i++)
                     {
-                        $( api.column( i ).footer() ).html(total[i].toLocaleString());
+                        $( api.column( i ).footer() ).html(
+                            Math.round(total[i]).toLocaleString()
+                        );
                     }
                 }
             });
@@ -250,10 +284,22 @@
                 columns: [
                     { data: 'name' },
                     { data: 'alliance' },
-                    { data: 'contracts' },
-                    { data: 'rewards' },
-                    { data: 'collaterals' },
-                    { data: 'volume' }
+                    {
+                        data: 'contracts',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'rewards',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'collaterals',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'volume',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
                 ],
                 order: [ [ 2, "desc" ], [ 3, "desc" ] ],
                 footerCallback: function ( row, data, start, end, display )
@@ -272,7 +318,9 @@
                     }
                     for (i = 2; i < 6; i++)
                     {
-                        $( api.column( i ).footer() ).html(total[i].toLocaleString());
+                        $( api.column( i ).footer() ).html(
+                            Math.round(total[i]).toLocaleString()
+                        );
                     }
                 }
             });
@@ -288,10 +336,22 @@
                 columns: [
                     { data: 'name' },
                     { data: 'corporation' },
-                    { data: 'contracts' },
-                    { data: 'rewards' },
-                    { data: 'collaterals' },
-                    { data: 'volume' }
+                    {
+                        data: 'contracts',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'rewards',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'collaterals',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
+                    {
+                        data: 'volume',
+                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                    },
                 ],
                 order: [ [ 2, "desc" ], [ 3, "desc" ] ],
                 footerCallback: function ( row, data, start, end, display )
@@ -310,7 +370,10 @@
                     }
                     for (i = 2; i < 6; i++)
                     {
-                        $( api.column( i ).footer() ).html(total[i].toLocaleString());
+                        $( api.column( i ).footer() )
+                        .html(
+                            Math.round(total[i]).toLocaleString()
+                        );
                     }
                 }
             });

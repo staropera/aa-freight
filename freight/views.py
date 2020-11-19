@@ -66,7 +66,7 @@ def contract_list_user(request):
     context = {
         "page_title": "My Contracts",
         "category": CONTRACT_LIST_USER,
-        "user_name": user_name
+        "user_name": user_name,
     }
     return render(
         request, "freight/contracts_user.html", add_common_context(request, context)
@@ -462,30 +462,15 @@ def statistics_routes_data(request):
     totals = list()
     for route in route_totals:
         if route.contracts_count > 0:
-            if route.rewards:
-                rewards = route.rewards / 1000000
-            else:
-                rewards = 0
-
-            if route.collaterals:
-                collaterals = route.collaterals / 1000000
-            else:
-                collaterals = 0
-
-            if route.volume:
-                volume = route.volume / 1000
-            else:
-                volume = 0
-
             totals.append(
                 {
                     "name": route.name,
-                    "contracts": "{:,}".format(route.contracts_count),
-                    "rewards": "{:,.0f}".format(rewards),
-                    "collaterals": "{:,.0f}".format(collaterals),
-                    "volume": "{:,.0f}".format(volume),
-                    "pilots": "{:,}".format(route.pilots),
-                    "customers": "{:,}".format(route.customers),
+                    "contracts": route.contracts_count,
+                    "rewards": route.rewards,
+                    "collaterals": route.collaterals,
+                    "volume": route.volume,
+                    "pilots": route.pilots,
+                    "customers": route.customers,
                 }
             )
 
@@ -515,29 +500,14 @@ def statistics_pilots_data(request):
     totals = list()
     for pilot in pilot_totals:
         if pilot.contracts_count > 0:
-            if pilot.rewards:
-                rewards = pilot.rewards / 1000000
-            else:
-                rewards = 0
-
-            if pilot.collaterals:
-                collaterals = pilot.collaterals / 1000000
-            else:
-                collaterals = 0
-
-            if pilot.volume:
-                volume = pilot.volume / 1000
-            else:
-                volume = 0
-
             totals.append(
                 {
                     "name": pilot.character_name,
                     "corporation": pilot.corporation_name,
-                    "contracts": "{:,}".format(pilot.contracts_count),
-                    "rewards": "{:,.0f}".format(rewards),
-                    "collaterals": "{:,.0f}".format(collaterals),
-                    "volume": "{:,.0f}".format(volume),
+                    "contracts": pilot.contracts_count,
+                    "rewards": pilot.rewards,
+                    "collaterals": pilot.collaterals,
+                    "volume": pilot.volume,
                 }
             )
 
@@ -582,21 +552,6 @@ def statistics_pilot_corporations_data(request):
     totals = list()
     for corporation in corporation_totals:
         if corporation.contracts_count > 0:
-            if corporation.rewards:
-                rewards = corporation.rewards / 1000000
-            else:
-                rewards = 0
-
-            if corporation.collaterals:
-                collaterals = corporation.collaterals / 1000000
-            else:
-                collaterals = 0
-
-            if corporation.volume:
-                volume = corporation.volume / 1000
-            else:
-                volume = 0
-
             alliance = (
                 corporation.alliance.alliance_name if corporation.alliance else ""
             )
@@ -604,10 +559,10 @@ def statistics_pilot_corporations_data(request):
                 {
                     "name": corporation.corporation_name,
                     "alliance": alliance,
-                    "contracts": "{:,}".format(corporation.contracts_count),
-                    "rewards": "{:,.0f}".format(rewards),
-                    "collaterals": "{:,.0f}".format(collaterals),
-                    "volume": "{:,.0f}".format(volume),
+                    "contracts": corporation.contracts_count,
+                    "rewards": corporation.rewards,
+                    "collaterals": corporation.collaterals,
+                    "volume": corporation.volume,
                 }
             )
 
@@ -636,29 +591,14 @@ def statistics_customer_data(request):
     totals = list()
     for customer in customer_totals:
         if customer.contracts_count > 0:
-            if customer.rewards:
-                rewards = customer.rewards / 1000000
-            else:
-                rewards = 0
-
-            if customer.collaterals:
-                collaterals = customer.collaterals / 1000000
-            else:
-                collaterals = 0
-
-            if customer.volume:
-                volume = customer.volume / 1000
-            else:
-                volume = 0
-
             totals.append(
                 {
                     "name": customer.character_name,
                     "corporation": customer.corporation_name,
-                    "contracts": "{:,}".format(customer.contracts_count),
-                    "rewards": "{:,.0f}".format(rewards),
-                    "collaterals": "{:,.0f}".format(collaterals),
-                    "volume": "{:,.0f}".format(volume),
+                    "contracts": customer.contracts_count,
+                    "rewards": customer.rewards,
+                    "collaterals": customer.collaterals,
+                    "volume": customer.volume,
                 }
             )
 
