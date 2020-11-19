@@ -1200,7 +1200,7 @@ class Contract(models.Model):
                     contents = ""
 
                 contract_list_url = urljoin(
-                    get_site_base_url(), reverse("freight:contract_list_active")
+                    get_site_base_url(), reverse("freight:contract_list_all")
                 )
                 contents += (
                     "There is a new courier contract from {} "

@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Volume now shown with statistics ([#32](https://gitlab.com/ErikKalkoken/aa-freight/issues/32))
+- New view "All contracts"
+
+### Changed
+
+- Layout modernized and aligned with other Kalkoken apps
 
 ## [1.2.3] - 2020-10-24
 

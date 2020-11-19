@@ -98,10 +98,10 @@ class TestContractList(TestCase):
         cls.user_2 = AuthUtils.create_user("Lex Luthor")
         AuthUtils.add_permission_to_user_by_name("freight.basic_access", cls.user_2)
 
-    def test_active_no_access_without_permission(self):
-        request = self.factory.get(reverse("freight:contract_list_active"))
+    def test_all_no_access_without_permission(self):
+        request = self.factory.get(reverse("freight:contract_list_all"))
         request.user = self.user_2
-        response = views.contract_list_active(request)
+        response = views.contract_list_all(request)
         self.assertNotEqual(response.status_code, HTTP_OK)
 
     """ issue with setting permission - todo

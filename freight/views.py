@@ -56,26 +56,20 @@ def index(request):
 
 
 @login_required
-@permission_required("freight.view_contracts")
-def contract_list_active(request):
-    context = {
-        "page_title": "Active Contracts",
-        "category": CONTRACT_LIST_ACTIVE,
-    }
-    return render(
-        request, "freight/contract_list.html", add_common_context(request, context)
-    )
-
-
-@login_required
 @permission_required("freight.use_calculator")
 def contract_list_user(request):
+    try:
+        user_name = request.user.profile.main_character.character_name
+    except AttributeError:
+        user_name = request.user.user_name
+
     context = {
         "page_title": "My Contracts",
         "category": CONTRACT_LIST_USER,
+        "user_name": user_name
     }
     return render(
-        request, "freight/contract_list.html", add_common_context(request, context)
+        request, "freight/contracts_user.html", add_common_context(request, context)
     )
 
 
@@ -87,7 +81,7 @@ def contract_list_all(request):
         "category": CONTRACT_LIST_ALL,
     }
     return render(
-        request, "freight/contract_list.html", add_common_context(request, context)
+        request, "freight/contracts_all.html", add_common_context(request, context)
     )
 
 
