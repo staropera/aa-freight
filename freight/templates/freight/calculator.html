@@ -6,7 +6,7 @@
 {% load freight_filters %}
 
 {% block details %}
-    <form id="form_calculator" class="form" action="{% url 'freight:calculator' %}" method="POST">        
+    <form id="form_calculator" class="form" action="{% url 'freight:calculator' %}" method="POST">
         {% csrf_token %}
         <div class="row">
             <div class="col-md-6">
@@ -19,25 +19,25 @@
                         {{ form|bootstrap }}
                         <br>
                         <p><strong>Reward</strong></p>
-                        <h2 id="text_price"> 
+                        <h2 id="text_price">
                             {{ price|formatnumber:"0"|default_if_none:"-" }} ISK
                         </h2>
-                        
+
                         <button class="btn btn-success btn-lg" type="submit">Click To Calculate Reward!</button>
                     </div>
                 </div>
 
             </div>
-            <div class="col-md-6">                
-                
+            <div class="col-md-6">
+
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title">Pricing details</h3>
                     </div>
                     <div class="panel-body" style="min-height: 100px;">
-                        
-                        {% if pricing %}       
-                            
+
+                        {% if pricing %}
+
                             <dl class="dl-horizontal">
 
                                 {% if pricing.is_bidirectional %}
@@ -55,8 +55,8 @@
                                 {% endif %}
                                 <dd>{{ pricing.end_location }}</dd>
 
-                                <dt>Both directions:</dt>                                    
-                                <dd>{{ pricing.is_bidirectional|yesno }}</dd>                                    
+                                <dt>Both directions:</dt>
+                                <dd>{{ pricing.is_bidirectional|yesno }}</dd>
                                 <br>
 
                                 {% if pricing.price_min != None %}
@@ -72,7 +72,7 @@
                                     {% endif %}
                                     <dd>{{ pricing.price_base|formatnumber:"0" }} ISK</dd>
                                 {% endif %}
-                                
+
                                 {% if pricing_price_per_volume_eff != None %}
                                     <dt>Price add-on per m3:</dt>
                                     <dd>{{ pricing_price_per_volume_eff|formatnumber:"0" }} ISK</dd>
@@ -88,7 +88,7 @@
                                     <dt>Min Volume:</dt>
                                     <dd>{{ pricing.volume_min|formatnumber:"0"|default_if_none:"-" }} m3</dd>
                                 {% endif %}
-                                
+
                                 {% if pricing.volume_max != None %}
                                     <dt>Max Volume:</dt>
                                     <dd>{{ pricing.volume_max|formatnumber:"0"|default_if_none:"-" }} m3</dd>
@@ -100,7 +100,7 @@
                                 {% endif %}
 
                                 {% if pricing.collateral_max != None %}
-                                    <dt>Max. Collateral:</dt>        
+                                    <dt>Max. Collateral:</dt>
                                     <dd>{{ pricing.collateral_max|formatnumber:"0" }} ISK</dd>
                                 {% endif %}
 
@@ -117,19 +117,19 @@
 
                             <p class="text-muted">No pricing defined</p>
 
-                        {% endif %}               
+                        {% endif %}
 
                     </div>
-                </div> 
+                </div>
 
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title">Your contract</h3>
                     </div>
-                    <div class="panel-body" style="min-height: 100px;">    
+                    <div class="panel-body" style="min-height: 100px;">
 
                         {% if price != None %}
-                        
+
                             <dl class="dl-horizontal">
 
                                 <dt>Contract Type:</dt>
@@ -140,14 +140,14 @@
 
                                 <dt>Location:</dt>
                                 <dd>{{ pricing.start_location }}</dd>
-                                
+
                                 {% if pricing.days_to_expire %}
                                     <dt>Expiration:</dt>
                                     <dd>{{ pricing.days_to_expire }} days ({{ expires_on|date:'Y-m-d' }})</dd>
                                 {% endif %}
 
                                 <hr>
-                                
+
                                 <dt>Reward:</dt>
                                 <dd>{{ price|formatnumber:"0"|default_if_none:"???" }} ISK</dd>
 
@@ -158,7 +158,7 @@
                                 <dd>{{ pricing.end_location }}</dd>
 
                                 {% if pricing.days_to_complete %}
-                                    <dt>Days to complete:</dt>           
+                                    <dt>Days to complete:</dt>
                                     <dd>{{ pricing.days_to_complete|default_if_none:"-" }}</dd>
                                 {% endif %}
 
@@ -181,34 +181,36 @@
 
                     </div>
                 </div>
-                
+
 
             </div>
-        </div>        
+        </div>
     </form>
-<br>    
-        
+<br>
+
 {% endblock %}
 
-{% block extra_css %}    
-    <link 
-        href="{% static 'freight/calculator.css' %}" 
-        type="text/css" 
-        rel="stylesheet"
-    >
-{% endblock %}
-
-{% block extra_script %}    
-    $(document).ready(function(){                
-        /* redirecting to updated calculator view with chosen pricing */
-        $("#id_pricing").change(function(){            
-            var value = $("#id_pricing").val();        
-            if (value == null) { 
-                value = 0;
-            }
-            window.location.replace(
-                "{% url 'freight:calculator' 0 %}".replace("0", value)
-            );
+{% block extra_javascript %}
+    <script type="application/javascript">
+        $(document).ready(function(){
+            /* redirecting to updated calculator view with chosen pricing */
+            $("#id_pricing").change(function(){
+                var value = $("#id_pricing").val();
+                if (value == null) {
+                    value = 0;
+                }
+                window.location.replace(
+                    "{% url 'freight:calculator' 0 %}".replace("0", value)
+                );
+            });
         });
-    });
+    </script>
+{% endblock %}
+
+{% block extra_css %}
+    <link href="{% static 'freight/kalkoken.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'freight/calculator.css' %}" type="text/css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_script %}
 {% endblock %}

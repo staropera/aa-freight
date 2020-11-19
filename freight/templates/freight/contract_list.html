@@ -5,19 +5,19 @@
 {% load freight_filters %}
 
 {% block details %}
-    
-    <div class="panel panel-primary">   
+
+    <div class="panel panel-primary">
         <div class="panel-heading">
             <h3 class="panel-title">Courier Contracts</h3>
         </div>
-        <div class="panel-body">        
+        <div class="panel-body">
             <div class="table-responsive">
-                <table class="table table-striped" id="tab_contracts">
+                <table class="table table-striped table-width-fix" id="tab_contracts">
                     <thead>
                         <tr>
                             <th>Status</th>
                             <th>Start</th>
-                            <th>Destination</th>                        
+                            <th>Destination</th>
                             <th>Rew.<br>M&nbsp;ISK</th>
                             <th>Coll.<br>M&nbsp;ISK</th>
                             <th>Vol.<br>K&nbsp;m3</th>
@@ -30,15 +30,15 @@
                             <th>Accepted<br>By</th>
                         </tr>
                     </thead>
-                    <tbody>                   
-                    </tbody>                
+                    <tbody>
+                    </tbody>
                 </table>
             </div>
         </div>
-    </div>    
+    </div>
     <p class="text-muted">
-        Contract check:&nbsp;&nbsp; 
-        <span class="glyphicon glyphicon-ok" aria-hidden="true"></span> = OK &nbsp;&nbsp; 
+        Contract check:&nbsp;&nbsp;
+        <span class="glyphicon glyphicon-ok" aria-hidden="true"></span> = OK &nbsp;&nbsp;
         <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span> = Errors &nbsp;&nbsp;
         If they are errors you find them in the tooltip of icon &nbsp;&nbsp;
         <strong>-</strong> = No contract check performed
@@ -47,92 +47,91 @@
         Notes:&nbsp;&nbsp;
         <span class="glyphicon glyphicon-envelope" aria-hidden="true"></span> &nbsp;&nbsp;
         If icon is shown you can hover with the mouse over it to see the notes.
-    </p>  
-    
+    </p>
+
 {% endblock %}
 
 {% block extra_javascript %}
-    {% include 'bundles/datatables-js.html' %}    
-    
-    <!--load JS for filterDropDown plugin -->    
+    {% include 'bundles/datatables-js.html' %}
+
+    <!--load JS for filterDropDown plugin -->
     <script type="application/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
+
+    <script type="application/javascript">
+        $(document).ready(function(){
+            $('#tab_contracts').DataTable({
+                ajax: {
+                    url: '{% url 'freight:contract_list_data' category %}',
+                    dataSrc: '',
+                    cache: false
+                },
+                columns: [
+                    { data: 'status' },
+                    { data: 'start_location' },
+                    { data: 'end_location' },
+                    { data: 'reward' },
+                    { data: 'collateral' },
+                    { data: 'volume' },
+                    { data: 'pricing_check' },
+                    { data: 'date_issued' },
+                    { data: 'date_expired' },
+                    { data: 'issuer' },
+                    { data: 'notes' },
+                    { data: 'date_accepted' },
+                    { data: 'acceptor' },
+
+                    /* hidden columns for filter */
+                    { data: 'route_name' }
+                ],
+                columnDefs: [
+                    { "orderable": false, "targets": [ 6 ] },
+                    { "visible": false, "targets": [ 13 ] },
+                ],
+                order: [ [ 7, "desc" ] ],
+                filterDropDown: {
+                    columns: [
+                        {
+                            idx: 13,
+                            title: 'Route'
+                        },
+                        {
+                            idx: 0
+                        },
+                        {
+                            idx: 9
+                        },
+                        {
+                            idx: 12
+                        }
+                    ],
+                    bootstrap: true
+                },
+                createdRow: function( row, data, dataIndex )
+                {
+                    if (data['is_in_progress'])
+                    {
+                        $(row).addClass('info');
+                    }
+                    else if (data['is_failed'])
+                    {
+                        $(row).addClass('warning');
+                    }
+                    else if (data['is_completed'])
+                    {
+                        $(row).addClass('success');
+                    }
+                },
+            });
+        });
+    </script>
 {% endblock %}
 
 {% block extra_css %}
-    {% include 'bundles/datatables-css.html' %}    
+    {% include 'bundles/datatables-css.html' %}
 
+    <link href="{% static 'freight/kalkoken.css' %}" type="text/css" rel="stylesheet">
     <link href="{% static 'freight/contracts.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_script %}
-    $(document).ready(function(){
-        $('#tab_contracts').DataTable({            
-            ajax: {
-                url: '{% url 'freight:contract_list_data' category %}',
-                dataSrc: '',
-                cache: false
-            },
-
-            columns: [
-                { data: 'status' },
-                { data: 'start_location' },
-                { data: 'end_location' },                
-                { data: 'reward' },
-                { data: 'collateral' },
-                { data: 'volume' },
-                { data: 'pricing_check' },
-                { data: 'date_issued' },
-                { data: 'date_expired' },
-                { data: 'issuer' },
-                { data: 'notes' },
-                { data: 'date_accepted' },
-                { data: 'acceptor' },
-                
-                /* hidden columns for filter */
-                { data: 'route_name' }
-            ],
-
-            columnDefs: [														
-                { "orderable": false, "targets": [ 6 ] },
-                { "visible": false, "targets": [ 13 ] },
-            ],
-
-            order: [ [ 7, "desc" ] ],
-
-            filterDropDown: {										
-                columns: [	                                        
-                    {
-                        idx: 13,
-                        title: 'Route'
-                    },
-                    {
-                        idx: 0
-                    },
-                    {
-                        idx: 9
-                    },
-                    {
-                        idx: 12
-                    }
-                ],
-                bootstrap: true
-            },
-
-            createdRow: function( row, data, dataIndex ) 
-            {
-                if (data['is_in_progress'])
-                {
-                    $(row).addClass('info');
-                }
-                else if (data['is_failed'])
-                {
-                    $(row).addClass('warning');
-                }
-                else if (data['is_completed'])
-                {
-                    $(row).addClass('success');
-                }
-            },
-        });       
-    });
 {% endblock %}

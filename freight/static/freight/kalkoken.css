@@ -1,0 +1,55 @@
+/*
+Global styles shared by all Kalkoken apps - Version 0.3.0
+*/
+
+@media all {
+
+    /* Bootstrap Tabs */
+    .template-light-mode .nav-tabs > li.active > a{
+        background-color: rgb(236, 240, 241) !important;
+        color: black !important;
+    }
+    .template-dark-mode .nav-tabs > li.active > a{
+        background-color: rgb(70, 69, 69) !important;
+        color: white !important;
+    }
+    .panel-tabs {
+        border-top: none;
+        border-top-left-radius: 0%;
+        border-top-right-radius: 0%;
+    }
+    .btn-tabs {
+        border-width: 0px;
+    }
+
+    /* Datatables row group headers */
+    .template-light-mode .table > tbody > .table-group > td {
+        background-color: rgb(105, 105, 105);
+        color: rgb(255, 255, 255);
+        font-weight: bold;
+    }
+
+    .template-dark-mode .table > tbody > .table-group > td {
+        background-color: rgb(105, 105, 105);
+        color: rgb(255, 255, 255);
+        font-weight: bold;
+    }
+
+    /* fix to remove vertical slider when in response mode */
+    .table-width-fix {
+        width: 100% !important;
+    }
+
+    /* other */
+    .nowrap {
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 768px) {
+    /* Bootstrap modals */
+    .modal-xl {
+        width: 90%;
+        max-width:1200px;
+    }
+}
