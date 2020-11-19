@@ -19,6 +19,7 @@ urlpatterns = [
         views.contract_list_active,
         name="contract_list_active",
     ),
+    url(r"^contract_list_all/$", views.contract_list_all, name="contract_list_all"),
     url(r"^contract_list_user/$", views.contract_list_user, name="contract_list_user"),
     url(
         r"^contract_list_data/(?P<category>.+)/$",

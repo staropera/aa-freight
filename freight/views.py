@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.forms import HiddenInput
 from django.http import JsonResponse
+from django.db import models
 from django.db.models import Count, Sum, Q
 from django.shortcuts import render, redirect
 from django.utils.html import mark_safe
@@ -31,6 +32,7 @@ logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 ADD_LOCATION_TOKEN_TAG = "freight_add_location_token"
 CONTRACT_LIST_USER = "user"
 CONTRACT_LIST_ACTIVE = "active"
+CONTRACT_LIST_ALL = "all"
 
 
 def add_common_context(request, context: dict) -> dict:
@@ -78,8 +80,20 @@ def contract_list_user(request):
 
 
 @login_required
+@permission_required("freight.view_contracts")
+def contract_list_all(request):
+    context = {
+        "page_title": "All Contracts",
+        "category": CONTRACT_LIST_ALL,
+    }
+    return render(
+        request, "freight/contract_list.html", add_common_context(request, context)
+    )
+
+
+@login_required
 @permission_required("freight.basic_access")
-def contract_list_data(request, category):
+def contract_list_data(request, category) -> JsonResponse:
     """returns list of outstanding contracts for contract_list AJAX call"""
 
     def datetime_format(x):
@@ -145,10 +159,11 @@ def contract_list_data(request, category):
     return JsonResponse(contracts_data, safe=False)
 
 
-def _get_contracts_for_contract_list(category, request):
+def _get_contracts_for_contract_list(category, request) -> models.QuerySet:
+    """returns contracts corresponding to given category"""
     if category == CONTRACT_LIST_ACTIVE:
         if not request.user.has_perm("freight.view_contracts"):
-            raise RuntimeError("Insufficient permissions")
+            contracts = None
 
         else:
             contracts = (
@@ -169,9 +184,23 @@ def _get_contracts_for_contract_list(category, request):
                 )
             )
 
+    elif category == CONTRACT_LIST_ALL:
+        if not request.user.has_perm("freight.view_contracts"):
+            contracts = None
+
+        else:
+            contracts = Contract.objects.select_related(
+                "acceptor",
+                "acceptor_corporation",
+                "end_location",
+                "issuer",
+                "start_location",
+                "pricing",
+            )
+
     elif category == CONTRACT_LIST_USER:
         if not request.user.has_perm("freight.use_calculator"):
-            raise RuntimeError("Insufficient permissions")
+            contracts = None
 
         else:
             contracts = Contract.objects.issued_by_user(user=request.user).filter(
@@ -185,6 +214,13 @@ def _get_contracts_for_contract_list(category, request):
 
     else:
         raise ValueError("Invalid category: {}".format(category))
+
+    if contracts is None:
+        logger.warning(
+            "Trying to access contracts with insufficient permissions: %s",
+            request.user,
+        )
+        return Contract.objects.none()
 
     return contracts
 

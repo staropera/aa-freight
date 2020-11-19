@@ -32,6 +32,18 @@ HTTP_OK = 200
 HTTP_REDIRECT = 302
 
 
+def response_content_to_str(content) -> str:
+    return content.decode("utf-8")
+
+
+def json_response_to_python(response) -> object:
+    return json.loads(response_content_to_str(response.content))
+
+
+def json_response_to_python_dict(response) -> dict:
+    return {x["id"]: x for x in json_response_to_python(response)}
+
+
 class TestCalculator(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
@@ -67,7 +79,7 @@ class TestCalculator(NoSocketsTestCase):
         self.assertNotEqual(response.status_code, HTTP_OK)
 
 
-class TestContractList(NoSocketsTestCase):
+class TestContractList(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -157,18 +169,27 @@ class TestContractList(NoSocketsTestCase):
             reverse("freight:contract_list_data", args={views.CONTRACT_LIST_USER})
         )
         request.user = self.user_2
-
-        with self.assertRaises(RuntimeError):
-            views.contract_list_data(request, views.CONTRACT_LIST_USER)
+        response = views.contract_list_data(request, views.CONTRACT_LIST_USER)
+        data = json_response_to_python(response)
+        self.assertListEqual(data, [])
 
     def test_data_user_no_access_without_permission_2(self):
         request = self.factory.get(
             reverse("freight:contract_list_data", args={views.CONTRACT_LIST_ACTIVE})
         )
         request.user = self.user_2
+        response = views.contract_list_data(request, views.CONTRACT_LIST_ACTIVE)
+        data = json_response_to_python(response)
+        self.assertListEqual(data, [])
 
-        with self.assertRaises(RuntimeError):
-            views.contract_list_data(request, views.CONTRACT_LIST_ACTIVE)
+    def test_data_user_no_access_without_permission_3(self):
+        request = self.factory.get(
+            reverse("freight:contract_list_data", args={views.CONTRACT_LIST_ALL})
+        )
+        request.user = self.user_2
+        response = views.contract_list_data(request, views.CONTRACT_LIST_ALL)
+        data = json_response_to_python(response)
+        self.assertListEqual(data, [])
 
     def test_data_user(self):
         request = self.factory.get(

@@ -19,15 +19,17 @@
                     <li class="{% navactive request 'freight:calculator' %}">
                         <a href="{% url 'freight:calculator' %}">Reward Calculator</a>
                     </li>
+
                     <li class="{% navactive request 'freight:contract_list_user' %}">
                         <a href="{% url 'freight:contract_list_user' %}">
                             My Contracts&nbsp;
                             {% if pending_user_count > 0 %}
                                 <span class="badge">{{ pending_user_count }}</span>
                             {% endif %}
-                        </a> 
+                        </a>
                     </li>
                 {% endif %}
+
                 {% if perms.freight.view_contracts %}
                     <li class="{% navactive request 'freight:contract_list_active' %}">
                         <a href="{% url 'freight:contract_list_active' %}">
@@ -35,18 +37,28 @@
                             {% if pending_all_count > 0 %}
                                 <span class="badge">{{ pending_all_count }}</span>
                             {% endif %}
-                        </a> 
+                        </a>
                     </li>
                 {% endif %}
+
+                {% if perms.freight.view_contracts %}
+                    <li class="{% navactive request 'freight:contract_list_all' %}">
+                        <a href="{% url 'freight:contract_list_all' %}">
+                            All Contracts
+                        </a>
+                    </li>
+                {% endif %}
+
                 {% if perms.freight.view_statistics %}
                     <li class="{% navactive request 'freight:statistics' %}">
                         <a href="{% url 'freight:statistics' %}">
                             Statistics
-                        </a> 
+                        </a>
                     </li>
                 {% endif %}
             </ul>
-            <ul class="nav navbar-nav navbar-right"> 
+
+            <ul class="nav navbar-nav navbar-right">
                 {% if perms.freight.add_location %}
                     <a class="btn btn-default navbar-btn" href="{% url 'freight:add_location' %}">
                         Add Location
@@ -57,7 +69,7 @@
                     <a class="btn btn-default navbar-btn" href="{% url 'freight:setup_contract_handler' %}">
                         Setup Contract Handler
                     </a>
-                {% endif %}                
+                {% endif %}
             </ul>
         </div>
     </div>
