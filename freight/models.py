@@ -24,7 +24,7 @@ from allianceauth.notifications import notify
 
 from app_utils.datetime import DATETIME_FORMAT
 from app_utils.django import app_labels
-from app_utils.logging import LoggerAddTag, make_logger_prefix
+from app_utils.logging import LoggerAddTag
 from app_utils.urls import site_absolute_url
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
@@ -693,7 +693,6 @@ class ContractHandler(models.Model):
 
         raises exception on error
         """
-        add_prefix = make_logger_prefix(self)
         try:
             token = (
                 Token.objects.filter(
@@ -706,27 +705,25 @@ class ContractHandler(models.Model):
             )
 
         except TokenInvalidError:
-            logger.error(add_prefix("Invalid token for fetching contracts"))
+            logger.error("%s: Invalid token for fetching contracts", self)
             self.set_sync_status(self.ERROR_TOKEN_INVALID)
             raise TokenInvalidError()
 
         except TokenExpiredError:
-            logger.error(add_prefix("Token expired for fetching contracts"))
+            logger.error("%s: Token expired for fetching contracts", self)
             self.set_sync_status(self.ERROR_TOKEN_EXPIRED)
             raise TokenExpiredError()
 
         else:
             if not token:
-                logger.error(add_prefix("No valid token found"))
+                logger.error("%s: No valid token found", self)
                 self.set_sync_status(self.ERROR_TOKEN_INVALID)
                 raise TokenInvalidError()
 
-        logger.info(add_prefix("Fetching ESI client..."))
         return token
 
     def update_contracts_esi(self, force_sync=False, user=None) -> bool:
         try:
-            add_prefix = make_logger_prefix(self)
             self._validate_update_readiness()
             token = self.token()
             try:
@@ -743,9 +740,7 @@ class ContractHandler(models.Model):
                 self._process_contracts_from_esi(contracts, token, force_sync)
 
             except Exception as ex:
-                logger.exception(
-                    add_prefix("An unexpected error ocurred {}".format(ex))
-                )
+                logger.exception("%s: An unexpected error ocurred %s", self, ex)
                 self.set_sync_status(self.ERROR_UNKNOWN)
                 raise ex
 
@@ -763,27 +758,24 @@ class ContractHandler(models.Model):
         return success
 
     def _validate_update_readiness(self):
-        add_prefix = make_logger_prefix(self)
-
         # abort if operation mode from settings is different
         if self.operation_mode != FREIGHT_OPERATION_MODE:
-            logger.error(add_prefix("Current operation mode not matching the handler"))
+            logger.error("%s: Current operation mode not matching the handler", self)
 
             self.set_sync_status(self.ERROR_OPERATION_MODE_MISMATCH)
             raise ValueError()
 
         # abort if character is not configured
         if self.character is None:
-            logger.error(add_prefix("No character configured to sync"))
+            logger.error("%s: No character configured to sync", self)
             self.set_sync_status(self.ERROR_NO_CHARACTER)
             raise ValueError()
 
         # abort if character does not have sufficient permissions
         if not self.character.user.has_perm("freight.setup_contract_handler"):
             logger.error(
-                add_prefix(
-                    "Character does not have sufficient permission to sync contracts"
-                )
+                "%s: Character does not have sufficient permission to sync contracts",
+                self,
             )
             self.set_sync_status(self.ERROR_INSUFFICIENT_PERMISSIONS)
             raise ValueError()
@@ -796,8 +788,6 @@ class ContractHandler(models.Model):
     def _process_contracts_from_esi(
         self, contracts_all: list, token: object, force_sync: bool
     ):
-        add_prefix = make_logger_prefix(self)
-
         # 1st filter: reduce to courier contracts assigned to handler org
         contracts_courier = [
             x
@@ -849,17 +839,13 @@ class ContractHandler(models.Model):
             self._store_contract_from_esi(contracts, new_version_hash, token)
 
         else:
-            logger.info(add_prefix("Contracts are unchanged."))
+            logger.info("%s: Contracts are unchanged.", self)
             self.set_sync_status(ContractHandler.ERROR_NONE)
 
     def _store_contract_from_esi(
         self, contracts: list, new_version_hash: str, token: Token
     ) -> None:
-        add_prefix = make_logger_prefix(self)
-        logger.info(
-            add_prefix("Storing update with {:,} contracts".format(len(contracts)))
-        )
-
+        logger.info("%s: Storing update with %d contracts", self, len(contracts))
         # update contracts in local DB
         with transaction.atomic():
             self.version_hash = new_version_hash
@@ -869,18 +855,15 @@ class ContractHandler(models.Model):
                     Contract.objects.update_or_create_from_dict(
                         handler=self, contract=contract, token=token
                     )
-                except Exception as ex:
+                except Exception:
                     logger.exception(
-                        add_prefix(
-                            "An unexpected error ocurred "
-                            "while trying to load contract "
-                            "{}: {}".format(
-                                contract["contract_id"]
-                                if "contract_id" in contract
-                                else "Unknown",
-                                ex,
-                            )
-                        )
+                        "%s: An unexpected error ocurred while trying to load contract "
+                        "%s",
+                        self,
+                        contract["contract_id"]
+                        if "contract_id" in contract
+                        else "Unknown",
+                        exc_info=True,
                     )
                     no_errors = False
 
@@ -893,7 +876,6 @@ class ContractHandler(models.Model):
         Contract.objects.update_pricing()
 
     def _report_to_user(self, user, success, error_code):
-        add_prefix = make_logger_prefix(self)
         try:
             message = 'Syncing of contracts for "{}"'.format(self.organization.name)
             message += ' in operation mode "{}" {}.\n'.format(
@@ -913,12 +895,11 @@ class ContractHandler(models.Model):
                 message=message,
                 level="success" if success else "danger",
             )
-        except Exception as ex:
+        except Exception:
             logger.exception(
-                add_prefix(
-                    "An unexpected error ocurred while trying to "
-                    + "report to user: {}".format(ex)
-                )
+                "%s: An unexpected error ocurred while trying to report to user",
+                self,
+                exc_info=True,
             )
 
 
@@ -1169,12 +1150,8 @@ class Contract(models.Model):
             thumbnail=Thumbnail(self.issuer.portrait_url()),
         )
 
-    def get_logger_tag(self):
-        return make_logger_prefix("contract:{}".format(self.contract_id))
-
     def send_pilot_notification(self):
         """sends pilot notification about this contract to the DISCORD webhook"""
-        add_tag = self.get_logger_tag()
         if FREIGHT_DISCORD_WEBHOOK_URL:
             if FREIGHT_DISCORD_DISABLE_BRANDING:
                 username = None
@@ -1188,12 +1165,10 @@ class Contract(models.Model):
             )
             with transaction.atomic():
                 logger.info(
-                    add_tag(
-                        "Trying to sent pilot notification about "
-                        "contract {} to {}".format(
-                            self.contract_id, FREIGHT_DISCORD_WEBHOOK_URL
-                        )
-                    )
+                    "%s: Trying to sent pilot notification about contract {} to {}",
+                    self,
+                    self.contract_id,
+                    FREIGHT_DISCORD_WEBHOOK_URL,
                 )
                 if FREIGHT_DISCORD_MENTIONS:
                     contents = str(FREIGHT_DISCORD_MENTIONS) + " "
@@ -1218,14 +1193,12 @@ class Contract(models.Model):
                     self.save()
                 else:
                     logger.warn(
-                        add_tag(
-                            "Failed to send message. HTTP code: {}".format(
-                                response.status_code
-                            )
-                        )
+                        "%s: Failed to send message. HTTP code: %s",
+                        self,
+                        response.status_code,
                     )
         else:
-            logger.debug(add_tag("FREIGHT_DISCORD_WEBHOOK_URL not configured"))
+            logger.debug("%s: FREIGHT_DISCORD_WEBHOOK_URL not configured", self)
 
     def send_customer_notification(self, force_sent=False):
         """sends customer notification about this contract to Discord
@@ -1246,28 +1219,25 @@ class Contract(models.Model):
             if "discord" in app_labels() and status_to_report:
                 self._report_to_customer(status_to_report)
         else:
-            add_tag = self.get_logger_tag()
             logger.debug(
-                add_tag(
-                    "FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured or "
-                    "Discord services not installed"
-                )
+                "%s: FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured or "
+                "Discord services not installed",
+                self,
             )
 
     def _report_to_customer(self, status_to_report):
-        add_tag = self.get_logger_tag()
         issuer_user = User.objects.filter(
             character_ownerships__character__exact=self.issuer
         ).first()
 
         if not issuer_user:
-            logger.info(add_tag("Could not find matching user for issuer"))
+            logger.info("%s: Could not find matching user for issuer", self)
             return
 
         try:
             discord_user_id = DiscordUser.objects.get(user=issuer_user).uid
         except DiscordUser.DoesNotExist:
-            logger.info(add_tag("Could not find Discord user for issuer"))
+            logger.info("%s: Could not find Discord user for issuer", self)
             return
 
         if FREIGHT_DISCORD_DISABLE_BRANDING:
@@ -1284,15 +1254,12 @@ class Contract(models.Model):
         )
         with transaction.atomic():
             logger.info(
-                add_tag(
-                    "Trying to sent customer notification"
-                    " about contract {} on status {}"
-                    " to {}".format(
-                        self.contract_id,
-                        status_to_report,
-                        FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
-                    )
-                )
+                "%s: Trying to sent customer notification"
+                " about contract %s on status %s to %s",
+                self,
+                self.contract_id,
+                status_to_report,
+                FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
             )
             embed = self._generate_embed()
             contents = self._generate_contents(discord_user_id, status_to_report)
@@ -1308,11 +1275,9 @@ class Contract(models.Model):
 
             else:
                 logger.warn(
-                    add_tag(
-                        "Failed to send message. HTTP code: {}".format(
-                            response.status_code
-                        )
-                    )
+                    "%s: Failed to send message. HTTP code: %s",
+                    self,
+                    response.status_code,
                 )
 
     def _generate_contents(self, discord_user_id, status_to_report):
