@@ -71,6 +71,15 @@ class Freight(models.Model):
             ("view_statistics", "Can view freight statistics"),
         )
 
+    @classmethod
+    def operation_mode_friendly(cls, operation_mode) -> str:
+        """returns user friendly description of operation mode"""
+        msg = [(x, y) for x, y in FREIGHT_OPERATION_MODES if x == operation_mode]
+        if len(msg) != 1:
+            raise ValueError("Undefined mode")
+        else:
+            return msg[0][1]
+
 
 class Location(models.Model):
     """An Eve Online courier contract location: station or Upwell structure"""
@@ -624,11 +633,7 @@ class ContractHandler(models.Model):
     @property
     def operation_mode_friendly(self) -> str:
         """returns user friendly description of operation mode"""
-        msg = [(x, y) for x, y in FREIGHT_OPERATION_MODES if x == self.operation_mode]
-        if len(msg) != 1:
-            raise ValueError("Undefined mode")
-        else:
-            return msg[0][1]
+        return Freight.operation_mode_friendly(self.operation_mode)
 
     @property
     def last_error_message_friendly(self) -> str:

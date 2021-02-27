@@ -25,7 +25,7 @@ from .app_settings import (
     FREIGHT_STATISTICS_MAX_DAYS,
     FREIGHT_OPERATION_MODE,
 )
-from .models import Contract, ContractHandler, EveEntity, Location, Pricing
+from .models import Contract, ContractHandler, EveEntity, Freight, Location, Pricing
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -39,11 +39,13 @@ CONTRACT_LIST_ALL = "all"
 def add_common_context(request, context: dict) -> dict:
     """adds the common context used by all view"""
     pending_user_count = Contract.objects.issued_by_user(request.user).pending_count()
+    operation_mode = Freight.operation_mode_friendly(FREIGHT_OPERATION_MODE)
     new_context = {
         **{
             "app_title": FREIGHT_APP_NAME,
             "pending_all_count": Contract.objects.all().pending_count(),
             "pending_user_count": pending_user_count,
+            "setup_contract_handler_label": f"Setup {operation_mode}",
         },
         **context,
     }
