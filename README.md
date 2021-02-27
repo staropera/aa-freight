@@ -2,7 +2,15 @@
 
 Freight is an [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) (AA) app for running a freight service.
 
-![release](https://img.shields.io/pypi/v/aa-freight?label=release) ![python](https://img.shields.io/pypi/pyversions/aa-freight) ![django](https://img.shields.io/pypi/djversions/aa-freight?label=django) ![pipeline](https://gitlab.com/ErikKalkoken/aa-freight/badges/master/pipeline.svg) ![coverage](https://gitlab.com/ErikKalkoken/aa-freight/badges/master/coverage.svg) ![license](https://img.shields.io/badge/license-MIT-green) ![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
+[![release](https://img.shields.io/pypi/v/aa-freight?label=release)](https://pypi.org/project/aa-freight/)
+[![python](https://img.shields.io/pypi/pyversions/aa-freight)](https://pypi.org/project/aa-freight/)
+[![django](https://img.shields.io/pypi/djversions/aa-freight?label=django)](https://pypi.org/project/aa-freight/)
+[![pipeline](https://gitlab.com/ErikKalkoken/aa-freight/badges/master/pipeline.svg)](https://gitlab.com/ErikKalkoken/aa-freight/-/pipelines)
+[![codecov](https://codecov.io/gl/ErikKalkoken/aa-freight/branch/master/graph/badge.svg?token=SDOK25QUHd)](https://codecov.io/gl/ErikKalkoken/aa-freight)
+[![license](https://img.shields.io/badge/license-MIT-green)](https://gitlab.com/ErikKalkoken/aa-freight/-/blob/master/LICENSE)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![chat](https://img.shields.io/discord/790364535294132234)](https://discord.gg/zmh52wnfvM)
 
 ## Contents
 
