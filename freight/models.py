@@ -1,7 +1,6 @@
 import json
 from datetime import timedelta
 import hashlib
-import logging
 from urllib.parse import urljoin
 
 from dhooks_lite import Webhook, Embed, Thumbnail
@@ -21,6 +20,7 @@ from allianceauth.eveonline.models import (
     EveCorporationInfo,
 )
 from allianceauth.notifications import notify
+from allianceauth.services.hooks import get_extension_logger
 
 from app_utils.datetime import DATETIME_FORMAT
 from app_utils.django import app_labels
@@ -29,6 +29,7 @@ from app_utils.urls import site_absolute_url
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 
+from . import __title__
 from .app_settings import (
     FREIGHT_APP_NAME,
     FREIGHT_FULL_ROUTE_NAMES,
@@ -53,7 +54,7 @@ if "discord" in app_labels():
     from allianceauth.services.modules.discord.models import DiscordUser
 
 
-logger = LoggerAddTag(logging.getLogger(__name__), __package__)
+logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
 class Freight(models.Model):

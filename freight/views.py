@@ -1,5 +1,4 @@
 import datetime
-import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
@@ -13,13 +12,14 @@ from django.utils.timezone import now
 
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
+from allianceauth.services.hooks import get_extension_logger
 
 from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
 from esi.decorators import token_required
 from esi.models import Token
 
-from . import tasks
+from . import tasks, __title__
 from .app_settings import (
     FREIGHT_APP_NAME,
     FREIGHT_STATISTICS_MAX_DAYS,
@@ -28,7 +28,7 @@ from .app_settings import (
 from .models import Contract, ContractHandler, EveEntity, Freight, Location, Pricing
 
 
-logger = LoggerAddTag(logging.getLogger(__name__), __package__)
+logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 ADD_LOCATION_TOKEN_TAG = "freight_add_location_token"
 CONTRACT_LIST_USER = "user"

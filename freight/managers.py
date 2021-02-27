@@ -1,6 +1,5 @@
 from datetime import datetime
 import json
-import logging
 from time import sleep
 
 from bravado.exception import HTTPUnauthorized, HTTPForbidden
@@ -11,10 +10,12 @@ from django.utils.timezone import now
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
+from allianceauth.services.hooks import get_extension_logger
 
 from app_utils.logging import LoggerAddTag
 from esi.models import Token
 
+from . import __title__
 from .app_settings import (
     FREIGHT_DISCORD_WEBHOOK_URL,
     FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
@@ -22,7 +23,7 @@ from .app_settings import (
 from .providers import esi
 
 
-logger = LoggerAddTag(logging.getLogger(__name__), __package__)
+logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
 class PricingManager(models.Manager):
