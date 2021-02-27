@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.4-0] - 2021-02-27
+
+### Changed
+
+- Removed support for Django 2
+
 ## [1.3-0] - 2020-11-19
 
 ### Added

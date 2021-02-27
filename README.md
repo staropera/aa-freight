@@ -221,7 +221,7 @@ Price base | Base price in ISK. If this is the only defined pricing component it
 Price min | Minimum total price in ISK | Pricing component
 Price per volume | Add-on price per m3 volume in ISK | Pricing component
 Use price per volume modifier | Switch defining if the global price per volume modifier should be used for pricing | Pricing flag
-Price per volume modifier | Global modifier for price per volume in percent. When used it will be added to the price per volume. It can be positive and negative, but the resulting price per volume can never be negative.<br>(defined for ContractHandler) | Pricing modifier
+Price per volume modifier | Global modifier for price per volume in percent.<br>The purpose of this modifier is to be able to compensate for fuel price fluctuations, without having to adjust pricing for many individual routes. When used it will be added to the price per volume. It can be positive and negative, and the resulting price per volume will always be >= 0.<br>e.g. if you have set a price of 200 ISK per m3 on a route, and set the global modifier to 10% then you get 220 ISK per m3 effectively.<br>(defined for ContractHandler) | Pricing modifier
 Price per collateral_percent | Add-on price in % of collateral | Pricing component
 Collateral min | Minimum required collateral in ISK | Validation check
 Collateral max | Maximum allowed collateral in ISK | Validation check
