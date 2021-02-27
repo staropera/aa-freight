@@ -46,7 +46,7 @@ from .app_settings import (
     FREIGHT_OPERATION_MODE_CORP_PUBLIC,
 )
 from .managers import ContractManager, EveEntityManager, LocationManager, PricingManager
-from .helpers.esi_fetch import esi_fetch
+from .providers import esi
 
 
 if "discord" in app_labels():
@@ -726,14 +726,12 @@ class ContractHandler(models.Model):
             token = self.token()
             try:
                 # fetching data from ESI
-                contracts = esi_fetch(
-                    "Contracts.get_corporations_corporation_id_contracts",
-                    args={"corporation_id": self.character.character.corporation_id},
-                    has_pages=True,
-                    token=token,
-                    logger_tag=add_prefix(),
+                contracts = (
+                    esi.client.Contracts.get_corporations_corporation_id_contracts(
+                        token=token.valid_access_token(),
+                        corporation_id=self.character.character.corporation_id,
+                    ).results()
                 )
-
                 if settings.DEBUG:
                     self._save_contract_to_file(contracts)
 

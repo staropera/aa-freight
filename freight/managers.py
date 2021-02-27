@@ -19,7 +19,7 @@ from .app_settings import (
     FREIGHT_DISCORD_WEBHOOK_URL,
     FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
 )
-from .helpers.esi_fetch import esi_fetch
+from .providers import esi
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -80,11 +80,9 @@ class LocationManager(models.Manager):
         if location_id >= self.STATION_ID_START and location_id <= self.STATION_ID_END:
             logger.info(add_prefix("Fetching station from ESI"))
             try:
-                station = esi_fetch(
-                    "Universe.get_universe_stations_station_id",
-                    args={"station_id": location_id},
-                    logger_tag=add_prefix(),
-                )
+                station = esi.client.Universe.get_universe_stations_station_id(
+                    station_id=location_id
+                ).results()
                 location, created = self.update_or_create(
                     id=location_id,
                     defaults={
@@ -100,12 +98,9 @@ class LocationManager(models.Manager):
 
         else:
             try:
-                structure = esi_fetch(
-                    "Universe.get_universe_structures_structure_id",
-                    args={"structure_id": location_id},
-                    token=token,
-                    logger_tag=add_prefix(),
-                )
+                structure = esi.client.Universe.get_universe_structures_structure_id(
+                    token=token.valid_access_token(), structure_id=location_id
+                ).results()
                 location, created = self.update_or_create(
                     id=location_id,
                     defaults={
@@ -151,13 +146,8 @@ class EveEntityManager(models.Manager):
         """updates or creates entity object with data fetched from ESI"""
 
         add_prefix = make_logger_prefix(id)
-
         try:
-            response = esi_fetch(
-                esi_path="Universe.post_universe_names",
-                args={"ids": [id]},
-                logger_tag=add_prefix(),
-            )
+            response = esi.client.Universe.post_universe_names(ids=[id]).results()
             if len(response) != 1:
                 raise ObjectNotFound(id, "unknown_type")
             else:

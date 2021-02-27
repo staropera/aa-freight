@@ -7,11 +7,16 @@ from django.utils.timezone import now, utc
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
+from allianceauth.tests.auth_utils import AuthUtils
 
 from app_utils.django import app_labels
-from app_utils.testing import NoSocketsTestCase
-from esi.models import Token
-
+from app_utils.testing import (
+    NoSocketsTestCase,
+    BravadoOperationStub,
+    BravadoResponseStub,
+    add_character_to_user_2,
+    add_new_token,
+)
 from . import DisconnectPricingSaveHandler, get_invalid_object_pk
 from ..app_settings import (
     FREIGHT_OPERATION_MODE_MY_ALLIANCE,
@@ -25,7 +30,6 @@ from .testdata import (
     create_contract_handler_w_contracts,
     create_locations,
     structures_data,
-    BravadoOperationStub,
 )
 
 
@@ -69,9 +73,9 @@ class TestEveEntityManager(NoSocketsTestCase):
 
         return BravadoOperationStub(data)
 
-    @patch("freight.helpers.esi_fetch._esi_client")
-    def test_can_create_entity(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.post_universe_names.side_effect = (
+    @patch(MODULE_PATH + ".esi")
+    def test_can_create_entity(self, mock_esi):
+        mock_esi.client.Universe.post_universe_names.side_effect = (
             TestEveEntityManager.esi_post_universe_names
         )
 
@@ -81,9 +85,9 @@ class TestEveEntityManager(NoSocketsTestCase):
         self.assertEqual(obj.name, "Bruce Wayne")
         self.assertEqual(obj.category, EveEntity.CATEGORY_CHARACTER)
 
-    @patch("freight.helpers.esi_fetch._esi_client")
-    def test_can_create_entity_when_not_found(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.post_universe_names.side_effect = (
+    @patch(MODULE_PATH + ".esi")
+    def test_can_create_entity_when_not_found(self, mock_esi):
+        mock_esi.client.Universe.post_universe_names.side_effect = (
             TestEveEntityManager.esi_post_universe_names
         )
 
@@ -93,9 +97,9 @@ class TestEveEntityManager(NoSocketsTestCase):
         self.assertEqual(obj.name, "Bruce Wayne")
         self.assertEqual(obj.category, EveEntity.CATEGORY_CHARACTER)
 
-    @patch("freight.helpers.esi_fetch._esi_client")
-    def test_can_update_entity(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.post_universe_names.side_effect = (
+    @patch(MODULE_PATH + ".esi")
+    def test_can_update_entity(self, mock_esi):
+        mock_esi.client.Universe.post_universe_names.side_effect = (
             TestEveEntityManager.esi_post_universe_names
         )
         obj, _ = EveEntity.objects.update_or_create_from_esi(id=90000001)
@@ -108,9 +112,9 @@ class TestEveEntityManager(NoSocketsTestCase):
         self.assertEqual(obj.name, "Bruce Wayne")
         self.assertEqual(obj.category, EveEntity.CATEGORY_CHARACTER)
 
-    @patch("freight.helpers.esi_fetch._esi_client")
-    def test_raise_exception_if_entity_can_not_be_created(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.post_universe_names.side_effect = (
+    @patch(MODULE_PATH + ".esi")
+    def test_raise_exception_if_entity_can_not_be_created(self, mock_esi):
+        mock_esi.client.Universe.post_universe_names.side_effect = (
             TestEveEntityManager.esi_post_universe_names
         )
 
@@ -197,159 +201,178 @@ def get_universe_structures_structure_id(*args, **kwargs) -> dict:
         return BravadoOperationStub(structures_data[structure_id])
 
 
-@patch("freight.helpers.esi_fetch._esi_client")
+@patch(MODULE_PATH + ".esi")
 class TestLocationManager(NoSocketsTestCase):
-    def test_can_create_structure(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.get_universe_structures_structure_id.side_effect = (
-            get_universe_structures_structure_id
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        user = AuthUtils.create_user("Bruce Wayne")
+        character = add_character_to_user_2(
+            user, 1001, "Bruce Wayne", 2001, "Wayne Tech"
+        )
+        cls.token = add_new_token(
+            user, character, scopes=["esi-universe.read_structures.v1"]
         )
 
-        obj, created = Location.objects.update_or_create_from_esi(
-            Mock(spec=Token), 1000000000001
+    def test_should_create_structure(self, mock_esi):
+        # given
+        mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
+            get_universe_structures_structure_id
         )
+        # when
+        obj, created = Location.objects.update_or_create_from_esi(
+            self.token, 1000000000001
+        )
+        # then
         self.assertTrue(created)
         self.assertEqual(obj.id, 1000000000001)
         self.assertEqual(obj.name, "Test Structure Alpha")
         self.assertEqual(obj.solar_system_id, 30002537)
         self.assertEqual(obj.type_id, 35832)
 
-    def test_can_update_structure(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.get_universe_structures_structure_id.side_effect = (
+    def test_should_update_structure(self, mock_esi):
+        # given
+        mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
             get_universe_structures_structure_id
         )
-        obj, _ = Location.objects.update_or_create_from_esi(
-            Mock(spec=Token), 1000000000001
-        )
+        obj, _ = Location.objects.update_or_create_from_esi(self.token, 1000000000001)
         obj.name = "Not my structure"
         obj.solar_system_id = 123
         obj.type_id = 456
         obj.save()
-
+        # when
         obj, created = Location.objects.update_or_create_from_esi(
-            Mock(spec=Token), 1000000000001
+            self.token, 1000000000001
         )
+        # then
         self.assertFalse(created)
         self.assertEqual(obj.id, 1000000000001)
         self.assertEqual(obj.name, "Test Structure Alpha")
         self.assertEqual(obj.solar_system_id, 30002537)
         self.assertEqual(obj.type_id, 35832)
 
-    def test_can_get_existing_location(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.get_universe_structures_structure_id.side_effect = (
+    def test_should_get_existing_location(self, mock_esi):
+        # given
+        mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
             get_universe_structures_structure_id
         )
         obj_created, _ = Location.objects.update_or_create_from_esi(
-            Mock(spec=Token), 1000000000001
+            self.token, 1000000000001
         )
-
+        # when
         obj, created = Location.objects.get_or_create_from_esi(
-            Mock(spec=Token), 1000000000001
+            self.token, 1000000000001
         )
+        # then
         self.assertFalse(created)
         self.assertEqual(obj, obj_created)
 
-    def test_can_create_not_existing_location(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.get_universe_structures_structure_id.side_effect = (
+    def test_should_create_not_existing_location(self, mock_esi):
+        # given
+        mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
             get_universe_structures_structure_id
         )
-
+        # when
         obj, created = Location.objects.get_or_create_from_esi(
-            Mock(spec=Token), 1000000000001
+            self.token, 1000000000001
         )
+        # then
         self.assertTrue(created)
         self.assertEqual(obj.id, 1000000000001)
         self.assertEqual(obj.name, "Test Structure Alpha")
         self.assertEqual(obj.solar_system_id, 30002537)
         self.assertEqual(obj.type_id, 35832)
 
-    def test_propagates_http_error_on_structure_create(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.get_universe_structures_structure_id.side_effect = HTTPForbidden(
-            Mock()
+    def test_should_propagate_http_error_on_structure_create(self, mock_esi):
+        # given
+        mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
+            HTTPForbidden(BravadoResponseStub(status_code=403, reason="test"))
         )
-
+        # when/then
         with self.assertRaises(HTTPForbidden):
             Location.objects.update_or_create_from_esi(
-                Mock(spec=Token), 42, add_unknown=False
+                self.token, 42, add_unknown=False
             )
 
-    def test_propagates_exceptions_on_structure_create(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.get_universe_structures_structure_id.side_effect = (
+    def test_should_propagates_exceptions_on_structure_create(self, mock_esi):
+        # given
+        mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
             RuntimeError
         )
-
+        # when/then
         with self.assertRaises(RuntimeError):
             Location.objects.update_or_create_from_esi(
-                Mock(spec=Token), 42, add_unknown=False
+                self.token, 42, add_unknown=False
             )
 
-    def test_creates_skeleton_structure_on_http_error_if_requested(
-        self, mock_esi_client
+    def test_should_create_skeleton_structure_on_http_error_if_requested(
+        self, mock_esi
     ):
-        mock_esi_client.return_value.Universe.get_universe_structures_structure_id.side_effect = HTTPForbidden(
-            Mock()
+        # given
+        mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
+            HTTPForbidden(BravadoResponseStub(status_code=403, reason="test"))
         )
-
+        # when
         obj, created = Location.objects.update_or_create_from_esi(
-            Mock(spec=Token), 42, add_unknown=True
+            self.token, 42, add_unknown=True
         )
+        # then
         self.assertTrue(created)
         self.assertEqual(obj.id, 42)
 
-    def test_does_not_creates_skeleton_structure_on_exceptions_if_requested(
-        self, mock_esi_client
+    def test_should_creates_skeleton_structure_on_exceptions_if_requested(
+        self, mock_esi
     ):
-        mock_esi_client.return_value.Universe.get_universe_structures_structure_id.side_effect = (
+        # given
+        mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
             RuntimeError
         )
+        # when/then
         with self.assertRaises(RuntimeError):
-            Location.objects.update_or_create_from_esi(
-                Mock(spec=Token), 42, add_unknown=True
-            )
+            Location.objects.update_or_create_from_esi(self.token, 42, add_unknown=True)
 
-    def test_can_create_station(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.get_universe_stations_station_id.side_effect = (
+    def test_should_create_station_from_scratch(self, mock_esi):
+        # given
+        mock_esi.client.Universe.get_universe_stations_station_id.side_effect = (
             get_universe_stations_station_id
         )
-
-        obj, created = Location.objects.update_or_create_from_esi(
-            Mock(spec=Token), 60000001
-        )
+        # when
+        obj, created = Location.objects.update_or_create_from_esi(self.token, 60000001)
+        # then
         self.assertTrue(created)
         self.assertEqual(obj.id, 60000001)
         self.assertEqual(obj.name, "Test Station Charlie")
         self.assertEqual(obj.solar_system_id, 30002537)
         self.assertEqual(obj.type_id, 99)
 
-    def test_can_update_station(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.get_universe_stations_station_id.side_effect = (
+    def test_should_update_existing_station(self, mock_esi):
+        # given
+        mock_esi.client.Universe.get_universe_stations_station_id.side_effect = (
             get_universe_stations_station_id
         )
-
-        obj, created = Location.objects.update_or_create_from_esi(
-            Mock(spec=Token), 60000001
-        )
+        obj, created = Location.objects.update_or_create_from_esi(self.token, 60000001)
         obj.name = "Not my station"
         obj.solar_system_id = 123
         obj.type_id = 456
         obj.save()
-
-        obj, created = Location.objects.update_or_create_from_esi(
-            Mock(spec=Token), 60000001
-        )
+        # when
+        obj, created = Location.objects.update_or_create_from_esi(self.token, 60000001)
+        # then
         self.assertFalse(created)
         self.assertEqual(obj.id, 60000001)
         self.assertEqual(obj.name, "Test Station Charlie")
         self.assertEqual(obj.solar_system_id, 30002537)
         self.assertEqual(obj.type_id, 99)
 
-    def test_propagates_http_error_on_station_create(self, mock_esi_client):
-        mock_esi_client.return_value.Universe.get_universe_stations_station_id.side_effect = HTTPNotFound(
-            Mock()
+    def test_should_propagate_http_error_on_station_create(self, mock_esi):
+        # given
+        mock_esi.client.Universe.get_universe_stations_station_id.side_effect = (
+            HTTPNotFound(BravadoResponseStub(status_code=404, reason="test"))
         )
-
+        # when/then
         with self.assertRaises(HTTPNotFound):
             Location.objects.update_or_create_from_esi(
-                Mock(spec=Token), 60000001, add_unknown=False
+                self.token, 60000001, add_unknown=False
             )
 
 
