@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.test.utils import override_settings
 
+from app_utils.testing import NoSocketsTestCase
 from esi.errors import TokenInvalidError
 
 from . import get_invalid_object_pk
@@ -16,11 +17,9 @@ from ..tasks import (
     update_locations,
 )
 from .testdata import create_contract_handler_w_contracts
-from ..utils import set_test_logger, NoSocketsTestCase
 
 
 MODULE_PATH = "freight.tasks"
-logger = set_test_logger(MODULE_PATH, __file__)
 
 
 class TestUpdateContractsEsi(NoSocketsTestCase):

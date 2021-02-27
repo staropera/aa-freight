@@ -22,6 +22,10 @@ from allianceauth.eveonline.models import (
 )
 from allianceauth.notifications import notify
 
+from app_utils.datetime import DATETIME_FORMAT
+from app_utils.django import app_labels
+from app_utils.logging import LoggerAddTag, make_logger_prefix
+from app_utils.urls import site_absolute_url
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 
@@ -43,13 +47,7 @@ from .app_settings import (
 )
 from .managers import ContractManager, EveEntityManager, LocationManager, PricingManager
 from .helpers.esi_fetch import esi_fetch
-from .utils import (
-    app_labels,
-    DATETIME_FORMAT,
-    get_site_base_url,
-    LoggerAddTag,
-    make_logger_prefix,
-)
+
 
 if "discord" in app_labels():
     from allianceauth.services.modules.discord.models import DiscordUser
@@ -1200,7 +1198,7 @@ class Contract(models.Model):
                     contents = ""
 
                 contract_list_url = urljoin(
-                    get_site_base_url(), reverse("freight:contract_list_all")
+                    site_absolute_url(), reverse("freight:contract_list_all")
                 )
                 contents += (
                     "There is a new courier contract from {} "
@@ -1357,7 +1355,7 @@ class Contract(models.Model):
 
         contents += (
             "\nClick [here]({}) to check the current " "status of your contract."
-        ).format(urljoin(get_site_base_url(), reverse("freight:contract_list_user")))
+        ).format(urljoin(site_absolute_url(), reverse("freight:contract_list_user")))
         return contents
 
 

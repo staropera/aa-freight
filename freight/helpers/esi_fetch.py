@@ -15,12 +15,12 @@ from bravado.exception import HTTPGatewayTimeout
 
 from django.conf import settings
 
+from app_utils.logging import LoggerAddTag
 from esi.clients import esi_client_factory
 from esi.models import Token
 
 from .. import __title__
 from ..app_settings import FREIGHT_ESI_TIMEOUT_ENABLED
-from ..utils import LoggerAddTag
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __title__)
