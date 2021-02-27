@@ -22,7 +22,7 @@
         "title": "this contract should be ignored by all modes",
         "type": "item_exchange",
         "volume": 486000.0
-    },        
+    },
     {
         "acceptor_id": 0,
         "assignee_id": 93000001,
@@ -70,7 +70,7 @@
         "title": "my_alliance mode only",
         "type": "courier",
         "volume": 115000.0
-    },        
+    },
     {
         "acceptor_id": 0,
         "assignee_id": 93000001,
@@ -118,7 +118,7 @@
         "title": "my_alliance mode only",
         "type": "courier",
         "volume": 115000.0
-    },    
+    },
     {
         "acceptor_id": 0,
         "assignee_id": 92000001,

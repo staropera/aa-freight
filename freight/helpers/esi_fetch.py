@@ -1,5 +1,5 @@
 """This module provides helper functions for smarter ESI requests with django-esi
-    
+
     Added features for all ESI requests:
     - Automatic page retry on 502, 503, 504 up to max retries with exponential backoff
     - Automatic retrieval of all pages

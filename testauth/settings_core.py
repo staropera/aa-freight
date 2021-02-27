@@ -98,7 +98,6 @@ TEMPLATES = [
                 "django.template.context_processors.media",
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
-                "allianceauth.notifications.context_processors.user_notification_count",
                 "allianceauth.context_processors.auth_settings",
             ],
         },

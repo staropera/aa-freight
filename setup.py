@@ -25,8 +25,6 @@ setup(
     classifiers=[
         "Environment :: Web Environment",
         "Framework :: Django",
-        "Framework :: Django :: 2.2",
-        "Framework :: Django :: 3.0",
         "Framework :: Django :: 3.1",
         "Intended Audience :: End Users/Desktop",
         "License :: OSI Approved :: MIT License",
@@ -40,13 +38,8 @@ setup(
     ],
     python_requires="~=3.6",
     install_requires=[
-        "allianceauth>=2.7.3",
+        "allianceauth>=2.8.1",
         "dhooks-lite>=0.5.0",
         "django-navhelper",
     ],
-    extras_require={
-        "testing": [
-            "django-webtest",
-        ]
-    },
 )

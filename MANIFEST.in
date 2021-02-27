@@ -8,4 +8,3 @@ recursive-include freight/templatetags *.py
 recursive-exclude freight/templatetags *.pyc
 recursive-exclude testauth *.*
 recursive-exclude freight/tests *.*
-
