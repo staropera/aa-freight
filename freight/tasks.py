@@ -1,16 +1,17 @@
-import logging
-
 from celery import shared_task, chain
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
+from allianceauth.services.hooks import get_extension_logger
+
 from app_utils.logging import LoggerAddTag
 
+from . import __title__
 from .models import ContractHandler, Contract, Location
 
 
-logger = LoggerAddTag(logging.getLogger(__name__), __package__)
+logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
 def _get_user(user_pk) -> User:

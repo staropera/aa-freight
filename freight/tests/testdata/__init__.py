@@ -24,26 +24,6 @@ if "discord" in app_labels():
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
 
-class BravadoOperationStub:
-    """Stub to simulate the operation object return from bravado via django-esi"""
-
-    class RequestConfig:
-        def __init__(self, also_return_response):
-            self.also_return_response = also_return_response
-
-    def __init__(self, data, headers: dict = None, also_return_response: bool = False):
-        self._data = data
-        self._headers = headers if headers else {"x-pages": 1}
-        self.request_config = BravadoOperationStub.RequestConfig(also_return_response)
-
-    def result(self, **kwargs):
-        if self.request_config.also_return_response:
-            mock_response = Mock(**{"headers": self._headers})
-            return [self._data, mock_response]
-        else:
-            return self._data
-
-
 def _load_structures_data() -> list:
     with open(currentdir + "/universe_structures.json", "r", encoding="utf-8") as f:
         data = json.load(f)

@@ -1,6 +1,5 @@
 from datetime import datetime
 import json
-import logging
 from time import sleep
 
 from bravado.exception import HTTPUnauthorized, HTTPForbidden
@@ -11,18 +10,20 @@ from django.utils.timezone import now
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
+from allianceauth.services.hooks import get_extension_logger
 
-from app_utils.logging import LoggerAddTag, make_logger_prefix
+from app_utils.logging import LoggerAddTag
 from esi.models import Token
 
+from . import __title__
 from .app_settings import (
     FREIGHT_DISCORD_WEBHOOK_URL,
     FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
 )
-from .helpers.esi_fetch import esi_fetch
+from .providers import esi
 
 
-logger = LoggerAddTag(logging.getLogger(__name__), __package__)
+logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
 class PricingManager(models.Manager):
@@ -75,37 +76,26 @@ class LocationManager(models.Manager):
         """updates or creates location object with data fetched from ESI"""
         from .models import Location
 
-        add_prefix = make_logger_prefix(location_id)
-
         if location_id >= self.STATION_ID_START and location_id <= self.STATION_ID_END:
-            logger.info(add_prefix("Fetching station from ESI"))
-            try:
-                station = esi_fetch(
-                    "Universe.get_universe_stations_station_id",
-                    args={"station_id": location_id},
-                    logger_tag=add_prefix(),
-                )
-                location, created = self.update_or_create(
-                    id=location_id,
-                    defaults={
-                        "name": station["name"],
-                        "solar_system_id": station["system_id"],
-                        "type_id": station["type_id"],
-                        "category_id": Location.CATEGORY_STATION_ID,
-                    },
-                )
-            except Exception as ex:
-                logger.exception(add_prefix("Failed to load station: {}".format(ex)))
-                raise ex
+            logger.info("%s: Fetching station from ESI", location_id)
+            station = esi.client.Universe.get_universe_stations_station_id(
+                station_id=location_id
+            ).results()
+            location, created = self.update_or_create(
+                id=location_id,
+                defaults={
+                    "name": station["name"],
+                    "solar_system_id": station["system_id"],
+                    "type_id": station["type_id"],
+                    "category_id": Location.CATEGORY_STATION_ID,
+                },
+            )
 
         else:
             try:
-                structure = esi_fetch(
-                    "Universe.get_universe_structures_structure_id",
-                    args={"structure_id": location_id},
-                    token=token,
-                    logger_tag=add_prefix(),
-                )
+                structure = esi.client.Universe.get_universe_structures_structure_id(
+                    token=token.valid_access_token(), structure_id=location_id
+                ).results()
                 location, created = self.update_or_create(
                     id=location_id,
                     defaults={
@@ -116,7 +106,7 @@ class LocationManager(models.Manager):
                     },
                 )
             except (HTTPUnauthorized, HTTPForbidden) as ex:
-                logger.warn(add_prefix("No access to this structure: {}".format(ex)))
+                logger.warn("%s: No access to this structure: %s", location_id, ex)
                 if add_unknown:
                     location, created = self.get_or_create(
                         id=location_id,
@@ -127,9 +117,6 @@ class LocationManager(models.Manager):
                     )
                 else:
                     raise ex
-            except Exception as ex:
-                logger.exception(add_prefix("Failed to load structure: {}".format(ex)))
-                raise ex
 
         return location, created
 
@@ -149,34 +136,18 @@ class EveEntityManager(models.Manager):
 
     def update_or_create_from_esi(self, id: int) -> tuple:
         """updates or creates entity object with data fetched from ESI"""
-
-        add_prefix = make_logger_prefix(id)
-
-        try:
-            response = esi_fetch(
-                esi_path="Universe.post_universe_names",
-                args={"ids": [id]},
-                logger_tag=add_prefix(),
-            )
-            if len(response) != 1:
-                raise ObjectNotFound(id, "unknown_type")
-            else:
-                entity_data = response[0]
-            entity, created = self.update_or_create(
-                id=entity_data["id"],
-                defaults={
-                    "name": entity_data["name"],
-                    "category": entity_data["category"],
-                },
-            )
-        except Exception as ex:
-            logger.exception(
-                add_prefix(
-                    "Failed to load entity with id {} from ESI: {}".format(id, ex)
-                )
-            )
-            raise ex
-
+        response = esi.client.Universe.post_universe_names(ids=[id]).results()
+        if len(response) != 1:
+            raise ObjectNotFound(id, "unknown_type")
+        else:
+            entity_data = response[0]
+        entity, created = self.update_or_create(
+            id=entity_data["id"],
+            defaults={
+                "name": entity_data["name"],
+                "category": entity_data["category"],
+            },
+        )
         return entity, created
 
     def update_or_create_from_evecharacter(
@@ -185,43 +156,34 @@ class EveEntityManager(models.Manager):
         """updates or creates EveEntity object from an EveCharacter object"""
         from .models import EveEntity
 
-        add_prefix = make_logger_prefix(character.character_id)
-
-        try:
-            if category == EveEntity.CATEGORY_ALLIANCE:
-                if not character.alliance_id:
-                    raise ValueError("character is not an alliance member")
-                eve_entity, created = self.update_or_create(
-                    id=character.alliance_id,
-                    defaults={
-                        "name": character.alliance_name,
-                        "category": EveEntity.CATEGORY_ALLIANCE,
-                    },
-                )
-            elif category == EveEntity.CATEGORY_CORPORATION:
-                eve_entity, created = self.update_or_create(
-                    id=character.corporation_id,
-                    defaults={
-                        "name": character.corporation_name,
-                        "category": EveEntity.CATEGORY_CORPORATION,
-                    },
-                )
-            elif category == EveEntity.CATEGORY_CHARACTER:
-                eve_entity, created = self.update_or_create(
-                    id=character.character_id,
-                    defaults={
-                        "name": character.character_name,
-                        "category": EveEntity.CATEGORY_CHARACTER,
-                    },
-                )
-            else:
-                raise ValueError("Invalid category: {}".format(category))
-
-        except Exception as ex:
-            logger.exception(
-                add_prefix("Failed to convert to EveEntity: {}".format(ex))
+        if category == EveEntity.CATEGORY_ALLIANCE:
+            if not character.alliance_id:
+                raise ValueError("character is not an alliance member")
+            eve_entity, created = self.update_or_create(
+                id=character.alliance_id,
+                defaults={
+                    "name": character.alliance_name,
+                    "category": EveEntity.CATEGORY_ALLIANCE,
+                },
             )
-            raise ex
+        elif category == EveEntity.CATEGORY_CORPORATION:
+            eve_entity, created = self.update_or_create(
+                id=character.corporation_id,
+                defaults={
+                    "name": character.corporation_name,
+                    "category": EveEntity.CATEGORY_CORPORATION,
+                },
+            )
+        elif category == EveEntity.CATEGORY_CHARACTER:
+            eve_entity, created = self.update_or_create(
+                id=character.character_id,
+                defaults={
+                    "name": character.character_name,
+                    "category": EveEntity.CATEGORY_CHARACTER,
+                },
+            )
+        else:
+            raise ValueError("Invalid category: {}".format(category))
 
         return eve_entity, created
 
@@ -316,7 +278,6 @@ class ContractManager(models.Manager):
     def _identify_contract_acceptor(self, contract: dict) -> tuple:
         from .models import EveEntity
 
-        add_prefix = make_logger_prefix(contract["contract_id"])
         if int(contract["acceptor_id"]) != 0:
             try:
                 entity, _ = EveEntity.objects.get_or_create_from_esi(
@@ -356,11 +317,11 @@ class ContractManager(models.Manager):
                         "Acceptor has invalid category: {}".format(entity.category)
                     )
 
-            except Exception as ex:
+            except Exception:
                 logger.exception(
-                    add_prefix(
-                        "Failed to identify acceptor for this contract: {}".format(ex)
-                    )
+                    "%s: Failed to identify acceptor for this contract",
+                    contract["contract_id"],
+                    exc_info=True,
                 )
                 acceptor = None
                 acceptor_corporation = None
@@ -425,8 +386,7 @@ class ContractManager(models.Manager):
 
     def send_notifications(self, force_sent=False, rate_limted=True) -> None:
         """Send notifications for outstanding contracts that have pricing"""
-        add_tag = make_logger_prefix("send_notifications")
-        logger.debug(add_tag("start"))
+        logger.debug("start sending notifications")
 
         # pilot notifications
         if FREIGHT_DISCORD_WEBHOOK_URL:
@@ -440,9 +400,9 @@ class ContractManager(models.Manager):
             contracts_qs = contracts_qs.select_related()
 
             if contracts_qs.count() > 0:
-                self._sent_pilot_notifications(contracts_qs, rate_limted, add_tag)
+                self._sent_pilot_notifications(contracts_qs, rate_limted)
         else:
-            logger.debug(add_tag("FREIGHT_DISCORD_WEBHOOK_URL not configured"))
+            logger.debug("FREIGHT_DISCORD_WEBHOOK_URL not configured")
 
         # customer notifications
         if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
@@ -453,21 +413,14 @@ class ContractManager(models.Manager):
             contracts_qs = contracts_qs.select_related()
 
             if contracts_qs.count() > 0:
-                self._sent_customer_notifications(
-                    contracts_qs, rate_limted, force_sent, add_tag
-                )
+                self._sent_customer_notifications(contracts_qs, rate_limted, force_sent)
 
         else:
-            logger.debug(
-                add_tag("FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured")
-            )
+            logger.debug("FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured")
 
-    def _sent_pilot_notifications(self, contracts_qs, rate_limted, add_tag) -> None:
+    def _sent_pilot_notifications(self, contracts_qs, rate_limted) -> None:
         logger.info(
-            add_tag(
-                "Trying to send pilot notifications for"
-                + " {} contracts".format(contracts_qs.count())
-            )
+            "Trying to send pilot notifications for %d contracts", contracts_qs.count()
         )
 
         for contract in contracts_qs:
@@ -476,27 +429,20 @@ class ContractManager(models.Manager):
                 if rate_limted:
                     sleep(1)
             else:
-                logger.debug(
-                    add_tag("contract {} has expired".format(contract.contract_id))
-                )
+                logger.debug("contract %s has expired", contract.contract_id)
 
     def _sent_customer_notifications(
-        self, contracts_qs, rate_limted, force_sent, add_tag
+        self, contracts_qs, rate_limted, force_sent
     ) -> None:
         logger.debug(
-            "%s: Checking %d contracts if customer " "notifications need to be sent",
-            add_tag(),
+            "Checking %d contracts if customer notifications need to be sent",
             contracts_qs.count(),
         )
         for contract in contracts_qs:
             if contract.has_expired:
-                logger.debug(
-                    "%s: contract %d has expired", add_tag(), contract.contract_id
-                )
+                logger.debug("contract %d has expired", contract.contract_id)
             elif contract.has_stale_status:
-                logger.debug(
-                    "%s: contract %d has stale status", add_tag(), contract.contract_id
-                )
+                logger.debug("contract %d has stale status", contract.contract_id)
             else:
                 contract.send_customer_notification(force_sent)
                 if rate_limted:

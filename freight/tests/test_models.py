@@ -13,7 +13,7 @@ from allianceauth.eveonline.providers import ObjectNotFound
 from allianceauth.tests.auth_utils import AuthUtils
 
 from app_utils.django import app_labels
-from app_utils.testing import NoSocketsTestCase
+from app_utils.testing import BravadoOperationStub, NoSocketsTestCase
 from esi.models import Token
 from esi.errors import TokenExpiredError, TokenInvalidError
 
@@ -39,7 +39,6 @@ from .testdata import (
     create_entities_from_characters,
     create_contract_handler_w_contracts,
     contracts_data,
-    BravadoOperationStub,
 )
 
 
@@ -1009,10 +1008,10 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + ".Contract.objects.update_or_create_from_dict")
     @patch(MODULE_PATH + ".Token")
-    @patch("freight.helpers.esi_fetch._esi_client")
+    @patch(MODULE_PATH + ".esi")
     def test_abort_when_exception_occurs_during_contract_creation(
         self,
-        mock_esi_client,
+        mock_esi,
         mock_Token,
         mock_Contracts_objects_update_or_create_from_dict,
     ):
@@ -1022,7 +1021,7 @@ class TestContractsSync(NoSocketsTestCase):
         mock_Contracts_objects_update_or_create_from_dict.side_effect = (
             func_Contracts_objects_update_or_create_from_dict
         )
-        mock_Contracts = mock_esi_client.return_value.Contracts
+        mock_Contracts = mock_esi.client.Contracts
         mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
             self.esi_get_corporations_corporation_id_contracts
         )
@@ -1047,9 +1046,9 @@ class TestContractsSync(NoSocketsTestCase):
 
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
     @patch(MODULE_PATH + ".Token")
-    @patch("freight.helpers.esi_fetch._esi_client")
-    def test_can_sync_contracts_for_my_alliance(self, mock_esi_client, mock_Token):
-        mock_Contracts = mock_esi_client.return_value.Contracts
+    @patch(MODULE_PATH + ".esi")
+    def test_can_sync_contracts_for_my_alliance(self, mock_esi, mock_Token):
+        mock_Contracts = mock_esi.client.Contracts
         mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
             self.esi_get_corporations_corporation_id_contracts
         )
@@ -1097,11 +1096,11 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_CORPORATION)
     @patch(MODULE_PATH + ".notify")
     @patch(MODULE_PATH + ".Token")
-    @patch("freight.helpers.esi_fetch._esi_client")
+    @patch(MODULE_PATH + ".esi")
     def test_sync_contracts_for_my_corporation_and_ignore_notify_exception(
-        self, mock_esi_client, mock_Token, mock_notify
+        self, mock_esi, mock_Token, mock_notify
     ):
-        mock_Contracts = mock_esi_client.return_value.Contracts
+        mock_Contracts = mock_esi.client.Contracts
         mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
             self.esi_get_corporations_corporation_id_contracts
         )
@@ -1148,11 +1147,11 @@ class TestContractsSync(NoSocketsTestCase):
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE)
     @patch(MODULE_PATH + ".notify")
     @patch(MODULE_PATH + ".Token")
-    @patch("freight.helpers.esi_fetch._esi_client")
+    @patch(MODULE_PATH + ".esi")
     def test_sync_contracts_for_corp_in_alliance_and_report_to_user(
-        self, mock_esi_client, mock_Token, mock_notify
+        self, mock_esi, mock_Token, mock_notify
     ):
-        mock_Contracts = mock_esi_client.return_value.Contracts
+        mock_Contracts = mock_esi.client.Contracts
         mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
             self.esi_get_corporations_corporation_id_contracts
         )
@@ -1209,16 +1208,16 @@ class TestContractsSync(NoSocketsTestCase):
         "freight.managers.EveCharacter.objects.create_character",
         side_effect=ObjectNotFound(9999999, "character"),
     )
-    @patch("freight.helpers.esi_fetch._esi_client")
+    @patch(MODULE_PATH + ".esi")
     def test_can_sync_contracts_for_corp_public(
         self,
-        mock_esi_client,
+        mock_esi,
         mock_EveCharacter_objects_create_character,
         mock_EveCorporationInfo_objects_create_corporation,
         mock_Token,
     ):
         # create mocks
-        mock_Contracts = mock_esi_client.return_value.Contracts
+        mock_Contracts = mock_esi.client.Contracts
         mock_Contracts.get_corporations_corporation_id_contracts.side_effect = (
             self.esi_get_corporations_corporation_id_contracts
         )
@@ -1261,11 +1260,14 @@ class TestContractsSync(NoSocketsTestCase):
         )
 
     @patch(PATCH_FREIGHT_OPERATION_MODE, FREIGHT_OPERATION_MODE_MY_ALLIANCE)
-    @patch(MODULE_PATH + ".esi_fetch")
+    @patch(MODULE_PATH + ".esi")
     @patch(MODULE_PATH + ".ContractHandler.token")
-    def test_abort_on_general_exception(self, mock_token, mock_fetch):
-        mock_fetch.side_effect = RuntimeError
-        AuthUtils.add_permission_to_user_by_name(
+    def test_should_abort_on_general_exception(self, mock_token, mock_esi):
+        # given
+        mock_esi.client.Contracts.get_corporations_corporation_id_contracts.side_effect = (
+            RuntimeError
+        )
+        self.user = AuthUtils.add_permission_to_user_by_name(
             "freight.setup_contract_handler", self.user
         )
         handler = ContractHandler.objects.create(
@@ -1273,8 +1275,10 @@ class TestContractsSync(NoSocketsTestCase):
             character=self.main_ownership,
             operation_mode=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
         )
-        self.assertFalse(handler.update_contracts_esi())
-
+        # when
+        result = handler.update_contracts_esi()
+        # then
+        self.assertFalse(result)
         handler.refresh_from_db()
         self.assertEqual(handler.last_error, ContractHandler.ERROR_UNKNOWN)
 

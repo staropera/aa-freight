@@ -59,7 +59,7 @@
 
                 {% if perms.freight.setup_contract_handler %}
                     <a class="btn btn-default navbar-btn" href="{% url 'freight:setup_contract_handler' %}">
-                        Setup Contract Handler
+                        {{ setup_contract_handler_label }}
                     </a>
                 {% endif %}
             </ul>
