@@ -14,6 +14,8 @@ from django.utils.timezone import now
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
 
+from app_utils.logging import LoggerAddTag
+from app_utils.messages import messages_plus
 from esi.decorators import token_required
 from esi.models import Token
 
@@ -24,7 +26,6 @@ from .app_settings import (
     FREIGHT_OPERATION_MODE,
 )
 from .models import Contract, ContractHandler, EveEntity, Location, Pricing
-from .utils import DATETIME_FORMAT, messages_plus, LoggerAddTag
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
@@ -89,9 +90,6 @@ def contract_list_all(request):
 @permission_required("freight.basic_access")
 def contract_list_data(request, category) -> JsonResponse:
     """returns list of outstanding contracts for contract_list AJAX call"""
-
-    def datetime_format(x):
-        return x.strftime(DATETIME_FORMAT) if x else None
 
     def character_format(x):
         return x.character_name if x else None

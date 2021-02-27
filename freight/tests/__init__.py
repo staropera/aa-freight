@@ -3,9 +3,12 @@ import random
 import string
 
 from django.db.models import signals
+
+from app_utils.datetime import dt_eveformat
+
+
 from ..models import Pricing
 from ..signals import pricing_save_handler
-from ..utils import dt_eveformat
 
 
 class TempDisconnectSignal:

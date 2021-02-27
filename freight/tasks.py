@@ -5,8 +5,9 @@ from celery import shared_task, chain
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
+from app_utils.logging import LoggerAddTag
+
 from .models import ContractHandler, Contract, Location
-from .utils import LoggerAddTag
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)

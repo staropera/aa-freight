@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Removed support for Django 2
 - Add pre-commit checks to CI
 - Integrate codecov
+- Migrate to allianceauth-app-utils
 
 ## [1.3-0] - 2020-11-19
 

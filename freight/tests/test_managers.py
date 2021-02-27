@@ -8,6 +8,8 @@ from django.utils.timezone import now, utc
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 
+from app_utils.django import app_labels
+from app_utils.testing import NoSocketsTestCase
 from esi.models import Token
 
 from . import DisconnectPricingSaveHandler, get_invalid_object_pk
@@ -25,11 +27,9 @@ from .testdata import (
     structures_data,
     BravadoOperationStub,
 )
-from ..utils import app_labels, set_test_logger, NoSocketsTestCase
 
 
 MODULE_PATH = "freight.managers"
-logger = set_test_logger(MODULE_PATH, __file__)
 
 
 class TestEveEntityManager(NoSocketsTestCase):
@@ -775,10 +775,8 @@ class TestContractManagerNotifications(NoSocketsTestCase):
     @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
     @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
     def test_send_pilot_notifications_normal(self, mock_webhook_execute):
-        logger.debug("test_send_pilot_notifications_normal - start")
         Contract.objects.send_notifications(rate_limted=False)
         self.assertEqual(mock_webhook_execute.call_count, 8)
-        logger.debug("test_send_pilot_notifications_normal - complete")
 
     @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", "url")
     @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
@@ -825,10 +823,8 @@ class TestContractManagerNotifications(NoSocketsTestCase):
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         def test_send_customer_notifications_normal(self, mock_webhook_execute):
-            logger.debug("test_send_customer_notifications_normal - start")
             Contract.objects.send_notifications(rate_limted=False)
             self.assertEqual(mock_webhook_execute.call_count, 12)
-            logger.debug("test_send_customer_notifications_normal - complete")
 
         @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")

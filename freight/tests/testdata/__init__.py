@@ -8,12 +8,14 @@ from unittest.mock import Mock
 from django.contrib.auth.models import User
 from django.utils.timezone import now
 
+from app_utils.django import app_labels
+
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.tests.auth_utils import AuthUtils
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 from ...models import Contract, ContractHandler, Location, EveEntity
-from ...utils import app_labels
+
 
 if "discord" in app_labels():
     from allianceauth.services.modules.discord.models import DiscordUser

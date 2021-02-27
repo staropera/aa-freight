@@ -12,6 +12,8 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 from allianceauth.tests.auth_utils import AuthUtils
 
+from app_utils.django import app_labels
+from app_utils.testing import NoSocketsTestCase
 from esi.models import Token
 from esi.errors import TokenExpiredError, TokenInvalidError
 
@@ -39,12 +41,10 @@ from .testdata import (
     contracts_data,
     BravadoOperationStub,
 )
-from ..utils import app_labels, set_test_logger, NoSocketsTestCase
 
 
 MODULE_PATH = "freight.models"
 PATCH_FREIGHT_OPERATION_MODE = MODULE_PATH + ".FREIGHT_OPERATION_MODE"
-logger = set_test_logger(MODULE_PATH, __file__)
 
 
 class TestPricing(NoSocketsTestCase):

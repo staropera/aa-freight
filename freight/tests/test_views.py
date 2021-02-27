@@ -6,9 +6,11 @@ from django.test import RequestFactory
 from django.urls import reverse
 from django.test import TestCase
 
+from app_utils.testing import NoSocketsTestCase
+from esi.models import Token
+
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.tests.auth_utils import AuthUtils
-from esi.models import Token
 
 from . import (
     DisconnectPricingSaveHandler,
@@ -22,12 +24,9 @@ from ..app_settings import (
 from ..models import Contract, ContractHandler, Location, Pricing
 from .. import views
 from .testdata import create_contract_handler_w_contracts
-from ..utils import set_test_logger, NoSocketsTestCase
 
 
 MODULE_PATH = "freight.views"
-logger = set_test_logger(MODULE_PATH, __file__)
-
 HTTP_OK = 200
 HTTP_REDIRECT = 302
 

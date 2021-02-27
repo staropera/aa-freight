@@ -12,6 +12,7 @@ from django.utils.timezone import now
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 
+from app_utils.logging import LoggerAddTag, make_logger_prefix
 from esi.models import Token
 
 from .app_settings import (
@@ -19,7 +20,6 @@ from .app_settings import (
     FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
 )
 from .helpers.esi_fetch import esi_fetch
-from .utils import LoggerAddTag, make_logger_prefix
 
 
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)

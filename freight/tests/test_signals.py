@@ -1,13 +1,13 @@
 from unittest.mock import patch
 from time import sleep
 
+from app_utils.testing import NoSocketsTestCase
+
 from ..models import Location, Pricing
 from .testdata import create_contract_handler_w_contracts
-from ..utils import set_test_logger, NoSocketsTestCase
 
 
 MODULE_PATH = "freight.signals"
-logger = set_test_logger(MODULE_PATH, __file__)
 
 
 class TestSignals(NoSocketsTestCase):

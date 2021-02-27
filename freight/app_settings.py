@@ -1,4 +1,5 @@
-from .utils import clean_setting
+from app_utils.django import clean_setting
+
 
 # Name of this app as shown in the Auth sidebar, page titles
 # and as default avatar name for notifications
