@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Removed support for Django 2
 - Add pre-commit checks to CI
+- Integrate codecov
 
 ## [1.3-0] - 2020-11-19
 
