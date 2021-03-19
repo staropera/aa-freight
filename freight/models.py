@@ -36,6 +36,8 @@ from .app_settings import (
     FREIGHT_DISCORD_DISABLE_BRANDING,
     FREIGHT_DISCORD_MENTIONS,
     FREIGHT_DISCORD_WEBHOOK_URL,
+    FREIGHT_DISCORDPROXY_PORT,
+    FREIGHT_ENABLE_DISCORD_NOTIFICATION,
     FREIGHT_FULL_ROUTE_NAMES,
     FREIGHT_HOURS_UNTIL_STALE_STATUS,
     FREIGHT_OPERATION_MODE,
@@ -1203,7 +1205,9 @@ class Contract(models.Model):
         """sends customer notification about this contract to Discord
         force_sent: send notification even if one has already been sent
         """
-        if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL and "discord" in app_labels():
+        if (
+            FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL or FREIGHT_ENABLE_DISCORD_NOTIFICATION
+        ) and "discord" in app_labels():
             status_to_report = None
             for status in self.STATUS_FOR_CUSTOMER_NOTIFICATION:
                 if self.status == status and (
@@ -1215,7 +1219,7 @@ class Contract(models.Model):
                     status_to_report = status
                     break
 
-            if "discord" in app_labels() and status_to_report:
+            if status_to_report:
                 self._report_to_customer(status_to_report)
         else:
             logger.debug(
@@ -1239,45 +1243,81 @@ class Contract(models.Model):
             logger.info("%s: Could not find Discord user for issuer", self)
             return
 
-        if FREIGHT_DISCORD_DISABLE_BRANDING:
-            username = None
-            avatar_url = None
-        else:
-            username = FREIGHT_APP_NAME
-            avatar_url = self.handler.organization.avatar_url
-
-        hook = Webhook(
-            FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
-            username=username,
-            avatar_url=avatar_url,
-        )
-        with transaction.atomic():
-            logger.info(
-                "%s: Trying to sent customer notification"
-                " about contract %s on status %s to %s",
-                self,
-                self.contract_id,
-                status_to_report,
-                FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
-            )
-            embed = self._generate_embed()
-            contents = self._generate_contents(discord_user_id, status_to_report)
-            response = hook.execute(
-                content=contents, embeds=[embed], wait_for_response=True
-            )
-            if response.status_ok:
-                ContractCustomerNotification.objects.update_or_create(
-                    contract=self,
-                    status=status_to_report,
-                    defaults={"date_notified": now()},
-                )
-
+        if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
+            if FREIGHT_DISCORD_DISABLE_BRANDING:
+                username = None
+                avatar_url = None
             else:
-                logger.warn(
-                    "%s: Failed to send message. HTTP code: %s",
+                username = FREIGHT_APP_NAME
+                avatar_url = self.handler.organization.avatar_url
+
+            hook = Webhook(
+                FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
+                username=username,
+                avatar_url=avatar_url,
+            )
+            with transaction.atomic():
+                logger.info(
+                    "%s: Trying to send customer notification"
+                    " about contract %s on status %s to %s",
                     self,
-                    response.status_code,
+                    self.contract_id,
+                    status_to_report,
+                    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
                 )
+                embed = self._generate_embed()
+                contents = self._generate_contents(discord_user_id, status_to_report)
+                response = hook.execute(
+                    content=contents, embeds=[embed], wait_for_response=True
+                )
+                if response.status_ok:
+                    ContractCustomerNotification.objects.update_or_create(
+                        contract=self,
+                        status=status_to_report,
+                        defaults={"date_notified": now()},
+                    )
+
+                else:
+                    logger.warn(
+                        "%s: Failed to send message. HTTP code: %s",
+                        self,
+                        response.status_code,
+                    )
+        if FREIGHT_ENABLE_DISCORD_NOTIFICATION:
+            with transaction.atomic():
+                logger.info(
+                    "%s: Trying to send customer notification"
+                    " about contract %s on status %s to discord dm",
+                    self,
+                    self.contract_id,
+                    status_to_report,
+                )
+                try:
+                    import grpc
+                    from discordproxy.discord_api_pb2 import SendDirectMessageRequest
+                    from discordproxy.discord_api_pb2_grpc import DiscordApiStub
+
+                    embed = self._generate_embed()
+                    contents = self._generate_contents(
+                        discord_user_id, status_to_report
+                    )
+
+                    with grpc.insecure_channel(
+                        f"localhost:{FREIGHT_DISCORDPROXY_PORT}"
+                    ) as channel:
+                        client = DiscordApiStub(channel)
+                        request = SendDirectMessageRequest(
+                            user_id=discord_user_id, embed=embed
+                        )
+                        client.SendDirectMessage(request)
+
+                    ContractCustomerNotification.objects.update_or_create(
+                        contract=self,
+                        status=status_to_report,
+                        defaults={"date_notified": now()},
+                    )
+                except ModuleNotFoundError:
+                    logger.warn("%s: Discord Proxy not installed", self)
 
     def _generate_contents(self, discord_user_id, status_to_report):
         contents = "<@{}>\n".format(discord_user_id)
