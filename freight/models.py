@@ -1320,7 +1320,7 @@ class Contract(models.Model):
                     ) as channel:
                         client = DiscordApiStub(channel)
                         request = SendDirectMessageRequest(
-                            user_id=discord_user_id, embed=embed
+                            user_id=discord_user_id, content=contents, embed=embed
                         )
                         client.SendDirectMessage(request)
 
