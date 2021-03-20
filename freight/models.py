@@ -1112,7 +1112,7 @@ class Contract(models.Model):
         else:
             return []
 
-    def _generate_embed(self) -> Embed:
+    def _generate_embed_description(self) -> object:
         """generates a Discord embed for this contract"""
         desc = ""
         desc += "**Route**: {} <-> {}\n".format(
@@ -1144,11 +1144,24 @@ class Contract(models.Model):
             desc += "**Accepted on**: {}\n".format(
                 self.date_accepted.strftime(DATETIME_FORMAT)
             )
+        return {"desc": desc, "color": color}
+
+    def _generate_embed(self) -> Embed:
+        embed_desc = self._generate_embed_description()
+        return Embed(
+            description=embed_desc["desc"],
+            color=embed_desc["color"],
+            thumbnail=Thumbnail(self.issuer.portrait_url()),
+        )
+
+    def _generate_proxy_embed(self):
+        embed_desc = self._generate_embed_description()
+        from discordproxy.discord_api_pb2 import Embed
 
         return Embed(
-            description=desc,
-            color=color,
-            thumbnail=Thumbnail(self.issuer.portrait_url()),
+            description=embed_desc["desc"],
+            color=embed_desc["color"],
+            thumbnail=Embed.Thumbnail(url=self.issuer.portrait_url()),
         )
 
     def send_pilot_notification(self):
@@ -1297,7 +1310,7 @@ class Contract(models.Model):
                     from discordproxy.discord_api_pb2 import SendDirectMessageRequest
                     from discordproxy.discord_api_pb2_grpc import DiscordApiStub
 
-                    embed = self._generate_embed()
+                    embed = self._generate_proxy_embed()
                     contents = self._generate_contents(
                         discord_user_id, status_to_report
                     )
