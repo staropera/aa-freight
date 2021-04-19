@@ -28,7 +28,7 @@ def _get_user(user_pk) -> User:
 def _get_contract_handler() -> ContractHandler:
     handler = ContractHandler.objects.first()
     if not handler:
-        logger.warning("contract handler was found")
+        logger.warning("No contract handler was found")
         raise ObjectDoesNotExist()
     else:
         return handler
