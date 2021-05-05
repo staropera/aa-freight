@@ -636,6 +636,7 @@ class TestContractSendPilotNotification(NoSocketsTestCase):
 
 if "discord" in app_labels():
 
+    @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
     @patch(MODULE_PATH + ".Webhook.execute", spec=True)
     class TestContractSendCustomerNotification(NoSocketsTestCase):
         @classmethod

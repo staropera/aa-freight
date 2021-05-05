@@ -1179,7 +1179,7 @@ class Contract(models.Model):
             )
             with transaction.atomic():
                 logger.info(
-                    "%s: Trying to sent pilot notification about contract {} to {}",
+                    "%s: Trying to sent pilot notification about contract %s to %s",
                     self,
                     self.contract_id,
                     FREIGHT_DISCORD_WEBHOOK_URL,

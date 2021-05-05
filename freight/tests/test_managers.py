@@ -775,75 +775,83 @@ class TestContractManagerCreateFromDict(NoSocketsTestCase):
         self.assertIsNone(obj.acceptor_corporation)
 
 
-@patch("freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS", 48)
-@patch("freight.models.Webhook.execute", autospec=True)
-class TestContractManagerNotifications(NoSocketsTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.handler, _ = create_contract_handler_w_contracts()
-        # disable pricing signal
-        jita = Location.objects.get(id=60003760)
-        amamake = Location.objects.get(id=1022167642188)
-        with DisconnectPricingSaveHandler():
-            Pricing.objects.create(
-                start_location=jita, end_location=amamake, price_base=500000000
-            )
+if "discord" in app_labels():
 
-        Contract.objects.update_pricing()
+    @patch("freight.models.FREIGHT_HOURS_UNTIL_STALE_STATUS", 48)
+    @patch("freight.models.Webhook.execute", autospec=True)
+    class TestContractManagerNotifications(NoSocketsTestCase):
+        @classmethod
+        def setUpClass(cls):
+            super().setUpClass()
+            cls.handler, _ = create_contract_handler_w_contracts()
+            # disable pricing signal
+            jita = Location.objects.get(id=60003760)
+            amamake = Location.objects.get(id=1022167642188)
+            with DisconnectPricingSaveHandler():
+                Pricing.objects.create(
+                    start_location=jita, end_location=amamake, price_base=500000000
+                )
 
-    @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", "url")
-    @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-    @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
-    @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-    def test_send_pilot_notifications_normal(self, mock_webhook_execute):
-        Contract.objects.send_notifications(rate_limted=False)
-        self.assertEqual(mock_webhook_execute.call_count, 8)
+            Contract.objects.update_pricing()
 
-    @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", "url")
-    @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-    @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
-    @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-    def test_dont_send_pilot_notifications_for_expired_contracts(
-        self, mock_webhook_execute
-    ):
-        x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
-        Contract.objects.all().exclude(pk=x.pk).delete()
-        x.date_expired = now() - timedelta(hours=1)
-        x.save()
-        Contract.objects.send_notifications(rate_limted=False)
-        self.assertEqual(mock_webhook_execute.call_count, 0)
+        @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", "url")
+        @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
+        @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        def test_send_pilot_notifications_normal(self, mock_webhook_execute):
+            Contract.objects.send_notifications(rate_limted=False)
+            self.assertEqual(mock_webhook_execute.call_count, 8)
 
-    @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", "url")
-    @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-    @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
-    @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-    def test_send_pilot_notifications_only_once(self, mock_webhook_execute):
-        x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
-        Contract.objects.all().exclude(pk=x.pk).delete()
+        @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", "url")
+        @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
+        @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        def test_dont_send_pilot_notifications_for_expired_contracts(
+            self, mock_webhook_execute
+        ):
+            x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
+            Contract.objects.all().exclude(pk=x.pk).delete()
+            x.date_expired = now() - timedelta(hours=1)
+            x.save()
+            Contract.objects.send_notifications(rate_limted=False)
+            self.assertEqual(mock_webhook_execute.call_count, 0)
 
-        # round #1
-        Contract.objects.send_notifications(rate_limted=False)
-        self.assertEqual(mock_webhook_execute.call_count, 1)
+        @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", "url")
+        @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
+        @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        def test_send_pilot_notifications_only_once(self, mock_webhook_execute):
+            x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
+            Contract.objects.all().exclude(pk=x.pk).delete()
 
-        # round #2
-        Contract.objects.send_notifications(rate_limted=False)
-        self.assertEqual(mock_webhook_execute.call_count, 1)
+            # round #1
+            Contract.objects.send_notifications(rate_limted=False)
+            self.assertEqual(mock_webhook_execute.call_count, 1)
 
-    @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
-    @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-    @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
-    @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-    def test_dont_send_any_notifications_when_no_url_if_set(self, mock_webhook_execute):
-        Contract.objects.send_notifications(rate_limted=False)
-        self.assertEqual(mock_webhook_execute.call_count, 0)
+            # round #2
+            Contract.objects.send_notifications(rate_limted=False)
+            self.assertEqual(mock_webhook_execute.call_count, 1)
 
-    if "discord" in app_labels():
+        @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
+        @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        def test_dont_send_any_notifications_when_no_url_if_set(
+            self, mock_webhook_execute
+        ):
+            Contract.objects.send_notifications(rate_limted=False)
+            self.assertEqual(mock_webhook_execute.call_count, 0)
 
         @patch("freight.managers.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
+        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
         def test_send_customer_notifications_normal(self, mock_webhook_execute):
             Contract.objects.send_notifications(rate_limted=False)
             self.assertEqual(mock_webhook_execute.call_count, 12)
@@ -852,6 +860,7 @@ class TestContractManagerNotifications(NoSocketsTestCase):
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
+        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
         def test_dont_send_customer_notifications_for_expired_contracts(
             self, mock_webhook_execute
         ):
@@ -866,6 +875,7 @@ class TestContractManagerNotifications(NoSocketsTestCase):
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
+        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
         def test_send_customer_notifications_only_once_per_state(
             self, mock_webhook_execute
         ):
