@@ -18,6 +18,7 @@ from . import __title__
 from .app_settings import (
     FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
     FREIGHT_DISCORD_WEBHOOK_URL,
+    FREIGHT_DISCORDPROXY_ENABLED,
 )
 from .providers import esi
 
@@ -403,7 +404,7 @@ class ContractManager(models.Manager):
             logger.debug("FREIGHT_DISCORD_WEBHOOK_URL not configured")
 
         # customer notifications
-        if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
+        if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL or FREIGHT_DISCORDPROXY_ENABLED:
             contracts_qs = self.filter(
                 status__in=self.model.STATUS_FOR_CUSTOMER_NOTIFICATION
             ).exclude(pricing__exact=None)
@@ -414,7 +415,9 @@ class ContractManager(models.Manager):
                 self._sent_customer_notifications(contracts_qs, rate_limted, force_sent)
 
         else:
-            logger.debug("FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured")
+            logger.debug(
+                "FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured or FREIGHT_DISCORDPROXY_ENABLED not enabled"
+            )
 
     def _sent_pilot_notifications(self, contracts_qs, rate_limted) -> None:
         logger.info(

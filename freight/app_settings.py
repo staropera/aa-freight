@@ -73,3 +73,9 @@ FREIGHT_OPERATION_MODE = clean_setting(
     default_value=FREIGHT_OPERATION_MODE_MY_ALLIANCE,
     choices=[x[0] for x in FREIGHT_OPERATION_MODES],
 )
+
+# whether to use Discord Proxy for sending DMs
+FREIGHT_DISCORDPROXY_ENABLED = clean_setting("FREIGHT_DISCORDPROXY_ENABLED", False)
+
+# Discordproxy port for GRPC
+FREIGHT_DISCORDPROXY_PORT = clean_setting("FREIGHT_DISCORDPROXY_PORT", 50051)

@@ -1,6 +1,7 @@
-from datetime import timedelta
+import datetime as dt
 from unittest.mock import Mock, patch
 
+import grpc
 from dhooks_lite import Embed
 
 from django.contrib.auth.models import User
@@ -498,7 +499,7 @@ class TestContract(NoSocketsTestCase):
             contract_id=1,
             collateral=0,
             date_issued=now(),
-            date_expired=now() + timedelta(days=5),
+            date_expired=now() + dt.timedelta(days=5),
             days_to_complete=3,
             end_location=self.amamake,
             for_corporation=False,
@@ -520,7 +521,7 @@ class TestContract(NoSocketsTestCase):
         self.assertEqual(repr(self.contract), excepted)
 
     def test_hours_issued_2_completed(self):
-        self.contract.date_completed = self.contract.date_issued + timedelta(hours=9)
+        self.contract.date_completed = self.contract.date_issued + dt.timedelta(hours=9)
         self.assertEqual(self.contract.hours_issued_2_completed, 9)
         self.contract.date_completed = None
         self.assertIsNone(self.contract.hours_issued_2_completed)
@@ -530,11 +531,13 @@ class TestContract(NoSocketsTestCase):
         self.assertEqual(self.contract.date_issued, self.contract.date_latest)
 
         # adding date_accepted to contract
-        self.contract.date_accepted = self.contract.date_issued + timedelta(days=1)
+        self.contract.date_accepted = self.contract.date_issued + dt.timedelta(days=1)
         self.assertEqual(self.contract.date_accepted, self.contract.date_latest)
 
         # adding date_completed to contract
-        self.contract.date_completed = self.contract.date_accepted + timedelta(days=1)
+        self.contract.date_completed = self.contract.date_accepted + dt.timedelta(
+            days=1
+        )
         self.assertEqual(self.contract.date_completed, self.contract.date_latest)
 
     @patch(MODULE_PATH + ".FREIGHT_HOURS_UNTIL_STALE_STATUS", 24)
@@ -544,7 +547,7 @@ class TestContract(NoSocketsTestCase):
         self.assertFalse(self.contract.has_stale_status)
 
         # date_issued is 30 hours ago
-        self.contract.date_issued = self.contract.date_issued - timedelta(hours=30)
+        self.contract.date_issued = self.contract.date_issued - dt.timedelta(hours=30)
         self.assertTrue(self.contract.has_stale_status)
 
     def test_acceptor_name(self):
@@ -580,7 +583,7 @@ class TestContract(NoSocketsTestCase):
         self.assertIsInstance(x, Embed)
 
 
-@patch(MODULE_PATH + ".Webhook.execute", spec=True)
+@patch(MODULE_PATH + ".dhooks_lite.Webhook.execute", spec=True)
 class TestContractSendPilotNotification(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
@@ -636,7 +639,9 @@ class TestContractSendPilotNotification(NoSocketsTestCase):
 
 if "discord" in app_labels():
 
-    @patch(MODULE_PATH + ".Webhook.execute", spec=True)
+    from allianceauth.services.modules.discord.models import DiscordUser
+
+    @patch(MODULE_PATH + ".dhooks_lite.Webhook.execute", spec=True)
     class TestContractSendCustomerNotification(NoSocketsTestCase):
         @classmethod
         def setUpClass(cls):
@@ -651,69 +656,121 @@ if "discord" in app_labels():
             cls.amamake = Location.objects.get(id=1022167642188)
             cls.amarr = Location.objects.get(id=60008494)
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         def test_can_send_outstanding(self, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = True
+            # when
             self.contract_1.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
+            obj = self.contract_1.contractcustomernotification_set.get(
+                status=Contract.STATUS_OUTSTANDING
+            )
+            self.assertAlmostEqual(
+                obj.date_notified, now(), delta=dt.timedelta(seconds=30)
+            )
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         def test_can_send_in_progress(self, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = True
+            # when
             self.contract_2.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
+            obj = self.contract_2.contractcustomernotification_set.get(
+                status=Contract.STATUS_IN_PROGRESS
+            )
+            self.assertAlmostEqual(
+                obj.date_notified, now(), delta=dt.timedelta(seconds=30)
+            )
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         def test_can_send_finished(self, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = True
+            # when
             self.contract_3.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
+            obj = self.contract_3.contractcustomernotification_set.get(
+                status=Contract.STATUS_FINISHED
+            )
+            self.assertAlmostEqual(
+                obj.date_notified, now(), delta=dt.timedelta(seconds=30)
+            )
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
         def test_aborts_without_webhook_url(self, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = True
+            # when
             self.contract_1.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 0)
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         @patch(MODULE_PATH + ".app_labels")
         def test_aborts_without_discord(self, mock_app_labels, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = True
             mock_app_labels.return_value = []
+            # when
             self.contract_1.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 0)
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         @patch(MODULE_PATH + ".User.objects")
         def test_aborts_without_issuer(self, mock_objects, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = True
             mock_objects.filter.return_value.first.return_value = None
+            # when
             self.contract_1.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 0)
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_DISABLE_BRANDING", True)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         def test_can_send_wo_branding(self, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = True
+            # when
             self.contract_1.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         def test_log_error_from_execute(self, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = False
             mock_webhook_execute.return_value.status_code = 404
+            # when
             self.contract_1.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         def test_can_send_without_acceptor(self, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = True
             my_contract = Contract.objects.create(
                 handler=self.handler,
                 contract_id=9999,
                 collateral=0,
                 date_issued=now(),
-                date_expired=now() + timedelta(days=5),
+                date_expired=now() + dt.timedelta(days=5),
                 days_to_complete=3,
                 end_location=self.amamake,
                 for_corporation=False,
@@ -724,18 +781,22 @@ if "discord" in app_labels():
                 status=Contract.STATUS_IN_PROGRESS,
                 volume=50000,
             )
+            # when
             my_contract.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         def test_can_send_failed(self, mock_webhook_execute):
+            # given
             mock_webhook_execute.return_value.status_ok = True
             my_contract = Contract.objects.create(
                 handler=self.handler,
                 contract_id=9999,
                 collateral=0,
                 date_issued=now(),
-                date_expired=now() + timedelta(days=5),
+                date_expired=now() + dt.timedelta(days=5),
                 days_to_complete=3,
                 end_location=self.amamake,
                 for_corporation=False,
@@ -746,18 +807,50 @@ if "discord" in app_labels():
                 status=Contract.STATUS_FAILED,
                 volume=50000,
             )
+            # when
             my_contract.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
 
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         @patch(MODULE_PATH + ".DiscordUser.objects")
         def test_aborts_without_Discord_user(self, mock_objects, mock_webhook_execute):
-            from allianceauth.services.modules.discord.models import DiscordUser
-
+            # given
             mock_webhook_execute.return_value.status_ok = True
             mock_objects.get.side_effect = DiscordUser.DoesNotExist
+            # when
             self.contract_1.send_customer_notification()
+            # then
             self.assertEqual(mock_webhook_execute.call_count, 0)
+
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", True)
+        @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch(MODULE_PATH + ".discord_api_pb2_grpc.DiscordApiStub")
+        def test_can_send_status_via_grpc(self, DiscordApiStub, mock_webhook_execute):
+            # when
+            self.contract_1.send_customer_notification()
+            # then
+            self.assertTrue(DiscordApiStub.return_value.SendDirectMessage.called)
+            obj = self.contract_1.contractcustomernotification_set.get(
+                status=Contract.STATUS_OUTSTANDING
+            )
+            self.assertAlmostEqual(
+                obj.date_notified, now(), delta=dt.timedelta(seconds=30)
+            )
+
+        @patch(MODULE_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", True)
+        @patch(MODULE_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
+        @patch(MODULE_PATH + ".discord_api_pb2_grpc.DiscordApiStub")
+        def test_can_handle_grpc_error(self, DiscordApiStub, mock_webhook_execute):
+            # given
+            my_exception = grpc.RpcError()
+            my_exception.details = lambda: "{}"
+            DiscordApiStub.return_value.SendDirectMessage.side_effect = my_exception
+            # when
+            self.contract_1.send_customer_notification()
+            # then
+            self.assertTrue(DiscordApiStub.return_value.SendDirectMessage.called)
 
 
 class TestLocation(NoSocketsTestCase):
@@ -868,7 +961,7 @@ class TestContractHandler(NoSocketsTestCase):
 
         # no errors and sync within grace period
         self.handler.last_error = ContractHandler.ERROR_NONE
-        self.handler.last_sync = now() - timedelta(minutes=29)
+        self.handler.last_sync = now() - dt.timedelta(minutes=29)
         self.assertTrue(self.handler.is_sync_ok)
 
         # recent sync error
@@ -878,7 +971,7 @@ class TestContractHandler(NoSocketsTestCase):
 
         # no error, but no sync within grace period
         self.handler.last_error = ContractHandler.ERROR_NONE
-        self.handler.last_sync = now() - timedelta(minutes=31)
+        self.handler.last_sync = now() - dt.timedelta(minutes=31)
         self.assertFalse(self.handler.is_sync_ok)
 
     def test_set_sync_status_1(self):
@@ -888,7 +981,7 @@ class TestContractHandler(NoSocketsTestCase):
 
         self.handler.set_sync_status(ContractHandler.ERROR_TOKEN_EXPIRED)
         self.assertEqual(self.handler.last_error, ContractHandler.ERROR_TOKEN_EXPIRED)
-        self.assertGreater(self.handler.last_sync, now() - timedelta(minutes=1))
+        self.assertGreater(self.handler.last_sync, now() - dt.timedelta(minutes=1))
 
     def test_set_sync_status_2(self):
         self.handler.last_error = ContractHandler.ERROR_UNKNOWN
@@ -897,7 +990,7 @@ class TestContractHandler(NoSocketsTestCase):
 
         self.handler.set_sync_status()
         self.assertEqual(self.handler.last_error, ContractHandler.ERROR_NONE)
-        self.assertGreater(self.handler.last_sync, now() - timedelta(minutes=1))
+        self.assertGreater(self.handler.last_sync, now() - dt.timedelta(minutes=1))
 
 
 class TestContractsSync(NoSocketsTestCase):
@@ -1445,7 +1538,7 @@ class TestContractCustomerNotification(NoSocketsTestCase):
             contract_id=1,
             collateral=0,
             date_issued=now(),
-            date_expired=now() + timedelta(days=5),
+            date_expired=now() + dt.timedelta(days=5),
             days_to_complete=3,
             end_location=self.location_2,
             for_corporation=False,
