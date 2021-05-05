@@ -798,7 +798,7 @@ if "discord" in app_labels():
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        @patch("freight.models.FREIGHT_DISCORDPROXY_ENABLED", False)
         def test_send_pilot_notifications_normal(self, mock_webhook_execute):
             Contract.objects.send_notifications(rate_limted=False)
             self.assertEqual(mock_webhook_execute.call_count, 8)
@@ -807,7 +807,7 @@ if "discord" in app_labels():
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        @patch("freight.models.FREIGHT_DISCORDPROXY_ENABLED", False)
         def test_dont_send_pilot_notifications_for_expired_contracts(
             self, mock_webhook_execute
         ):
@@ -822,7 +822,7 @@ if "discord" in app_labels():
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", "url")
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        @patch("freight.models.FREIGHT_DISCORDPROXY_ENABLED", False)
         def test_send_pilot_notifications_only_once(self, mock_webhook_execute):
             x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
             Contract.objects.all().exclude(pk=x.pk).delete()
@@ -839,8 +839,8 @@ if "discord" in app_labels():
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
-        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
-        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        @patch("freight.models.FREIGHT_DISCORDPROXY_ENABLED", False)
+        @patch("freight.models.FREIGHT_DISCORDPROXY_ENABLED", False)
         def test_dont_send_any_notifications_when_no_url_if_set(
             self, mock_webhook_execute
         ):
@@ -851,7 +851,7 @@ if "discord" in app_labels():
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
-        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        @patch("freight.models.FREIGHT_DISCORDPROXY_ENABLED", False)
         def test_send_customer_notifications_normal(self, mock_webhook_execute):
             Contract.objects.send_notifications(rate_limted=False)
             self.assertEqual(mock_webhook_execute.call_count, 12)
@@ -860,7 +860,7 @@ if "discord" in app_labels():
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
-        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        @patch("freight.models.FREIGHT_DISCORDPROXY_ENABLED", False)
         def test_dont_send_customer_notifications_for_expired_contracts(
             self, mock_webhook_execute
         ):
@@ -875,7 +875,7 @@ if "discord" in app_labels():
         @patch("freight.managers.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
         @patch("freight.models.FREIGHT_DISCORD_WEBHOOK_URL", None)
         @patch("freight.models.FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", "url")
-        @patch("freight.models.FREIGHT_ENABLE_DISCORD_NOTIFICATION", False)
+        @patch("freight.models.FREIGHT_DISCORDPROXY_ENABLED", False)
         def test_send_customer_notifications_only_once_per_state(
             self, mock_webhook_execute
         ):

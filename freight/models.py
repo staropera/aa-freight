@@ -44,8 +44,8 @@ from .app_settings import (
     FREIGHT_DISCORD_DISABLE_BRANDING,
     FREIGHT_DISCORD_MENTIONS,
     FREIGHT_DISCORD_WEBHOOK_URL,
+    FREIGHT_DISCORDPROXY_ENABLED,
     FREIGHT_DISCORDPROXY_PORT,
-    FREIGHT_ENABLE_DISCORD_NOTIFICATION,
     FREIGHT_FULL_ROUTE_NAMES,
     FREIGHT_HOURS_UNTIL_STALE_STATUS,
     FREIGHT_OPERATION_MODE,
@@ -1227,7 +1227,7 @@ class Contract(models.Model):
         force_sent: send notification even if one has already been sent
         """
         if (
-            FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL or FREIGHT_ENABLE_DISCORD_NOTIFICATION
+            FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL or FREIGHT_DISCORDPROXY_ENABLED
         ) and "discord" in app_labels():
             status_to_report = None
             for status in self.STATUS_FOR_CUSTOMER_NOTIFICATION:
@@ -1267,7 +1267,7 @@ class Contract(models.Model):
         if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
             self._send_to_customer_via_webhook(status_to_report, discord_user_id)
 
-        if FREIGHT_ENABLE_DISCORD_NOTIFICATION:
+        if FREIGHT_DISCORDPROXY_ENABLED:
             self._send_to_customer_via_grpc(status_to_report, discord_user_id)
 
     def _send_to_customer_via_webhook(self, status_to_report, discord_user_id):
