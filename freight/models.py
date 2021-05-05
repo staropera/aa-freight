@@ -1092,14 +1092,14 @@ class Contract(models.Model):
 
     def _generate_embed_description(self) -> object:
         """generates a Discord embed for this contract"""
-        desc = ""
-        desc += "**Route**: {} <-> {}\n".format(
-            self.start_location.solar_system_name, self.end_location.solar_system_name
+        desc = (
+            f"**From**: {self.start_location}\n"
+            f"**To**: {self.end_location}\n"
+            f"**Volume**: {self.volume:,.0f} m3\n"
+            f"**Reward**: {self.reward:,.0f} ISK\n"
+            f"**Collateral**: {self.collateral:,.0f} ISK\n"
+            f"**Status**: {self.status}\n"
         )
-        desc += "**Reward**: {:,.0f} ISK\n".format(self.reward)
-        desc += "**Collateral**: {:,.0f} ISK\n".format(self.collateral)
-        desc += "**Volume**: {:,.0f} m3\n".format(self.volume)
-        desc += "**Status**: {}\n".format(self.status)
         if self.pricing:
             if not self.has_pricing_errors:
                 check_text = "passed"
@@ -1110,26 +1110,37 @@ class Contract(models.Model):
         else:
             check_text = "N/A"
             color = None
-        desc += "**Contract Check**: {}\n".format(check_text)
-        desc += "**Issued on**: {}\n".format(self.date_issued.strftime(DATETIME_FORMAT))
-        desc += "**Issued by**: {}\n".format(self.issuer)
-        desc += "**Expires on**: {}\n".format(
-            self.date_expired.strftime(DATETIME_FORMAT)
+        desc += (
+            f"**Contract Check**: {check_text}\n"
+            f"**Issued on**: {self.date_issued.strftime(DATETIME_FORMAT)}\n"
+            f"**Issued by**: {self.issuer}\n"
+            f"**Expires on**: {self.date_expired.strftime(DATETIME_FORMAT)}\n"
         )
         if self.acceptor_name:
-            desc += "**Accepted by**: {}\n".format(self.acceptor_name)
+            desc += f"**Accepted by**: {self.acceptor_name}\n"
         if self.date_accepted:
-            desc += "**Accepted on**: {}\n".format(
-                self.date_accepted.strftime(DATETIME_FORMAT)
-            )
+            desc += f"**Accepted on**: {self.date_accepted.strftime(DATETIME_FORMAT)}\n"
+        desc += f"**Contract ID**: {self.contract_id}\n"
         return {"desc": desc, "color": color}
 
-    def _generate_embed(self) -> dhooks_lite.Embed:
+    def _generate_embed(self, for_issuer=False) -> dhooks_lite.Embed:
         embed_desc = self._generate_embed_description()
+        if for_issuer:
+            url = urljoin(site_absolute_url(), reverse("freight:contract_list_user"))
+        else:
+            url = urljoin(site_absolute_url(), reverse("freight:contract_list_all"))
         return dhooks_lite.Embed(
+            author=dhooks_lite.Author(
+                name=self.issuer.character_name, icon_url=self.issuer.portrait_url()
+            ),
+            title=(
+                f"{self.start_location.solar_system_name} >> "
+                f"{self.end_location.solar_system_name} "
+                f"| {self.volume:,.0f} m3 | {self.status.upper()}"
+            ),
+            url=url,
             description=embed_desc["desc"],
             color=embed_desc["color"],
-            thumbnail=dhooks_lite.Thumbnail(self.issuer.portrait_url()),
         )
 
     def send_pilot_notification(self):
@@ -1254,7 +1265,7 @@ class Contract(models.Model):
             status_to_report,
             FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
         )
-        embed = self._generate_embed()
+        embed = self._generate_embed(for_issuer=True)
         contents = self._generate_contents(discord_user_id, status_to_report)
         response = hook.execute(
             content=contents, embeds=[embed], wait_for_response=True
@@ -1284,7 +1295,7 @@ class Contract(models.Model):
             logger.error("Discord Proxy not installed. Can not send direct messages.")
             return
 
-        embed_dct = self._generate_embed().asdict()
+        embed_dct = self._generate_embed(for_issuer=True).asdict()
         embed = json_format.ParseDict(embed_dct, discord_api_pb2.Embed())
         contents = self._generate_contents(
             discord_user_id, status_to_report, include_mention=False
