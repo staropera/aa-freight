@@ -15,6 +15,14 @@ from django.utils.timezone import now
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 
+try:
+    import grpc
+    from discordproxy.discord_api_pb2 import SendDirectMessageRequest
+    from discordproxy.discord_api_pb2_grpc import DiscordApiStub
+    from discordproxy.helpers import parse_error_details
+except ImportError:
+    grpc = None
+
 from allianceauth.authentication.models import CharacterOwnership, User
 from allianceauth.eveonline.models import (
     EveAllianceInfo,
@@ -1257,80 +1265,80 @@ class Contract(models.Model):
             return
 
         if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
-            if FREIGHT_DISCORD_DISABLE_BRANDING:
-                username = None
-                avatar_url = None
-            else:
-                username = FREIGHT_APP_NAME
-                avatar_url = self.handler.organization.avatar_url
+            self._send_to_customer_via_webhook(status_to_report, discord_user_id)
 
-            hook = Webhook(
-                FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
-                username=username,
-                avatar_url=avatar_url,
-            )
-            with transaction.atomic():
-                logger.info(
-                    "%s: Trying to send customer notification"
-                    " about contract %s on status %s to %s",
-                    self,
-                    self.contract_id,
-                    status_to_report,
-                    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
-                )
-                embed = self._generate_embed()
-                contents = self._generate_contents(discord_user_id, status_to_report)
-                response = hook.execute(
-                    content=contents, embeds=[embed], wait_for_response=True
-                )
-                if response.status_ok:
-                    ContractCustomerNotification.objects.update_or_create(
-                        contract=self,
-                        status=status_to_report,
-                        defaults={"date_notified": now()},
-                    )
-
-                else:
-                    logger.warn(
-                        "%s: Failed to send message. HTTP code: %s",
-                        self,
-                        response.status_code,
-                    )
         if FREIGHT_ENABLE_DISCORD_NOTIFICATION:
-            with transaction.atomic():
-                logger.info(
-                    "%s: Trying to send customer notification"
-                    " about contract %s on status %s to discord dm",
-                    self,
-                    self.contract_id,
-                    status_to_report,
+            self._send_to_customer_via_grpc(status_to_report, discord_user_id)
+
+    def _send_to_customer_via_webhook(self, status_to_report, discord_user_id):
+        if FREIGHT_DISCORD_DISABLE_BRANDING:
+            username = None
+            avatar_url = None
+        else:
+            username = FREIGHT_APP_NAME
+            avatar_url = self.handler.organization.avatar_url
+
+        hook = Webhook(
+            FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
+            username=username,
+            avatar_url=avatar_url,
+        )
+        logger.info(
+            "%s: Trying to send customer notification"
+            " about contract %s on status %s to %s",
+            self,
+            self.contract_id,
+            status_to_report,
+            FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
+        )
+        embed = self._generate_embed()
+        contents = self._generate_contents(discord_user_id, status_to_report)
+        response = hook.execute(
+            content=contents, embeds=[embed], wait_for_response=True
+        )
+        if response.status_ok:
+            ContractCustomerNotification.objects.update_or_create(
+                contract=self,
+                status=status_to_report,
+                defaults={"date_notified": now()},
+            )
+        else:
+            logger.warn(
+                "%s: Failed to send message. HTTP code: %s",
+                self,
+                response.status_code,
+            )
+
+    def _send_to_customer_via_grpc(self, status_to_report, discord_user_id):
+        logger.info(
+            "%s: Trying to send customer notification "
+            "about contract %s on status %s to discord dm",
+            self,
+            self.contract_id,
+            status_to_report,
+        )
+        if not grpc:
+            logger.error("Discord Proxy not installed. Can not send direct messages.")
+            return
+
+        embed = self._generate_proxy_embed()
+        contents = self._generate_contents(discord_user_id, status_to_report)
+        with grpc.insecure_channel(f"localhost:{FREIGHT_DISCORDPROXY_PORT}") as channel:
+            client = DiscordApiStub(channel)
+            request = SendDirectMessageRequest(
+                user_id=discord_user_id, content=contents, embed=embed
+            )
+            try:
+                client.SendDirectMessage(request)
+            except grpc.RpcError as e:
+                details = parse_error_details(e)
+                logger.error("Failed to send message to Discord: %s", details)
+            else:
+                ContractCustomerNotification.objects.update_or_create(
+                    contract=self,
+                    status=status_to_report,
+                    defaults={"date_notified": now()},
                 )
-                try:
-                    import grpc
-                    from discordproxy.discord_api_pb2 import SendDirectMessageRequest
-                    from discordproxy.discord_api_pb2_grpc import DiscordApiStub
-
-                    embed = self._generate_proxy_embed()
-                    contents = self._generate_contents(
-                        discord_user_id, status_to_report
-                    )
-
-                    with grpc.insecure_channel(
-                        f"localhost:{FREIGHT_DISCORDPROXY_PORT}"
-                    ) as channel:
-                        client = DiscordApiStub(channel)
-                        request = SendDirectMessageRequest(
-                            user_id=discord_user_id, content=contents, embed=embed
-                        )
-                        client.SendDirectMessage(request)
-
-                    ContractCustomerNotification.objects.update_or_create(
-                        contract=self,
-                        status=status_to_report,
-                        defaults={"date_notified": now()},
-                    )
-                except ModuleNotFoundError:
-                    logger.warn("%s: Discord Proxy not installed", self)
 
     def _generate_contents(self, discord_user_id, status_to_report):
         contents = "<@{}>\n".format(discord_user_id)
