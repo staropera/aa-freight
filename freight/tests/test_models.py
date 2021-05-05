@@ -507,7 +507,7 @@ class TestContract(NoSocketsTestCase):
             issuer=self.character,
             reward=50000000,
             start_location=self.jita,
-            status=Contract.STATUS_OUTSTANDING,
+            status=Contract.Status.OUTSTANDING,
             volume=50000,
             pricing=self.pricing,
         )
@@ -666,7 +666,7 @@ if "discord" in app_labels():
             # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
             obj = self.contract_1.contractcustomernotification_set.get(
-                status=Contract.STATUS_OUTSTANDING
+                status=Contract.Status.OUTSTANDING
             )
             self.assertAlmostEqual(
                 obj.date_notified, now(), delta=dt.timedelta(seconds=30)
@@ -682,7 +682,7 @@ if "discord" in app_labels():
             # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
             obj = self.contract_2.contractcustomernotification_set.get(
-                status=Contract.STATUS_IN_PROGRESS
+                status=Contract.Status.IN_PROGRESS
             )
             self.assertAlmostEqual(
                 obj.date_notified, now(), delta=dt.timedelta(seconds=30)
@@ -698,7 +698,7 @@ if "discord" in app_labels():
             # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
             obj = self.contract_3.contractcustomernotification_set.get(
-                status=Contract.STATUS_FINISHED
+                status=Contract.Status.FINISHED
             )
             self.assertAlmostEqual(
                 obj.date_notified, now(), delta=dt.timedelta(seconds=30)
@@ -778,7 +778,7 @@ if "discord" in app_labels():
                 issuer=self.character,
                 reward=50000000,
                 start_location=self.jita,
-                status=Contract.STATUS_IN_PROGRESS,
+                status=Contract.Status.IN_PROGRESS,
                 volume=50000,
             )
             # when
@@ -804,7 +804,7 @@ if "discord" in app_labels():
                 issuer=self.character,
                 reward=50000000,
                 start_location=self.jita,
-                status=Contract.STATUS_FAILED,
+                status=Contract.Status.FAILED,
                 volume=50000,
             )
             # when
@@ -833,7 +833,7 @@ if "discord" in app_labels():
             # then
             self.assertTrue(DiscordApiStub.return_value.SendDirectMessage.called)
             obj = self.contract_1.contractcustomernotification_set.get(
-                status=Contract.STATUS_OUTSTANDING
+                status=Contract.Status.OUTSTANDING
             )
             self.assertAlmostEqual(
                 obj.date_notified, now(), delta=dt.timedelta(seconds=30)
@@ -1166,7 +1166,7 @@ class TestContractsSync(NoSocketsTestCase):
         contract_ids = [
             x["contract_id"]
             for x in Contract.objects.filter(
-                status__exact=Contract.STATUS_OUTSTANDING
+                status__exact=Contract.Status.OUTSTANDING
             ).values("contract_id")
         ]
         self.assertCountEqual(
@@ -1218,7 +1218,7 @@ class TestContractsSync(NoSocketsTestCase):
         contract_ids = [
             x["contract_id"]
             for x in Contract.objects.filter(
-                status__exact=Contract.STATUS_OUTSTANDING
+                status__exact=Contract.Status.OUTSTANDING
             ).values("contract_id")
         ]
         self.assertCountEqual(
@@ -1269,7 +1269,7 @@ class TestContractsSync(NoSocketsTestCase):
         contract_ids = [
             x["contract_id"]
             for x in Contract.objects.filter(
-                status__exact=Contract.STATUS_OUTSTANDING
+                status__exact=Contract.Status.OUTSTANDING
             ).values("contract_id")
         ]
         self.assertCountEqual(
@@ -1334,7 +1334,7 @@ class TestContractsSync(NoSocketsTestCase):
         contract_ids = [
             x["contract_id"]
             for x in Contract.objects.filter(
-                status__exact=Contract.STATUS_OUTSTANDING
+                status__exact=Contract.Status.OUTSTANDING
             ).values("contract_id")
         ]
         self.assertCountEqual(
@@ -1546,13 +1546,13 @@ class TestContractCustomerNotification(NoSocketsTestCase):
             issuer=self.character,
             reward=50000000,
             start_location=self.location_1,
-            status=Contract.STATUS_OUTSTANDING,
+            status=Contract.Status.OUTSTANDING,
             volume=50000,
             pricing=self.pricing,
         )
         self.notification = ContractCustomerNotification.objects.create(
             contract=self.contract,
-            status=Contract.STATUS_IN_PROGRESS,
+            status=Contract.Status.IN_PROGRESS,
             date_notified=now(),
         )
 

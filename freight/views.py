@@ -195,8 +195,8 @@ def _get_contracts_for_contract_list(category, request) -> models.QuerySet:
             contracts = (
                 Contract.objects.filter(
                     status__in=[
-                        Contract.STATUS_OUTSTANDING,
-                        Contract.STATUS_IN_PROGRESS,
+                        Contract.Status.OUTSTANDING,
+                        Contract.Status.IN_PROGRESS,
                     ]
                 )
                 .exclude(date_expired__lt=now())
@@ -231,10 +231,10 @@ def _get_contracts_for_contract_list(category, request) -> models.QuerySet:
         else:
             contracts = Contract.objects.issued_by_user(user=request.user).filter(
                 status__in=[
-                    Contract.STATUS_OUTSTANDING,
-                    Contract.STATUS_IN_PROGRESS,
-                    Contract.STATUS_FINISHED,
-                    Contract.STATUS_FAILED,
+                    Contract.Status.OUTSTANDING,
+                    Contract.Status.IN_PROGRESS,
+                    Contract.Status.FINISHED,
+                    Contract.Status.FAILED,
                 ]
             )
 
@@ -471,7 +471,7 @@ def statistics_routes_data(request):
     """returns totals for statistics as JSON"""
 
     cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
-    finished_contracts = Q(contract__status=Contract.STATUS_FINISHED) & Q(
+    finished_contracts = Q(contract__status=Contract.Status.FINISHED) & Q(
         contract__date_completed__gte=cutoff_date
     )
     route_totals = (
@@ -515,7 +515,7 @@ def statistics_pilots_data(request):
     """returns totals for statistics as JSON"""
 
     cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
-    finished_contracts = Q(contract_acceptor__status=Contract.STATUS_FINISHED) & Q(
+    finished_contracts = Q(contract_acceptor__status=Contract.Status.FINISHED) & Q(
         contract_acceptor__date_completed__gte=cutoff_date
     )
 
@@ -553,7 +553,7 @@ def statistics_pilot_corporations_data(request):
 
     cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
     finished_contracts = Q(
-        contract_acceptor_corporation__status=Contract.STATUS_FINISHED
+        contract_acceptor_corporation__status=Contract.Status.FINISHED
     ) & Q(contract_acceptor_corporation__date_completed__gte=cutoff_date)
 
     corporation_totals = (
@@ -607,7 +607,7 @@ def statistics_customer_data(request):
     """returns totals for statistics as JSON"""
 
     cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
-    finished_contracts = Q(contract_issuer__status=Contract.STATUS_FINISHED) & Q(
+    finished_contracts = Q(contract_issuer__status=Contract.Status.FINISHED) & Q(
         contract_issuer__date_completed__gte=cutoff_date
     )
     customer_totals = (

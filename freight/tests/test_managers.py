@@ -538,7 +538,7 @@ class TestContractManagerCreateFromDict(NoSocketsTestCase):
         self.assertEqual(obj.issuer, EveCharacter.objects.get(character_id=90000003))
         self.assertEqual(obj.reward, 25000000)
         self.assertEqual(obj.start_location_id, 60003760)
-        self.assertEqual(obj.status, Contract.STATUS_OUTSTANDING)
+        self.assertEqual(obj.status, Contract.Status.OUTSTANDING)
         self.assertEqual(obj.title, "demo contract")
         self.assertEqual(obj.volume, 115000)
         self.assertIsNone(obj.pricing)
@@ -594,7 +594,7 @@ class TestContractManagerCreateFromDict(NoSocketsTestCase):
         self.assertEqual(obj.issuer, EveCharacter.objects.get(character_id=90000003))
         self.assertEqual(obj.reward, 25000000)
         self.assertEqual(obj.start_location_id, 60003760)
-        self.assertEqual(obj.status, Contract.STATUS_IN_PROGRESS)
+        self.assertEqual(obj.status, Contract.Status.IN_PROGRESS)
         self.assertEqual(obj.title, "demo contract")
         self.assertEqual(obj.volume, 115000)
         self.assertIsNone(obj.pricing)
@@ -650,7 +650,7 @@ class TestContractManagerCreateFromDict(NoSocketsTestCase):
         self.assertEqual(obj.issuer, EveCharacter.objects.get(character_id=90000003))
         self.assertEqual(obj.reward, 25000000)
         self.assertEqual(obj.start_location_id, 60003760)
-        self.assertEqual(obj.status, Contract.STATUS_FINISHED)
+        self.assertEqual(obj.status, Contract.Status.FINISHED)
         self.assertEqual(obj.title, "demo contract")
         self.assertEqual(obj.volume, 115000)
         self.assertIsNone(obj.pricing)
@@ -812,7 +812,7 @@ if "discord" in app_labels():
         def test_dont_send_pilot_notifications_for_expired_contracts(
             self, mock_webhook_execute
         ):
-            x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
+            x = Contract.objects.filter(status=Contract.Status.OUTSTANDING).first()
             Contract.objects.all().exclude(pk=x.pk).delete()
             x.date_expired = now() - timedelta(hours=1)
             x.save()
@@ -825,7 +825,7 @@ if "discord" in app_labels():
         @patch(MODELS_PATH + ".FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL", None)
         @patch(MODELS_PATH + ".FREIGHT_DISCORDPROXY_ENABLED", False)
         def test_send_pilot_notifications_only_once(self, mock_webhook_execute):
-            x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
+            x = Contract.objects.filter(status=Contract.Status.OUTSTANDING).first()
             Contract.objects.all().exclude(pk=x.pk).delete()
 
             # round #1
@@ -865,7 +865,7 @@ if "discord" in app_labels():
         def test_dont_send_customer_notifications_for_expired_contracts(
             self, mock_webhook_execute
         ):
-            x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
+            x = Contract.objects.filter(status=Contract.Status.OUTSTANDING).first()
             Contract.objects.all().exclude(pk=x.pk).delete()
             x.date_expired = now() - timedelta(hours=1)
             x.save()
@@ -880,7 +880,7 @@ if "discord" in app_labels():
         def test_send_customer_notifications_only_once_per_state(
             self, mock_webhook_execute
         ):
-            x = Contract.objects.filter(status=Contract.STATUS_OUTSTANDING).first()
+            x = Contract.objects.filter(status=Contract.Status.OUTSTANDING).first()
             Contract.objects.all().exclude(pk=x.pk).delete()
 
             # round #1

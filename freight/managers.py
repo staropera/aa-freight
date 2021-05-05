@@ -191,7 +191,7 @@ class ContractQuerySet(models.QuerySet):
     def pending_count(self) -> int:
         """returns the number of pending contacts for this QS"""
         return (
-            self.filter(status=self.model.STATUS_OUTSTANDING)
+            self.filter(status=self.model.Status.OUTSTANDING)
             .exclude(date_expired__lt=now())
             .count()
         )
@@ -363,7 +363,7 @@ class ContractManager(models.Manager):
                 pricings[_make_key(x.end_location_id, x.start_location_id)] = x
 
         for contract in self.all():
-            if contract.status == self.model.STATUS_OUTSTANDING or not contract.pricing:
+            if contract.status == self.model.Status.OUTSTANDING or not contract.pricing:
                 with transaction.atomic():
                     route_key = _make_key(
                         contract.start_location_id, contract.end_location_id
@@ -390,7 +390,7 @@ class ContractManager(models.Manager):
         # pilot notifications
         if FREIGHT_DISCORD_WEBHOOK_URL:
             contracts_qs = self.filter(
-                status__exact=self.model.STATUS_OUTSTANDING
+                status__exact=self.model.Status.OUTSTANDING
             ).exclude(pricing__exact=None)
 
             if not force_sent:
@@ -406,7 +406,7 @@ class ContractManager(models.Manager):
         # customer notifications
         if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL or FREIGHT_DISCORDPROXY_ENABLED:
             contracts_qs = self.filter(
-                status__in=self.model.STATUS_FOR_CUSTOMER_NOTIFICATION
+                status__in=self.model.Status.for_customer_notification
             ).exclude(pricing__exact=None)
 
             contracts_qs = contracts_qs.select_related()

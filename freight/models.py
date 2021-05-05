@@ -15,6 +15,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.urls import reverse
+from django.utils.functional import classproperty
 from django.utils.timezone import now
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
@@ -911,35 +912,21 @@ class ContractHandler(models.Model):
 class Contract(models.Model):
     """An Eve Online courier contract with additional meta data"""
 
-    STATUS_OUTSTANDING = "outstanding"
-    STATUS_IN_PROGRESS = "in_progress"
-    STATUS_FINISHED_ISSUER = "finished_issuer"
-    STATUS_FINISHED_CONTRACTOR = "finished_contractor"
-    STATUS_FINISHED = "finished"
-    STATUS_CANCELED = "canceled"
-    STATUS_REJECTED = "rejected"
-    STATUS_FAILED = "failed"
-    STATUS_DELETED = "deleted"
-    STATUS_REVERSED = "reversed"
+    class Status(models.TextChoices):
+        OUTSTANDING = "outstanding", "outstanding"
+        IN_PROGRESS = "in_progress", "in progress"
+        FINISHED_ISSUER = "finished_issuer", "finished issuer"
+        FINISHED_CONTRACTOR = "finished_contractor", "finished contractor"
+        FINISHED = "finished", "finished"
+        CANCELED = "canceled", "canceled"
+        REJECTED = "rejected", "rejected"
+        FAILED = "failed", "failed"
+        DELETED = "deleted", "deleted"
+        REVERSED = "reversed", "reversed"
 
-    STATUS_CHOICES = [
-        (STATUS_OUTSTANDING, "outstanding"),
-        (STATUS_IN_PROGRESS, "in progress"),
-        (STATUS_FINISHED_ISSUER, "finished issuer"),
-        (STATUS_FINISHED_CONTRACTOR, "finished contractor"),
-        (STATUS_FINISHED, "finished"),
-        (STATUS_CANCELED, "canceled"),
-        (STATUS_REJECTED, "rejected"),
-        (STATUS_FAILED, "failed"),
-        (STATUS_DELETED, "deleted"),
-        (STATUS_REVERSED, "reversed"),
-    ]
-    STATUS_FOR_CUSTOMER_NOTIFICATION = [
-        STATUS_OUTSTANDING,
-        STATUS_IN_PROGRESS,
-        STATUS_FINISHED,
-        STATUS_FAILED,
-    ]
+        @classproperty
+        def for_customer_notification(cls) -> set:
+            return {cls.OUTSTANDING, cls.IN_PROGRESS, cls.FINISHED, cls.FAILED}
 
     EMBED_COLOR_PASSED = 0x008000
     EMBED_COLOR_FAILED = 0xFF0000
@@ -987,7 +974,7 @@ class Contract(models.Model):
     start_location = models.ForeignKey(
         Location, on_delete=models.CASCADE, related_name="contract_start_location"
     )
-    status = models.CharField(max_length=32, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=32, choices=Status.choices)
     title = models.CharField(max_length=100, default=None, null=True, blank=True)
     volume = models.FloatField()
     pricing = models.ForeignKey(
@@ -1033,23 +1020,23 @@ class Contract(models.Model):
     def is_completed(self) -> bool:
         """whether this contract is completed or active"""
         return self.status in [
-            self.STATUS_FINISHED_ISSUER,
-            self.STATUS_FINISHED_CONTRACTOR,
-            self.STATUS_FINISHED_ISSUER,
-            self.STATUS_CANCELED,
-            self.STATUS_REJECTED,
-            self.STATUS_DELETED,
-            self.STATUS_FINISHED,
-            self.STATUS_FAILED,
+            self.Status.FINISHED_ISSUER,
+            self.Status.FINISHED_CONTRACTOR,
+            self.Status.FINISHED_ISSUER,
+            self.Status.CANCELED,
+            self.Status.REJECTED,
+            self.Status.DELETED,
+            self.Status.FINISHED,
+            self.Status.FAILED,
         ]
 
     @property
     def is_in_progress(self) -> bool:
-        return self.status == self.STATUS_IN_PROGRESS
+        return self.status == self.Status.IN_PROGRESS
 
     @property
     def is_failed(self) -> bool:
-        return self.status == self.STATUS_FAILED
+        return self.status == self.Status.FAILED
 
     @property
     def has_expired(self) -> bool:
@@ -1216,7 +1203,7 @@ class Contract(models.Model):
             FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL or FREIGHT_DISCORDPROXY_ENABLED
         ) and "discord" in app_labels():
             status_to_report = None
-            for status in self.STATUS_FOR_CUSTOMER_NOTIFICATION:
+            for status in self.Status.for_customer_notification:
                 if self.status == status and (
                     force_sent
                     or not self.contractcustomernotification_set.filter(
@@ -1340,7 +1327,7 @@ class Contract(models.Model):
             acceptor_text = "by {} ".format(self.acceptor_name)
         else:
             acceptor_text = ""
-        if status_to_report == self.STATUS_OUTSTANDING:
+        if status_to_report == self.Status.OUTSTANDING:
             contents += "We have received your contract"
             if self.has_pricing_errors:
                 issues = self.get_issue_list()
@@ -1353,17 +1340,17 @@ class Contract(models.Model):
                     contents += "• {}\n".format(issue)
             else:
                 contents += " and it will be picked up by " "one of our pilots shortly."
-        elif status_to_report == self.STATUS_IN_PROGRESS:
+        elif status_to_report == self.Status.IN_PROGRESS:
             contents += (
                 "Your contract has been picked up {}"
                 "and will be delivered to you shortly.".format(acceptor_text)
             )
-        elif status_to_report == self.STATUS_FINISHED:
+        elif status_to_report == self.Status.FINISHED:
             contents += (
                 "Your contract has been **delivered**.\n"
                 "Thank you for using our freight service."
             )
-        elif status_to_report == self.STATUS_FAILED:
+        elif status_to_report == self.Status.FAILED:
             contents += (
                 "Your contract has been **failed** {}"
                 "Thank you for using our freight service.".format(acceptor_text)
@@ -1377,7 +1364,7 @@ class ContractCustomerNotification(models.Model):
     """record of contract notification to customer about state"""
 
     contract = models.ForeignKey(Contract, on_delete=models.CASCADE)
-    status = models.CharField(max_length=32, choices=Contract.STATUS_CHOICES)
+    status = models.CharField(max_length=32, choices=Contract.Status.choices)
     date_notified = models.DateTimeField(help_text="datetime of notification")
 
     class Meta:
