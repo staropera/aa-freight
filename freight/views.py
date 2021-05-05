@@ -323,7 +323,7 @@ def setup_contract_handler(request, token):
 
     if (
         EveEntity.get_category_for_operation_mode(FREIGHT_OPERATION_MODE)
-        == EveEntity.CATEGORY_ALLIANCE
+        == EveEntity.Category.ALLIANCE
     ) and token_char.alliance_id is None:
         messages_plus.error(
             request,

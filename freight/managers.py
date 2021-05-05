@@ -86,7 +86,7 @@ class LocationManager(models.Manager):
                     "name": station["name"],
                     "solar_system_id": station["system_id"],
                     "type_id": station["type_id"],
-                    "category_id": Location.CATEGORY_STATION_ID,
+                    "category_id": Location.Category.STATION_ID,
                 },
             )
 
@@ -101,7 +101,7 @@ class LocationManager(models.Manager):
                         "name": structure["name"],
                         "solar_system_id": structure["solar_system_id"],
                         "type_id": structure["type_id"],
-                        "category_id": Location.CATEGORY_STRUCTURE_ID,
+                        "category_id": Location.Category.STRUCTURE_ID,
                     },
                 )
             except (HTTPUnauthorized, HTTPForbidden) as ex:
@@ -111,7 +111,7 @@ class LocationManager(models.Manager):
                         id=location_id,
                         defaults={
                             "name": "Unknown structure {}".format(location_id),
-                            "category_id": Location.CATEGORY_STRUCTURE_ID,
+                            "category_id": Location.Category.STRUCTURE_ID,
                         },
                     )
                 else:
@@ -155,30 +155,30 @@ class EveEntityManager(models.Manager):
         """updates or creates EveEntity object from an EveCharacter object"""
         from .models import EveEntity
 
-        if category == EveEntity.CATEGORY_ALLIANCE:
+        if category == EveEntity.Category.ALLIANCE:
             if not character.alliance_id:
                 raise ValueError("character is not an alliance member")
             eve_entity, created = self.update_or_create(
                 id=character.alliance_id,
                 defaults={
                     "name": character.alliance_name,
-                    "category": EveEntity.CATEGORY_ALLIANCE,
+                    "category": EveEntity.Category.ALLIANCE,
                 },
             )
-        elif category == EveEntity.CATEGORY_CORPORATION:
+        elif category == EveEntity.Category.CORPORATION:
             eve_entity, created = self.update_or_create(
                 id=character.corporation_id,
                 defaults={
                     "name": character.corporation_name,
-                    "category": EveEntity.CATEGORY_CORPORATION,
+                    "category": EveEntity.Category.CORPORATION,
                 },
             )
-        elif category == EveEntity.CATEGORY_CHARACTER:
+        elif category == EveEntity.Category.CHARACTER:
             eve_entity, created = self.update_or_create(
                 id=character.character_id,
                 defaults={
                     "name": character.character_name,
-                    "category": EveEntity.CATEGORY_CHARACTER,
+                    "category": EveEntity.Category.CHARACTER,
                 },
             )
         else:

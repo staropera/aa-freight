@@ -90,14 +90,10 @@ class Freight(models.Model):
 class Location(models.Model):
     """An Eve Online courier contract location: station or Upwell structure"""
 
-    CATEGORY_UNKNOWN_ID = 0
-    CATEGORY_STATION_ID = 3
-    CATEGORY_STRUCTURE_ID = 65
-    CATEGORY_CHOICES = [
-        (CATEGORY_STATION_ID, "station"),
-        (CATEGORY_STRUCTURE_ID, "structure"),
-        (CATEGORY_UNKNOWN_ID, "(unknown)"),
-    ]
+    class Category(models.IntegerChoices):
+        STATION_ID = 3, "station"
+        STRUCTURE_ID = 65, "structure"
+        UNKNOWN_ID = 0, "(unknown)"
 
     id = models.BigIntegerField(
         primary_key=True,
@@ -115,8 +111,8 @@ class Location(models.Model):
         default=None, null=True, blank=True, help_text="Eve Online type ID"
     )
     category_id = models.PositiveIntegerField(
-        choices=CATEGORY_CHOICES,
-        default=CATEGORY_UNKNOWN_ID,
+        choices=Category.choices,
+        default=Category.UNKNOWN_ID,
         help_text="Eve Online category ID",
     )
 
@@ -494,26 +490,17 @@ class Pricing(models.Model):
 class EveEntity(models.Model):
     """An Eve entity like a corporation or a character"""
 
-    # entity categories supported by this class
-    CATEGORY_ALLIANCE = "alliance"
-    CATEGORY_CORPORATION = "corporation"
-    CATEGORY_CHARACTER = "character"
-    CATEGORIES_DEF = [
-        (CATEGORY_ALLIANCE, "Alliance"),
-        (CATEGORY_CORPORATION, "Corporation"),
-        (CATEGORY_CHARACTER, "Character"),
-    ]
+    class Category(models.TextChoices):
+        """entity categories supported by this class"""
+
+        ALLIANCE = "alliance", "Alliance"
+        CORPORATION = "corporation", "Corporation"
+        CHARACTER = "character", "Character"
 
     AVATAR_SIZE = 128
 
-    id = models.IntegerField(
-        primary_key=True,
-        validators=[MinValueValidator(0)],
-    )
-    category = models.CharField(
-        max_length=32,
-        choices=CATEGORIES_DEF,
-    )
+    id = models.IntegerField(primary_key=True, validators=[MinValueValidator(0)])
+    category = models.CharField(max_length=32, choices=Category.choices)
     name = models.CharField(max_length=254)
 
     objects = EveEntityManager()
@@ -528,26 +515,26 @@ class EveEntity(models.Model):
 
     @property
     def is_alliance(self) -> bool:
-        return self.category == self.CATEGORY_ALLIANCE
+        return self.category == self.Category.ALLIANCE
 
     @property
     def is_corporation(self) -> bool:
-        return self.category == self.CATEGORY_CORPORATION
+        return self.category == self.Category.CORPORATION
 
     @property
     def is_character(self) -> bool:
-        return self.category == self.CATEGORY_CHARACTER
+        return self.category == self.Category.CHARACTER
 
     @property
     def avatar_url(self) -> str:
         """returns the url to an icon image for this organization"""
-        if self.category == self.CATEGORY_ALLIANCE:
+        if self.category == self.Category.ALLIANCE:
             return EveAllianceInfo.generic_logo_url(self.id, self.AVATAR_SIZE)
 
-        elif self.category == self.CATEGORY_CORPORATION:
+        elif self.category == self.Category.CORPORATION:
             return EveCorporationInfo.generic_logo_url(self.id, self.AVATAR_SIZE)
 
-        elif self.category == self.CATEGORY_CHARACTER:
+        elif self.category == self.Category.CHARACTER:
             return EveCharacter.generic_portrait_url(self.id, self.AVATAR_SIZE)
 
         else:
@@ -559,9 +546,9 @@ class EveEntity(models.Model):
     def get_category_for_operation_mode(cls, mode: str) -> str:
         """return organization category related to given operation mode"""
         if mode == FREIGHT_OPERATION_MODE_MY_ALLIANCE:
-            return cls.CATEGORY_ALLIANCE
+            return cls.Category.ALLIANCE
         else:
-            return cls.CATEGORY_CORPORATION
+            return cls.Category.CORPORATION
 
 
 class ContractHandler(models.Model):

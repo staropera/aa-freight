@@ -112,14 +112,14 @@ def create_entities_from_characters():
         EveEntity.objects.get_or_create(
             id=character["character_id"],
             defaults={
-                "category": EveEntity.CATEGORY_CHARACTER,
+                "category": EveEntity.Category.CHARACTER,
                 "name": character["character_name"],
             },
         )
         EveEntity.objects.get_or_create(
             id=character["corporation_id"],
             defaults={
-                "category": EveEntity.CATEGORY_CORPORATION,
+                "category": EveEntity.Category.CORPORATION,
                 "name": character["corporation_name"],
             },
         )
@@ -127,7 +127,7 @@ def create_entities_from_characters():
             EveEntity.objects.get_or_create(
                 id=character["alliance_id"],
                 defaults={
-                    "category": EveEntity.CATEGORY_ALLIANCE,
+                    "category": EveEntity.Category.ALLIANCE,
                     "name": character["alliance_name"],
                 },
             )

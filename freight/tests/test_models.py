@@ -458,7 +458,7 @@ class TestContract(NoSocketsTestCase):
         )
         cls.organization = EveEntity.objects.create(
             id=cls.character.alliance_id,
-            category=EveEntity.CATEGORY_ALLIANCE,
+            category=EveEntity.Category.ALLIANCE,
             name=cls.character.alliance_name,
         )
         cls.user = User.objects.create_user(
@@ -871,7 +871,7 @@ class TestLocation(NoSocketsTestCase):
         self.assertEqual(repr(self.amamake), expected)
 
     def test_category(self):
-        self.assertEqual(self.jita.category, Location.CATEGORY_STATION_ID)
+        self.assertEqual(self.jita.category, Location.Category.STATION_ID)
 
     def test_solar_system_name_station(self):
         self.assertEqual(self.jita.solar_system_name, "Jita")
@@ -906,7 +906,7 @@ class TestContractHandler(NoSocketsTestCase):
         )
         self.organization = EveEntity.objects.create(
             id=self.character.alliance_id,
-            category=EveEntity.CATEGORY_ALLIANCE,
+            category=EveEntity.Category.ALLIANCE,
             name=self.character.alliance_name,
         )
         self.user = User.objects.create_user(
@@ -1453,25 +1453,25 @@ class TestEveEntity(NoSocketsTestCase):
             EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE_MY_ALLIANCE
             ),
-            EveEntity.CATEGORY_ALLIANCE,
+            EveEntity.Category.ALLIANCE,
         )
         self.assertEqual(
             EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE_MY_CORPORATION
             ),
-            EveEntity.CATEGORY_CORPORATION,
+            EveEntity.Category.CORPORATION,
         )
         self.assertEqual(
             EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE
             ),
-            EveEntity.CATEGORY_CORPORATION,
+            EveEntity.Category.CORPORATION,
         )
         self.assertEqual(
             EveEntity.get_category_for_operation_mode(
                 FREIGHT_OPERATION_MODE_CORP_PUBLIC
             ),
-            EveEntity.CATEGORY_CORPORATION,
+            EveEntity.Category.CORPORATION,
         )
 
 
@@ -1497,7 +1497,7 @@ class TestContractCustomerNotification(NoSocketsTestCase):
         )
         cls.organization = EveEntity.objects.create(
             id=cls.character.alliance_id,
-            category=EveEntity.CATEGORY_ALLIANCE,
+            category=EveEntity.Category.ALLIANCE,
             name=cls.character.alliance_name,
         )
         cls.user = User.objects.create_user(
