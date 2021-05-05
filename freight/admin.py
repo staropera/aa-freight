@@ -3,9 +3,9 @@ from django.contrib import admin
 from . import tasks
 from .app_settings import FREIGHT_DEVELOPER_MODE
 from .models import (
-    ContractHandler,
     Contract,
     ContractCustomerNotification,
+    ContractHandler,
     EveEntity,
     Location,
     Pricing,

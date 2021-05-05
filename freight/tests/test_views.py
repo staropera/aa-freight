@@ -2,29 +2,22 @@ import json
 from unittest.mock import Mock, patch
 
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.test import RequestFactory
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
-from django.test import TestCase
-
-from app_utils.testing import NoSocketsTestCase
 from esi.models import Token
 
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.tests.auth_utils import AuthUtils
+from app_utils.testing import NoSocketsTestCase
 
-from . import (
-    DisconnectPricingSaveHandler,
-    generate_token,
-    store_as_Token,
-)
+from .. import views
 from ..app_settings import (
     FREIGHT_OPERATION_MODE_MY_ALLIANCE,
     FREIGHT_OPERATION_MODE_MY_CORPORATION,
 )
 from ..models import Contract, ContractHandler, Location, Pricing
-from .. import views
+from . import DisconnectPricingSaveHandler, generate_token, store_as_Token
 from .testdata import create_contract_handler_w_contracts
-
 
 MODULE_PATH = "freight.views"
 HTTP_OK = 200

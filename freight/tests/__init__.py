@@ -1,18 +1,17 @@
-from datetime import datetime, timedelta
 import random
 import string
+from datetime import datetime, timedelta
 
 from django.db.models import signals
 
 from app_utils.datetime import dt_eveformat
-
 
 from ..models import Pricing
 from ..signals import pricing_save_handler
 
 
 class TempDisconnectSignal:
-    """ Temporarily disconnect a model from a signal """
+    """Temporarily disconnect a model from a signal"""
 
     def __init__(self, signal, receiver, sender, dispatch_uid=None):
         self.signal = signal

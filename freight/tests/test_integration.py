@@ -1,11 +1,10 @@
 from django.urls import reverse
+from django_webtest import WebTest
 
 from allianceauth.tests.auth_utils import AuthUtils
 
-from django_webtest import WebTest
-
-from . import DisconnectPricingSaveHandler
 from ..models import Contract, Location, Pricing
+from . import DisconnectPricingSaveHandler
 from .testdata import create_contract_handler_w_contracts
 
 

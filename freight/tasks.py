@@ -1,15 +1,13 @@
-from celery import shared_task, chain
+from celery import chain, shared_task
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
 from allianceauth.services.hooks import get_extension_logger
-
 from app_utils.logging import LoggerAddTag
 
 from . import __title__
-from .models import ContractHandler, Contract, Location
-
+from .models import Contract, ContractHandler, Location
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -72,7 +70,7 @@ def update_contracts_pricing() -> None:
 
 @shared_task
 def update_location(location_id: int) -> None:
-    """Updates the location from ESI """
+    """Updates the location from ESI"""
     try:
         Location.objects.get(id=location_id)
     except Location.DoesNotExist:
@@ -86,7 +84,7 @@ def update_location(location_id: int) -> None:
 
 @shared_task
 def update_locations(location_ids: list) -> None:
-    """Updates the locations from ESI """
+    """Updates the locations from ESI"""
 
     for location_id in location_ids:
         update_location.delay(location_id)

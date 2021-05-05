@@ -3,11 +3,10 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.test.utils import override_settings
-
-from app_utils.testing import NoSocketsTestCase
 from esi.errors import TokenInvalidError
 
-from . import get_invalid_object_pk
+from app_utils.testing import NoSocketsTestCase
+
 from ..tasks import (
     run_contracts_sync,
     send_contract_notifications,
@@ -16,8 +15,8 @@ from ..tasks import (
     update_location,
     update_locations,
 )
+from . import get_invalid_object_pk
 from .testdata import create_contract_handler_w_contracts
-
 
 MODULE_PATH = "freight.tasks"
 

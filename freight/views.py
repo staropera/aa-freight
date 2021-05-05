@@ -2,31 +2,29 @@ import datetime
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
+from django.db import models
+from django.db.models import Count, Q, Sum
 from django.forms import HiddenInput
 from django.http import JsonResponse
-from django.db import models
-from django.db.models import Count, Sum, Q
-from django.shortcuts import render, redirect
-from django.utils.html import mark_safe, format_html
+from django.shortcuts import redirect, render
+from django.utils.html import format_html, mark_safe
 from django.utils.timezone import now
-
-from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
-from allianceauth.services.hooks import get_extension_logger
-
-from app_utils.logging import LoggerAddTag
-from app_utils.messages import messages_plus
 from esi.decorators import token_required
 from esi.models import Token
 
-from . import tasks, __title__
+from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.services.hooks import get_extension_logger
+from app_utils.logging import LoggerAddTag
+from app_utils.messages import messages_plus
+
+from . import __title__, tasks
 from .app_settings import (
     FREIGHT_APP_NAME,
-    FREIGHT_STATISTICS_MAX_DAYS,
     FREIGHT_OPERATION_MODE,
+    FREIGHT_STATISTICS_MAX_DAYS,
 )
 from .models import Contract, ContractHandler, EveEntity, Freight, Location, Pricing
-
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 

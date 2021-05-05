@@ -1,37 +1,36 @@
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
-from bravado.exception import HTTPNotFound, HTTPForbidden
+from bravado.exception import HTTPForbidden, HTTPNotFound
 
 from django.utils.timezone import now, utc
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 from allianceauth.tests.auth_utils import AuthUtils
-
 from app_utils.django import app_labels
 from app_utils.testing import (
-    NoSocketsTestCase,
     BravadoOperationStub,
     BravadoResponseStub,
+    NoSocketsTestCase,
     add_character_to_user_2,
     add_new_token,
 )
-from . import DisconnectPricingSaveHandler, get_invalid_object_pk
+
 from ..app_settings import (
-    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
-    FREIGHT_OPERATION_MODE_MY_CORPORATION,
     FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE,
     FREIGHT_OPERATION_MODE_CORP_PUBLIC,
+    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+    FREIGHT_OPERATION_MODE_MY_CORPORATION,
 )
 from ..models import Contract, EveEntity, Location, Pricing
+from . import DisconnectPricingSaveHandler, get_invalid_object_pk
 from .testdata import (
     characters_data,
     create_contract_handler_w_contracts,
     create_locations,
     structures_data,
 )
-
 
 MODULE_PATH = "freight.managers"
 

@@ -1,9 +1,9 @@
+import hashlib
 import json
 from datetime import timedelta
-import hashlib
 from urllib.parse import urljoin
 
-from dhooks_lite import Webhook, Embed, Thumbnail
+from dhooks_lite import Embed, Thumbnail, Webhook
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -12,6 +12,8 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.urls import reverse
 from django.utils.timezone import now
+from esi.errors import TokenExpiredError, TokenInvalidError
+from esi.models import Token
 
 from allianceauth.authentication.models import CharacterOwnership, User
 from allianceauth.eveonline.models import (
@@ -21,34 +23,30 @@ from allianceauth.eveonline.models import (
 )
 from allianceauth.notifications import notify
 from allianceauth.services.hooks import get_extension_logger
-
 from app_utils.datetime import DATETIME_FORMAT
 from app_utils.django import app_labels
 from app_utils.logging import LoggerAddTag
 from app_utils.urls import site_absolute_url
-from esi.errors import TokenExpiredError, TokenInvalidError
-from esi.models import Token
 
 from . import __title__
 from .app_settings import (
     FREIGHT_APP_NAME,
-    FREIGHT_FULL_ROUTE_NAMES,
-    FREIGHT_HOURS_UNTIL_STALE_STATUS,
-    FREIGHT_DISCORD_WEBHOOK_URL,
+    FREIGHT_CONTRACT_SYNC_GRACE_MINUTES,
+    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
     FREIGHT_DISCORD_DISABLE_BRANDING,
     FREIGHT_DISCORD_MENTIONS,
-    FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
-    FREIGHT_CONTRACT_SYNC_GRACE_MINUTES,
+    FREIGHT_DISCORD_WEBHOOK_URL,
+    FREIGHT_FULL_ROUTE_NAMES,
+    FREIGHT_HOURS_UNTIL_STALE_STATUS,
     FREIGHT_OPERATION_MODE,
-    FREIGHT_OPERATION_MODES,
-    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
-    FREIGHT_OPERATION_MODE_MY_CORPORATION,
     FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE,
     FREIGHT_OPERATION_MODE_CORP_PUBLIC,
+    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+    FREIGHT_OPERATION_MODE_MY_CORPORATION,
+    FREIGHT_OPERATION_MODES,
 )
 from .managers import ContractManager, EveEntityManager, LocationManager, PricingManager
 from .providers import esi
-
 
 if "discord" in app_labels():
     from allianceauth.services.modules.discord.models import DiscordUser
@@ -291,7 +289,7 @@ class Pricing(models.Model):
         return route_name
 
     def price_per_volume_modifier(self):
-        """returns the effective price per volume modifier or None """
+        """returns the effective price per volume modifier or None"""
         if not self.use_price_per_volume_modifier:
             modifier = None
 
@@ -306,7 +304,7 @@ class Pricing(models.Model):
         return modifier
 
     def price_per_volume_eff(self):
-        """"returns price per volume incl. potential modifier or None"""
+        """ "returns price per volume incl. potential modifier or None"""
         if not self.price_per_volume:
             price_per_volume = None
         else:

@@ -1,6 +1,5 @@
 from app_utils.django import clean_setting
 
-
 # Name of this app as shown in the Auth sidebar, page titles
 # and as default avatar name for notifications
 FREIGHT_APP_NAME = clean_setting("FREIGHT_APP_NAME", "Freight", required_type=str)

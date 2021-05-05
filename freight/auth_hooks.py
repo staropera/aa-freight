@@ -1,5 +1,5 @@
-from allianceauth.services.hooks import MenuItemHook, UrlHook
 from allianceauth import hooks
+from allianceauth.services.hooks import MenuItemHook, UrlHook
 
 from . import urls
 from .app_settings import FREIGHT_APP_NAME
@@ -7,7 +7,7 @@ from .models import Contract
 
 
 class ExampleMenuItem(MenuItemHook):
-    """ This class ensures only authorized users will see the menu entry """
+    """This class ensures only authorized users will see the menu entry"""
 
     def __init__(self):
         # setup menu entry for sidebar

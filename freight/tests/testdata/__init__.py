@@ -1,21 +1,19 @@
-from datetime import timedelta, datetime
 import inspect
 import json
 import os
+from datetime import datetime, timedelta
 from random import randrange
 from unittest.mock import Mock
 
 from django.contrib.auth.models import User
 from django.utils.timezone import now
 
+from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.tests.auth_utils import AuthUtils
 from app_utils.django import app_labels
 
-from allianceauth.authentication.models import CharacterOwnership
-from allianceauth.tests.auth_utils import AuthUtils
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-
-from ...models import Contract, ContractHandler, Location, EveEntity
-
+from ...models import Contract, ContractHandler, EveEntity, Location
 
 if "discord" in app_labels():
     from allianceauth.services.modules.discord.models import DiscordUser

@@ -1,5 +1,7 @@
 import os
+
 from setuptools import find_packages, setup
+
 from freight import __version__
 
 # read the contents of your README file

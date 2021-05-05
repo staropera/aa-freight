@@ -1,28 +1,26 @@
 from datetime import timedelta
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 from dhooks_lite import Embed
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.timezone import now
+from esi.errors import TokenExpiredError, TokenInvalidError
+from esi.models import Token
 
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.eveonline.providers import ObjectNotFound
 from allianceauth.tests.auth_utils import AuthUtils
-
 from app_utils.django import app_labels
 from app_utils.testing import BravadoOperationStub, NoSocketsTestCase
-from esi.models import Token
-from esi.errors import TokenExpiredError, TokenInvalidError
 
-from . import DisconnectPricingSaveHandler
 from ..app_settings import (
-    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
-    FREIGHT_OPERATION_MODE_MY_CORPORATION,
     FREIGHT_OPERATION_MODE_CORP_IN_ALLIANCE,
     FREIGHT_OPERATION_MODE_CORP_PUBLIC,
+    FREIGHT_OPERATION_MODE_MY_ALLIANCE,
+    FREIGHT_OPERATION_MODE_MY_CORPORATION,
     FREIGHT_OPERATION_MODES,
 )
 from ..models import (
@@ -33,14 +31,14 @@ from ..models import (
     Location,
     Pricing,
 )
+from . import DisconnectPricingSaveHandler
 from .testdata import (
     characters_data,
-    create_locations,
-    create_entities_from_characters,
-    create_contract_handler_w_contracts,
     contracts_data,
+    create_contract_handler_w_contracts,
+    create_entities_from_characters,
+    create_locations,
 )
-
 
 MODULE_PATH = "freight.models"
 PATCH_FREIGHT_OPERATION_MODE = MODULE_PATH + ".FREIGHT_OPERATION_MODE"
