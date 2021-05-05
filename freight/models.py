@@ -3,7 +3,11 @@ import json
 from datetime import timedelta
 from urllib.parse import urljoin
 
-from dhooks_lite import Embed, Thumbnail, Webhook
+import dhooks_lite
+import grpc
+from discordproxy import discord_api_pb2, discord_api_pb2_grpc
+from discordproxy.helpers import parse_error_details
+from google.protobuf import json_format
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -14,14 +18,6 @@ from django.urls import reverse
 from django.utils.timezone import now
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
-
-try:
-    import grpc
-    from discordproxy.discord_api_pb2 import SendDirectMessageRequest
-    from discordproxy.discord_api_pb2_grpc import DiscordApiStub
-    from discordproxy.helpers import parse_error_details
-except ImportError:
-    grpc = None
 
 from allianceauth.authentication.models import CharacterOwnership, User
 from allianceauth.eveonline.models import (
@@ -1154,22 +1150,12 @@ class Contract(models.Model):
             )
         return {"desc": desc, "color": color}
 
-    def _generate_embed(self) -> Embed:
+    def _generate_embed(self) -> dhooks_lite.Embed:
         embed_desc = self._generate_embed_description()
-        return Embed(
+        return dhooks_lite.Embed(
             description=embed_desc["desc"],
             color=embed_desc["color"],
-            thumbnail=Thumbnail(self.issuer.portrait_url()),
-        )
-
-    def _generate_proxy_embed(self):
-        embed_desc = self._generate_embed_description()
-        from discordproxy.discord_api_pb2 import Embed
-
-        return Embed(
-            description=embed_desc["desc"],
-            color=embed_desc["color"],
-            thumbnail=Embed.Thumbnail(url=self.issuer.portrait_url()),
+            thumbnail=dhooks_lite.Thumbnail(self.issuer.portrait_url()),
         )
 
     def send_pilot_notification(self):
@@ -1182,7 +1168,7 @@ class Contract(models.Model):
                 username = FREIGHT_APP_NAME
                 avatar_url = self.handler.organization.avatar_url
 
-            hook = Webhook(
+            hook = dhooks_lite.Webhook(
                 FREIGHT_DISCORD_WEBHOOK_URL, username=username, avatar_url=avatar_url
             )
             with transaction.atomic():
@@ -1245,23 +1231,26 @@ class Contract(models.Model):
         else:
             logger.debug(
                 "%s: FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL not configured or "
-                "Discord services not installed",
+                "Discord services not installed or Discord Proxy not enabled",
                 self,
             )
 
     def _report_to_customer(self, status_to_report):
         issuer_user = User.objects.filter(
-            character_ownerships__character__exact=self.issuer
+            character_ownerships__character=self.issuer
         ).first()
-
         if not issuer_user:
-            logger.info("%s: Could not find matching user for issuer", self)
+            logger.info(
+                "%s: Could not find matching user for issuer: %s", self, self.issuer
+            )
             return
 
         try:
             discord_user_id = DiscordUser.objects.get(user=issuer_user).uid
         except DiscordUser.DoesNotExist:
-            logger.info("%s: Could not find Discord user for issuer", self)
+            logger.warning(
+                "%s: Could not find Discord user for issuer: %s", self, issuer_user
+            )
             return
 
         if FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL:
@@ -1278,7 +1267,7 @@ class Contract(models.Model):
             username = FREIGHT_APP_NAME
             avatar_url = self.handler.organization.avatar_url
 
-        hook = Webhook(
+        hook = dhooks_lite.Webhook(
             FREIGHT_DISCORD_CUSTOMERS_WEBHOOK_URL,
             username=username,
             avatar_url=avatar_url,
@@ -1321,11 +1310,14 @@ class Contract(models.Model):
             logger.error("Discord Proxy not installed. Can not send direct messages.")
             return
 
-        embed = self._generate_proxy_embed()
-        contents = self._generate_contents(discord_user_id, status_to_report)
+        embed_dct = self._generate_embed().asdict()
+        embed = json_format.ParseDict(embed_dct, discord_api_pb2.Embed())
+        contents = self._generate_contents(
+            discord_user_id, status_to_report, include_mention=False
+        )
         with grpc.insecure_channel(f"localhost:{FREIGHT_DISCORDPROXY_PORT}") as channel:
-            client = DiscordApiStub(channel)
-            request = SendDirectMessageRequest(
+            client = discord_api_pb2_grpc.DiscordApiStub(channel)
+            request = discord_api_pb2.SendDirectMessageRequest(
                 user_id=discord_user_id, content=contents, embed=embed
             )
             try:
@@ -1340,8 +1332,10 @@ class Contract(models.Model):
                     defaults={"date_notified": now()},
                 )
 
-    def _generate_contents(self, discord_user_id, status_to_report):
-        contents = "<@{}>\n".format(discord_user_id)
+    def _generate_contents(
+        self, discord_user_id, status_to_report, include_mention=True
+    ):
+        contents = "<@{}>\n".format(discord_user_id) if include_mention else ""
         if self.acceptor_name:
             acceptor_text = "by {} ".format(self.acceptor_name)
         else:
@@ -1359,31 +1353,23 @@ class Contract(models.Model):
                     contents += "• {}\n".format(issue)
             else:
                 contents += " and it will be picked up by " "one of our pilots shortly."
-
         elif status_to_report == self.STATUS_IN_PROGRESS:
             contents += (
                 "Your contract has been picked up {}"
                 "and will be delivered to you shortly.".format(acceptor_text)
             )
-
         elif status_to_report == self.STATUS_FINISHED:
             contents += (
                 "Your contract has been **delivered**.\n"
                 "Thank you for using our freight service."
             )
-
         elif status_to_report == self.STATUS_FAILED:
             contents += (
                 "Your contract has been **failed** {}"
                 "Thank you for using our freight service.".format(acceptor_text)
             )
-
         else:
             raise NotImplementedError()
-
-        contents += (
-            "\nClick [here]({}) to check the current " "status of your contract."
-        ).format(urljoin(site_absolute_url(), reverse("freight:contract_list_user")))
         return contents
 
 

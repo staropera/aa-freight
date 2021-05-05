@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+### Added
+
+- Receive customer contract updates as direct messages on Discord via Discord Proxy
+
+Big thanks to @huideaki for contributing notifications via Discord Proxy!
+
 ## [1.4-0] - 2021-02-27
 
 ### Changed

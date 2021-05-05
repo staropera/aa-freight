@@ -59,7 +59,7 @@ Freight offers the following main features:
 
 ## Installation
 
-### 1. Install app
+### 1 - Install app
 
 Install into your Alliance Auth virtual environment from PyPI:
 
@@ -67,7 +67,7 @@ Install into your Alliance Auth virtual environment from PyPI:
 pip install aa-freight
 ```
 
-### 2 Update Eve Online app
+### 2 - Update Eve Online app
 
 Update the Eve Online app used for authentication in your AA installation to include the following scopes:
 
@@ -76,7 +76,7 @@ esi-universe.read_structures.v1
 esi-contracts.read_corporation_contracts.v1
 ```
 
-### 3. Configure AA settings
+### 3 - Configure AA settings
 
 Configure your AA settings (`local.py`) as follows:
 
@@ -93,7 +93,7 @@ Configure your AA settings (`local.py`) as follows:
 
 If you want to setup notifications for Discord you can now also add the required settings. Check out section **Settings** for details.
 
-### 3a Celery setup
+### 3a - Celery setup
 
 This app uses celery for critical functions like refreshing data from ESI. We strongly recommend to enable the following additional settings for celery workers to enable proper logging and to protect against potential memory leaks:
 
@@ -117,7 +117,7 @@ e.g. on Ubuntu:
 systemctl restart supervisor
 ```
 
-### 4. Finalize installation into AA
+### 4 - Finalize installation into AA
 
 Run migrations & copy static files
 
@@ -128,21 +128,29 @@ python manage.py collectstatic
 
 Restart your supervisor services for AA
 
-### 5. Setup permissions
+### 5 - Setup permissions
 
 Now you can access Alliance Auth and setup permissions for your users. See section **Permissions** below for details.
 
-### 6. Setup contract handler
+### 6 - Setup contract handler
 
 Finally you need to set the contract handler with the character that will be used for fetching the corporation or alliance contracts and related structures. Just click on "Set Contract Handler" and add the requested token. Note that only users with the appropriate permission will be able to see and use this function. However, the respective character does not need any special corporation roles. Any corp member will work.
 
 Once a contract handler is set the app will start fetching contracts. Wait a minute and then reload the contract list page to see the result.
 
-### 7. Define pricing
+### 7 - Define pricing
 
 Finally go ahead and define the first pricing of a courier route. See section **Pricing** for details.
 
 That's it. The Freight app is fully installed and ready to be used.
+
+### 8 - Setup Discord Proxy (optional)
+
+If you want Freight to send contract updates as direct messages to your users you need to have [Discord Proxy](https://gitlab.com/ErikKalkoken/discordproxy) running.
+
+Once Discord Proxy is running just set `FREIGHT_DISCORDPROXY_ENABLED = True` in your local settings to enable this feature.
+
+For details on how to setup Discord Proxy (if you don't have it running already) please see the [installation documentation](https://discordproxy.readthedocs.io/en/latest/operations.html#installation).
 
 ## Updating
 
