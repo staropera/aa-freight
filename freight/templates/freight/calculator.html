@@ -10,7 +10,6 @@
         {% csrf_token %}
         <div class="row">
             <div class="col-md-6">
-
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h3 class="panel-title">Calculator</h3>
@@ -21,12 +20,13 @@
                         <p><strong>Reward</strong></p>
                         <h2 id="text_price">
                             {{ price|formatnumber:"0"|default_if_none:"-" }} ISK
+                            <span class="copy_to_clipboard" data-text="{{ price }}">
+                                &nbsp;&nbsp;<i class="far fa-copy"></i></span>
+                            </span>
                         </h2>
-
-                        <button class="btn btn-success btn-lg" type="submit">Click To Calculate Reward!</button>
+                            <button class="btn btn-success btn-lg" type="submit">Click To Calculate Reward!</button>
                     </div>
                 </div>
-
             </div>
             <div class="col-md-6">
 
@@ -34,12 +34,11 @@
                     <div class="panel-heading">
                         <h3 class="panel-title">Pricing details</h3>
                     </div>
+
                     <div class="panel-body" style="min-height: 100px;">
 
                         {% if pricing %}
-
                             <dl class="dl-horizontal">
-
                                 {% if pricing.is_bidirectional %}
                                     <dt>From / To:</dt>
                                 {% else %}
@@ -127,11 +126,8 @@
                         <h3 class="panel-title">Your contract</h3>
                     </div>
                     <div class="panel-body" style="min-height: 100px;">
-
                         {% if price != None %}
-
                             <dl class="dl-horizontal">
-
                                 <dt>Contract Type:</dt>
                                 <dd>Courier</dd>
 
@@ -168,20 +164,14 @@
                                 {% endif %}
 
                                 <hr>
-
                                 Note that this route is bidirectional, so Location and Destination can be switched.
-
                             </dl>
 
                         {% else %}
-
                             <p class="text-muted">No price calculated yet</p>
-
                         {% endif %}
-
                     </div>
                 </div>
-
 
             </div>
         </div>
@@ -192,16 +182,42 @@
 
 {% block extra_javascript %}
     <script type="application/javascript">
+        function copyToClipboard(text) {
+            if (window.clipboardData && window.clipboardData.setData) {
+                // IE specific code path to prevent textarea being shown while dialog is visible.
+                return clipboardData.setData("Text", text);
+            } else if (document.queryCommandSupported && document.queryCommandSupported("copy")) {
+                const textarea = document.createElement("textarea");
+                textarea.textContent = text;
+                textarea.style.position = "fixed";  // Prevent scrolling to bottom of page in MS Edge.
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    return document.execCommand("copy");  // Security exception may be thrown by some browsers.
+                } catch (ex) {
+                    console.warn("Copy to clipboard failed.", ex);
+                    return false;
+                } finally {
+                    document.body.removeChild(textarea);
+                }
+            }
+        }
+
         $(document).ready(function(){
             /* redirecting to updated calculator view with chosen pricing */
             $("#id_pricing").change(function(){
-                var value = $("#id_pricing").val();
+                let value = $("#id_pricing").val();
                 if (value == null) {
                     value = 0;
                 }
                 window.location.replace(
                     "{% url 'freight:calculator' 0 %}".replace("0", value)
                 );
+            });
+
+            $('#text_price').on('click', '.copy_to_clipboard', function (event) {
+                const text = event.currentTarget.getAttribute("data-text")
+                copyToClipboard(text)
             });
         });
     </script>

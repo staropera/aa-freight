@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
-- Receive customer contract updates as direct messages on Discord via Discord Proxy
+- Ability to receive customer contract updates as direct messages on Discord via Discord Proxy
+- Reward can not be copied to clipboard with on click
 
-Big thanks to @huideaki for contributing notifications via Discord Proxy!
+Big thanks to @huideaki for contributing the direct messages feature!
 
 ## [1.4-0] - 2021-02-27
 
