@@ -26,6 +26,9 @@ logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
 class PricingManager(models.Manager):
+    def get_queryset(self) -> models.QuerySet:
+        return super().get_queryset().select_related("start_location", "end_location")
+
     def get_default(self):
         """return the default pricing if defined
         else the first pricing, which can be None if no pricing exists
@@ -355,10 +358,10 @@ class ContractManager(models.Manager):
             return "{}x{}".format(int(location_id_1), int(location_id_2))
 
         pricings = dict()
-        for x in Pricing.objects.filter(is_active=True).order_by("-id"):
-            pricings[_make_key(x.start_location_id, x.end_location_id)] = x
-            if x.is_bidirectional:
-                pricings[_make_key(x.end_location_id, x.start_location_id)] = x
+        for obj in Pricing.objects.filter(is_active=True).order_by("-id"):
+            pricings[_make_key(obj.start_location_id, obj.end_location_id)] = obj
+            if obj.is_bidirectional:
+                pricings[_make_key(obj.end_location_id, obj.start_location_id)] = obj
 
         for contract in self.all():
             if contract.status == self.model.Status.OUTSTANDING or not contract.pricing:

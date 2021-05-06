@@ -261,7 +261,7 @@ def calculator(request, pricing_pk=None):
         volume = None
         expires_on = None
 
-    handler = ContractHandler.objects.first()
+    handler = ContractHandler.objects.select_related("organization").first()
     if handler:
         organization_name = handler.organization.name
         availability = handler.get_availability_text_for_contracts()
