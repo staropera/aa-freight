@@ -24,7 +24,7 @@
                         <a href="{% url 'freight:contract_list_user' %}">
                             My Contracts&nbsp;
                             {% if pending_user_count > 0 %}
-                                <span class="badge">{{ pending_user_count }}</span>
+                                <span class="badge badge-nav">{{ pending_user_count }}</span>
                             {% endif %}
                         </a>
                     </li>
@@ -35,7 +35,7 @@
                         <a href="{% url 'freight:contract_list_all' %}">
                             All Contracts&nbsp;
                             {% if pending_all_count > 0 %}
-                                <span class="badge">{{ pending_all_count }}</span>
+                                <span class="badge badge-nav">{{ pending_all_count }}</span>
                             {% endif %}
                         </a>
                     </li>
