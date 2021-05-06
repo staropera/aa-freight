@@ -201,26 +201,14 @@
                     },
                 ],
                 order: [ [ 1, "desc" ], [ 2, "desc" ] ],
-                footerCallback: function ( row, data, start, end, display )
-                {
-                    var api = this.api(), data;
-
-                    var total = [];
-                    for (i = 1; i < 7; i++)
-                    {
-                        total[i] = api
-                            .column( i )
-                            .data()
-                            .reduce( function (a, b) {
-                                return intVal(a) + intVal(b);
-                            }, 0 );
-                    }
-                    for (i = 1; i < 7; i++)
-                    {
-                        $( api.column( i ).footer() ).html(
-                            Math.round(total[i]).toLocaleString()
-                        );
-                    }
+                footerCallback: function ( row, data, start, end, display ) {
+                    const api = this.api();
+                    dataTableFooterSumColumn(api, 1);
+                    dataTableFooterSumColumn(api, 2, "isk");
+                    dataTableFooterSumColumn(api, 3, "isk");
+                    dataTableFooterSumColumn(api, 4);
+                    dataTableFooterSumColumn(api, 5);
+                    dataTableFooterSumColumn(api, 6);
                 }
             });
 
@@ -252,26 +240,12 @@
                     },
                 ],
                 order: [ [ 2, "desc" ], [ 3, "desc" ] ],
-                footerCallback: function ( row, data, start, end, display )
-                {
-                    var api = this.api(), data;
-
-                    var total = [];
-                    for (i = 2; i < 6; i++)
-                    {
-                        total[i] = api
-                            .column( i )
-                            .data()
-                            .reduce( function (a, b) {
-                                return intVal(a) + intVal(b);
-                            }, 0 );
-                    }
-                    for (i = 2; i < 6; i++)
-                    {
-                        $( api.column( i ).footer() ).html(
-                            Math.round(total[i]).toLocaleString()
-                        );
-                    }
+                footerCallback: function ( row, data, start, end, display ) {
+                    const api = this.api();
+                    dataTableFooterSumColumn(api, 2);
+                    dataTableFooterSumColumn(api, 3, "isk");
+                    dataTableFooterSumColumn(api, 4, "isk");
+                    dataTableFooterSumColumn(api, 5);
                 }
             });
 
@@ -303,26 +277,12 @@
                     },
                 ],
                 order: [ [ 2, "desc" ], [ 3, "desc" ] ],
-                footerCallback: function ( row, data, start, end, display )
-                {
-                    var api = this.api(), data;
-
-                    var total = [];
-                    for (i = 2; i < 6; i++)
-                    {
-                        total[i] = api
-                            .column( i )
-                            .data()
-                            .reduce( function (a, b) {
-                                return intVal(a) + intVal(b);
-                            }, 0 );
-                    }
-                    for (i = 2; i < 6; i++)
-                    {
-                        $( api.column( i ).footer() ).html(
-                            Math.round(total[i]).toLocaleString()
-                        );
-                    }
+                footerCallback: function ( row, data, start, end, display ){
+                    const api = this.api();
+                    dataTableFooterSumColumn(api, 2);
+                    dataTableFooterSumColumn(api, 3, "isk");
+                    dataTableFooterSumColumn(api, 4, "isk");
+                    dataTableFooterSumColumn(api, 5);
                 }
             });
 
@@ -354,27 +314,12 @@
                     },
                 ],
                 order: [ [ 2, "desc" ], [ 3, "desc" ] ],
-                footerCallback: function ( row, data, start, end, display )
-                {
-                    var api = this.api(), data;
-
-                    var total = [];
-                    for (i = 2; i < 6; i++)
-                    {
-                        total[i] = api
-                            .column( i )
-                            .data()
-                            .reduce( function (a, b) {
-                                return intVal(a) + intVal(b);
-                            }, 0 );
-                    }
-                    for (i = 2; i < 6; i++)
-                    {
-                        $( api.column( i ).footer() )
-                        .html(
-                            Math.round(total[i]).toLocaleString()
-                        );
-                    }
+                footerCallback: function ( row, data, start, end, display ) {
+                    const api = this.api();
+                    dataTableFooterSumColumn(api, 2);
+                    dataTableFooterSumColumn(api, 3, "isk");
+                    dataTableFooterSumColumn(api, 4, "isk");
+                    dataTableFooterSumColumn(api, 5);
                 }
             });
         });
