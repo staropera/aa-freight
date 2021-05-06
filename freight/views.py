@@ -207,6 +207,8 @@ def _get_contracts_for_contract_list(category, request) -> models.QuerySet:
                     "issuer",
                     "start_location",
                     "pricing",
+                    "pricing__start_location",
+                    "pricing__end_location",
                 )
             )
 

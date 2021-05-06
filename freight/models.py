@@ -159,6 +159,7 @@ class Pricing(models.Model):
         related_name="pricing_end_location",
         help_text="Destination station or structure for courier route",
     )
+
     is_bidirectional = models.BooleanField(
         default=True,
         help_text="Whether this pricing is valid for contracts "
