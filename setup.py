@@ -41,7 +41,7 @@ setup(
     python_requires="~=3.6",
     install_requires=[
         "allianceauth>=2.8.1",
-        "allianceauth-app-utils>=1.0.1",
+        "allianceauth-app-utils>=1.3",
         "dhooks-lite>=0.5.0",
         "django-navhelper",
         "discordproxy",

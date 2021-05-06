@@ -30,6 +30,7 @@ from allianceauth.notifications import notify
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.datetime import DATETIME_FORMAT
 from app_utils.django import app_labels
+from app_utils.helpers import humanize_number
 from app_utils.logging import LoggerAddTag
 from app_utils.urls import site_absolute_url
 
@@ -1096,8 +1097,8 @@ class Contract(models.Model):
             f"**From**: {self.start_location}\n"
             f"**To**: {self.end_location}\n"
             f"**Volume**: {self.volume:,.0f} m3\n"
-            f"**Reward**: {self.reward:,.0f} ISK\n"
-            f"**Collateral**: {self.collateral:,.0f} ISK\n"
+            f"**Reward**: {humanize_number(self.reward)} ISK\n"
+            f"**Collateral**: {humanize_number(self.collateral)} ISK\n"
             f"**Status**: {self.status}\n"
         )
         if self.pricing:

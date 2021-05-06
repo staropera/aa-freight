@@ -1,7 +1,7 @@
 /* creates a dataTable object for a contracts table*/
-function create_contracts_data_table(tab_name, view_url) {
+function createContractsDataTable(tab_name, view_url) {
     const DATETIME_FORMAT_2 = 'YYYY-MMM-DD HH:mm'
-    var columns = [
+    const columns = [
         { data: 'status' },
         {
             data: 'start_location',
@@ -19,11 +19,11 @@ function create_contracts_data_table(tab_name, view_url) {
         },
         {
             data: 'reward',
-            render: $.fn.dataTable.render.number(',', '.', 0)
+            render: $.fn.dataTable.render.formatisk()
         },
         {
             data: 'collateral',
-            render: $.fn.dataTable.render.number(',', '.', 0)
+            render: $.fn.dataTable.render.formatisk()
         },
         {
             data: 'volume',
@@ -48,12 +48,12 @@ function create_contracts_data_table(tab_name, view_url) {
         /* hidden columns for filter */
         { data: 'route_name' }
     ];
-    var columnDefs = [
+    const columnDefs = [
         { "orderable": false, "targets": [6] },
         { "visible": false, "targets": [12] }
     ];
-    var order = [[7, "desc"]];
-    var filterDropDown = {
+    const order = [[7, "desc"]];
+    const filterDropDown = {
         columns: [
             {
                 idx: 12,
@@ -72,7 +72,7 @@ function create_contracts_data_table(tab_name, view_url) {
         bootstrap: true,
         autoSize: false
     };
-    var createdRow = function (row, data, dataIndex) {
+    const createdRow = function (row, data, dataIndex) {
         if (data['is_in_progress']) {
             $(row).addClass('info');
         }

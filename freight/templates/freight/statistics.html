@@ -153,6 +153,7 @@
 
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
+    {% include "freight/partials/global_js.html" %}
 
     <script type="application/javascript">
         // Remove the formatting to get integer data for summation
@@ -180,11 +181,11 @@
                     },
                     {
                         data: 'rewards',
-                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     {
                         data: 'collaterals',
-                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     {
                         data: 'volume',
@@ -239,11 +240,11 @@
                     },
                     {
                         data: 'rewards',
-                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     {
                         data: 'collaterals',
-                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     {
                         data: 'volume',
@@ -290,11 +291,11 @@
                     },
                     {
                         data: 'rewards',
-                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     {
                         data: 'collaterals',
-                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     {
                         data: 'volume',
@@ -341,11 +342,11 @@
                     },
                     {
                         data: 'rewards',
-                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     {
                         data: 'collaterals',
-                        render: $.fn.dataTable.render.number( ',', '.', 0 )
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     {
                         data: 'volume',

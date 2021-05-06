@@ -32,10 +32,11 @@
 {% block extra_javascript %}
 
     {% include "freight/partials/contracts_js_includes.html" %}
+    {% include "freight/partials/global_js.html" %}
 
     <script type="application/javascript">
         $(document).ready(function(){
-            create_contracts_data_table(
+            createContractsDataTable(
                 "tab_user_contracts", "{% url 'freight:contract_list_data' 'user' %}"
             )
         });

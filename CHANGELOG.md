@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Ability to receive customer contract updates as direct messages on Discord via Discord Proxy
 - Reward can not be copied to clipboard with on click
 
+### Changed
+
+- Rewards and collaterals are now shown in a humanized format in most places
+
 Big thanks to @huideaki for contributing the direct messages feature!
 
 ## [1.4-0] - 2021-02-27
