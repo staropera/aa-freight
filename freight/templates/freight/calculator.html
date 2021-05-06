@@ -19,7 +19,7 @@
                         <br>
                         <p><strong>Reward</strong></p>
                         <h2 id="text_price">
-                            {{ price|formatnumber:"0"|default_if_none:"-" }} ISK
+                            <span id="text_price_2">{{ price|formatnumber:"0"|default_if_none:"-" }} ISK</span>
                             <span class="copy_to_clipboard" data-text="{{ price }}">
                                 &nbsp;&nbsp;<i class="far fa-copy"></i></span>
                             </span>

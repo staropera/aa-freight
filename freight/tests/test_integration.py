@@ -64,7 +64,7 @@ class TestCalculatorWeb(WebTest):
         self.assertIsNotNone(form)
 
         # extract the price string
-        price_str = response.html.find(id="text_price").string.strip()
+        price_str = response.html.find(id="text_price_2").string.strip()
         return price_str, form, response
 
     def test_can_calculate_pricing_1(self):

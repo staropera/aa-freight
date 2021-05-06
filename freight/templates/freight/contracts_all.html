@@ -15,23 +15,23 @@
         <div class="panel-body">
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane active" id="active_contracts">
-                    {% include "freight/contract_table_partial.html" with tab_name="tab_active_contracts" %}
+                    {% include "freight/partials/contract_table.html" with tab_name="tab_active_contracts" %}
                 </div>
                 <div role="tabpanel" class="tab-pane" id="all_contracts">
-                    {% include "freight/contract_table_partial.html" with tab_name="tab_all_contracts" %}
+                    {% include "freight/partials/contract_table.html" with tab_name="tab_all_contracts" %}
                 </div>
             </div>
         </div>
     </div>
 
-    {% include "freight/contracts_legend_partial.html" %}
+    {% include "freight/partials/contracts_legend.html" %}
 
 
 {% endblock %}
 
 {% block extra_javascript %}
 
-    {% include "freight/contracts_js_includes.html" %}
+    {% include "freight/partials/contracts_js_includes.html" %}
 
     <script type="application/javascript">
         $(document).ready(function(){
