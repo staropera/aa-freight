@@ -398,7 +398,7 @@ class TestContractManager(NoSocketsTestCase):
         )
 
     def test_issued_by_user(self):
-        qs = Contract.objects.issued_by_user(user=self.user)
+        qs = Contract.objects.all().issued_by_user(user=self.user)
         self.assertSetEqual(
             set(qs.values_list("contract_id", flat=True)),
             {149409016, 149409061, 149409062, 149409063, 149409064},

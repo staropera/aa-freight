@@ -196,11 +196,6 @@ class ContractQuerySet(models.QuerySet):
             .count()
         )
 
-
-class ContractManager(models.Manager):
-    def get_queryset(self) -> models.QuerySet:
-        return ContractQuerySet(self.model, using=self._db)
-
     def issued_by_user(self, user: User) -> models.QuerySet:
         """returns QS of contracts issued by a character owned by given user"""
         return self.filter(
@@ -208,6 +203,11 @@ class ContractManager(models.Manager):
                 character_ownership__user=user
             ).select_related("character_ownership__user")
         )
+
+
+class ContractManager(models.Manager):
+    def get_queryset(self) -> models.QuerySet:
+        return ContractQuerySet(self.model, using=self._db)
 
     def update_or_create_from_dict(
         self, handler: object, contract: dict, token: Token

@@ -36,7 +36,9 @@ CONTRACT_LIST_ALL = "all"
 
 def add_common_context(request, context: dict) -> dict:
     """adds the common context used by all view"""
-    pending_user_count = Contract.objects.issued_by_user(request.user).pending_count()
+    pending_user_count = (
+        Contract.objects.all().issued_by_user(request.user).pending_count()
+    )
     operation_mode = Freight.operation_mode_friendly(FREIGHT_OPERATION_MODE)
     new_context = {
         **{
@@ -89,15 +91,13 @@ def contract_list_all(request):
 @login_required
 @permission_required("freight.basic_access")
 def contract_list_data(request, category) -> JsonResponse:
-    """returns list of outstanding contracts for contract_list AJAX call"""
+    """Return list of outstanding contracts for contract_list AJAX call."""
 
-    def character_format(x):
-        return x.character_name if x else None
-
-    contracts = _get_contracts_for_contract_list(category, request)
+    def character_format(obj):
+        return obj.character_name if obj else None
 
     contracts_data = list()
-    for contract in contracts:
+    for contract in _contracts_for_contract_list(category, request):
         if contract.has_pricing:
             route_name = contract.pricing.name
             if not contract.has_pricing_errors:
@@ -149,7 +149,6 @@ def contract_list_data(request, category) -> JsonResponse:
             contract.end_location,
             contract.end_location.solar_system_name,
         )
-
         contracts_data.append(
             {
                 "contract_id": contract.contract_id,
@@ -181,57 +180,39 @@ def contract_list_data(request, category) -> JsonResponse:
                 "is_completed": contract.is_completed,
             }
         )
-
     return JsonResponse(contracts_data, safe=False)
 
 
-def _get_contracts_for_contract_list(category, request) -> models.QuerySet:
+def _contracts_for_contract_list(category, request) -> models.QuerySet:
     """returns contracts corresponding to given category"""
+    contracts_qs = Contract.objects.select_related(
+        "acceptor",
+        "acceptor_corporation",
+        "end_location",
+        "issuer",
+        "start_location",
+        "pricing",
+        "pricing__start_location",
+        "pricing__end_location",
+    )
     if category == CONTRACT_LIST_ACTIVE:
         if not request.user.has_perm("freight.view_contracts"):
-            contracts = None
-
+            return contracts_qs.none()
         else:
-            contracts = (
-                Contract.objects.filter(
-                    status__in=[
-                        Contract.Status.OUTSTANDING,
-                        Contract.Status.IN_PROGRESS,
-                    ]
-                )
-                .exclude(date_expired__lt=now())
-                .select_related(
-                    "acceptor",
-                    "acceptor_corporation",
-                    "end_location",
-                    "issuer",
-                    "start_location",
-                    "pricing",
-                    "pricing__start_location",
-                    "pricing__end_location",
-                )
-            )
-
+            return contracts_qs.filter(
+                status__in=[
+                    Contract.Status.OUTSTANDING,
+                    Contract.Status.IN_PROGRESS,
+                ]
+            ).exclude(date_expired__lt=now())
     elif category == CONTRACT_LIST_ALL:
         if not request.user.has_perm("freight.view_contracts"):
-            contracts = None
-
-        else:
-            contracts = Contract.objects.select_related(
-                "acceptor",
-                "acceptor_corporation",
-                "end_location",
-                "issuer",
-                "start_location",
-                "pricing",
-            )
-
+            return contracts_qs.none()
     elif category == CONTRACT_LIST_USER:
         if not request.user.has_perm("freight.use_calculator"):
-            contracts = None
-
+            return contracts_qs.none()
         else:
-            contracts = Contract.objects.issued_by_user(user=request.user).filter(
+            return contracts_qs.issued_by_user(user=request.user).filter(
                 status__in=[
                     Contract.Status.OUTSTANDING,
                     Contract.Status.IN_PROGRESS,
@@ -239,18 +220,7 @@ def _get_contracts_for_contract_list(category, request) -> models.QuerySet:
                     Contract.Status.FAILED,
                 ]
             )
-
-    else:
-        raise ValueError("Invalid category: {}".format(category))
-
-    if contracts is None:
-        logger.warning(
-            "Trying to access contracts with insufficient permissions: %s",
-            request.user,
-        )
-        return Contract.objects.none()
-
-    return contracts
+    raise ValueError("Invalid category: {}".format(category))
 
 
 @login_required
@@ -480,6 +450,7 @@ def statistics_routes_data(request):
         Pricing.objects.annotate(
             contracts_count=Count("contract", filter=finished_contracts)
         )
+        .select_related("start_location", "end_location")
         .annotate(rewards=Sum("contract__reward", filter=finished_contracts))
         .annotate(collaterals=Sum("contract__collateral", filter=finished_contracts))
         .annotate(volume=Sum("contract__volume", filter=finished_contracts))
@@ -560,7 +531,7 @@ def statistics_pilot_corporations_data(request):
 
     corporation_totals = (
         EveCorporationInfo.objects.exclude(contract_acceptor_corporation__isnull=True)
-        .prefetch_related("alliance")
+        .select_related("alliance")
         .annotate(
             contracts_count=Count(
                 "contract_acceptor_corporation", filter=finished_contracts

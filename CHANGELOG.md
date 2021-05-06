@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - Rewards and collaterals are now shown in a humanized format in most places
+- Reduced page load times for contract lists and statistics
 
 Big thanks to @huideaki for contributing the direct messages feature!
 
