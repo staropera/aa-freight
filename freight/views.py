@@ -198,28 +198,27 @@ def _contracts_for_contract_list(category, request) -> models.QuerySet:
     if category == CONTRACT_LIST_ACTIVE:
         if not request.user.has_perm("freight.view_contracts"):
             return contracts_qs.none()
-        else:
-            return contracts_qs.filter(
-                status__in=[
-                    Contract.Status.OUTSTANDING,
-                    Contract.Status.IN_PROGRESS,
-                ]
-            ).exclude(date_expired__lt=now())
+        return contracts_qs.filter(
+            status__in=[
+                Contract.Status.OUTSTANDING,
+                Contract.Status.IN_PROGRESS,
+            ]
+        ).exclude(date_expired__lt=now())
     elif category == CONTRACT_LIST_ALL:
         if not request.user.has_perm("freight.view_contracts"):
             return contracts_qs.none()
+        return contracts_qs
     elif category == CONTRACT_LIST_USER:
         if not request.user.has_perm("freight.use_calculator"):
             return contracts_qs.none()
-        else:
-            return contracts_qs.issued_by_user(user=request.user).filter(
-                status__in=[
-                    Contract.Status.OUTSTANDING,
-                    Contract.Status.IN_PROGRESS,
-                    Contract.Status.FINISHED,
-                    Contract.Status.FAILED,
-                ]
-            )
+        return contracts_qs.issued_by_user(user=request.user).filter(
+            status__in=[
+                Contract.Status.OUTSTANDING,
+                Contract.Status.IN_PROGRESS,
+                Contract.Status.FINISHED,
+                Contract.Status.FAILED,
+            ]
+        )
     raise ValueError("Invalid category: {}".format(category))
 
 

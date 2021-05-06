@@ -96,7 +96,23 @@ class TestContractList(TestCase):
         response = views.contract_list_all(request)
         self.assertNotEqual(response.status_code, HTTP_OK)
 
-    """ issue with setting permission - todo
+    def test_should_return_all_contracts(self):
+        # given
+        request = self.factory.get(
+            reverse("freight:contract_list_data", args={views.CONTRACT_LIST_ALL})
+        )
+        request.user = self.user_1
+        # when
+        response = views.contract_list_data(request, views.CONTRACT_LIST_ALL)
+        # then
+        all_contract_ids = set(Contract.objects.values_list("contract_id", flat=True))
+        contract_ids_in_response = {
+            obj["contract_id"] for obj in json_response_to_python(response)
+        }
+        self.assertSetEqual(contract_ids_in_response, all_contract_ids)
+
+    # TODO
+    """ issue with setting permission
     def test_active_access_with_permission(self):
         request = self.factory.get(reverse('freight:contract_list_active'))
         request.user = self.user_1
