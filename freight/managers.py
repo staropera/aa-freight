@@ -199,9 +199,7 @@ class ContractQuerySet(models.QuerySet):
     def issued_by_user(self, user: User) -> models.QuerySet:
         """returns QS of contracts issued by a character owned by given user"""
         return self.filter(
-            issuer__in=EveCharacter.objects.filter(
-                character_ownership__user=user
-            ).select_related("character_ownership__user")
+            issuer__in=EveCharacter.objects.filter(character_ownership__user=user)
         )
 
 
@@ -219,8 +217,8 @@ class ContractManager(models.Manager):
         self._ensure_datetime_type_or_none(contract, "date_expired")
         self._ensure_datetime_type_or_none(contract, "date_issued")
 
-        acceptor, acceptor_corporation = self._identify_contract_acceptor(contract)
-        issuer_corporation, issuer = self._identify_contract_issuer(contract)
+        acceptor, acceptor_corporation = self._identify_contracts_acceptor(contract)
+        issuer_corporation, issuer = self._identify_contracts_issuer(contract)
         date_accepted = (
             contract["date_accepted"] if "date_accepted" in contract else None
         )
@@ -274,7 +272,7 @@ class ContractManager(models.Manager):
         )
         return start_location, end_location
 
-    def _identify_contract_acceptor(self, contract: dict) -> tuple:
+    def _identify_contracts_acceptor(self, contract: dict) -> tuple:
         from .models import EveEntity
 
         if int(contract["acceptor_id"]) != 0:
@@ -331,7 +329,7 @@ class ContractManager(models.Manager):
 
         return acceptor, acceptor_corporation
 
-    def _identify_contract_issuer(self, contract) -> tuple:
+    def _identify_contracts_issuer(self, contract) -> tuple:
         try:
             issuer = EveCharacter.objects.get(character_id=contract["issuer_id"])
         except EveCharacter.DoesNotExist:

@@ -443,23 +443,25 @@ def statistics_routes_data(request):
     """returns totals for statistics as JSON"""
 
     cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
-    finished_contracts = Q(contract__status=Contract.Status.FINISHED) & Q(
-        contract__date_completed__gte=cutoff_date
+    finished_contracts = Q(contracts__status=Contract.Status.FINISHED) & Q(
+        contracts__date_completed__gte=cutoff_date
     )
     route_totals = (
         Pricing.objects.annotate(
-            contracts_count=Count("contract", filter=finished_contracts)
+            contracts_count=Count("contracts", filter=finished_contracts)
         )
         .select_related("start_location", "end_location")
-        .annotate(rewards=Sum("contract__reward", filter=finished_contracts))
-        .annotate(collaterals=Sum("contract__collateral", filter=finished_contracts))
-        .annotate(volume=Sum("contract__volume", filter=finished_contracts))
+        .annotate(rewards=Sum("contracts__reward", filter=finished_contracts))
+        .annotate(collaterals=Sum("contracts__collateral", filter=finished_contracts))
+        .annotate(volume=Sum("contracts__volume", filter=finished_contracts))
         .annotate(
-            pilots=Count("contract__acceptor", distinct=True, filter=finished_contracts)
+            pilots=Count(
+                "contracts__acceptor", distinct=True, filter=finished_contracts
+            )
         )
         .annotate(
             customers=Count(
-                "contract__issuer", distinct=True, filter=finished_contracts
+                "contracts__issuer", distinct=True, filter=finished_contracts
             )
         )
     )
@@ -488,18 +490,20 @@ def statistics_pilots_data(request):
     """returns totals for statistics as JSON"""
 
     cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
-    finished_contracts = Q(contract_acceptor__status=Contract.Status.FINISHED) & Q(
-        contract_acceptor__date_completed__gte=cutoff_date
+    finished_contracts = Q(contracts_acceptor__status=Contract.Status.FINISHED) & Q(
+        contracts_acceptor__date_completed__gte=cutoff_date
     )
 
     pilot_totals = (
-        EveCharacter.objects.exclude(contract_acceptor__isnull=True)
-        .annotate(contracts_count=Count("contract_acceptor", filter=finished_contracts))
-        .annotate(rewards=Sum("contract_acceptor__reward", filter=finished_contracts))
+        EveCharacter.objects.exclude(contracts_acceptor__isnull=True)
         .annotate(
-            collaterals=Sum("contract_acceptor__collateral", filter=finished_contracts)
+            contracts_count=Count("contracts_acceptor", filter=finished_contracts)
         )
-        .annotate(volume=Sum("contract_acceptor__volume", filter=finished_contracts))
+        .annotate(rewards=Sum("contracts_acceptor__reward", filter=finished_contracts))
+        .annotate(
+            collaterals=Sum("contracts_acceptor__collateral", filter=finished_contracts)
+        )
+        .annotate(volume=Sum("contracts_acceptor__volume", filter=finished_contracts))
     )
 
     totals = list()
@@ -526,30 +530,30 @@ def statistics_pilot_corporations_data(request):
 
     cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
     finished_contracts = Q(
-        contract_acceptor_corporation__status=Contract.Status.FINISHED
-    ) & Q(contract_acceptor_corporation__date_completed__gte=cutoff_date)
+        contracts_acceptor_corporation__status=Contract.Status.FINISHED
+    ) & Q(contracts_acceptor_corporation__date_completed__gte=cutoff_date)
 
     corporation_totals = (
-        EveCorporationInfo.objects.exclude(contract_acceptor_corporation__isnull=True)
+        EveCorporationInfo.objects.exclude(contracts_acceptor_corporation__isnull=True)
         .select_related("alliance")
         .annotate(
             contracts_count=Count(
-                "contract_acceptor_corporation", filter=finished_contracts
+                "contracts_acceptor_corporation", filter=finished_contracts
             )
         )
         .annotate(
             rewards=Sum(
-                "contract_acceptor_corporation__reward", filter=finished_contracts
+                "contracts_acceptor_corporation__reward", filter=finished_contracts
             )
         )
         .annotate(
             collaterals=Sum(
-                "contract_acceptor_corporation__collateral", filter=finished_contracts
+                "contracts_acceptor_corporation__collateral", filter=finished_contracts
             )
         )
         .annotate(
             volume=Sum(
-                "contract_acceptor_corporation__volume", filter=finished_contracts
+                "contracts_acceptor_corporation__volume", filter=finished_contracts
             )
         )
     )
@@ -580,17 +584,17 @@ def statistics_customer_data(request):
     """returns totals for statistics as JSON"""
 
     cutoff_date = now() - datetime.timedelta(days=FREIGHT_STATISTICS_MAX_DAYS)
-    finished_contracts = Q(contract_issuer__status=Contract.Status.FINISHED) & Q(
-        contract_issuer__date_completed__gte=cutoff_date
+    finished_contracts = Q(contracts_issuer__status=Contract.Status.FINISHED) & Q(
+        contracts_issuer__date_completed__gte=cutoff_date
     )
     customer_totals = (
-        EveCharacter.objects.exclude(contract_issuer__isnull=True)
-        .annotate(contracts_count=Count("contract_issuer", filter=finished_contracts))
-        .annotate(rewards=Sum("contract_issuer__reward", filter=finished_contracts))
+        EveCharacter.objects.exclude(contracts_issuer__isnull=True)
+        .annotate(contracts_count=Count("contracts_issuer", filter=finished_contracts))
+        .annotate(rewards=Sum("contracts_issuer__reward", filter=finished_contracts))
         .annotate(
-            collaterals=Sum("contract_issuer__collateral", filter=finished_contracts)
+            collaterals=Sum("contracts_issuer__collateral", filter=finished_contracts)
         )
-        .annotate(volume=Sum("contract_issuer__volume", filter=finished_contracts))
+        .annotate(volume=Sum("contracts_issuer__volume", filter=finished_contracts))
     )
 
     totals = list()

@@ -665,7 +665,7 @@ if "discord" in app_labels():
             self.contract_1.send_customer_notification()
             # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
-            obj = self.contract_1.contractcustomernotification_set.get(
+            obj = self.contract_1.customer_notifications.get(
                 status=Contract.Status.OUTSTANDING
             )
             self.assertAlmostEqual(
@@ -681,7 +681,7 @@ if "discord" in app_labels():
             self.contract_2.send_customer_notification()
             # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
-            obj = self.contract_2.contractcustomernotification_set.get(
+            obj = self.contract_2.customer_notifications.get(
                 status=Contract.Status.IN_PROGRESS
             )
             self.assertAlmostEqual(
@@ -697,7 +697,7 @@ if "discord" in app_labels():
             self.contract_3.send_customer_notification()
             # then
             self.assertEqual(mock_webhook_execute.call_count, 1)
-            obj = self.contract_3.contractcustomernotification_set.get(
+            obj = self.contract_3.customer_notifications.get(
                 status=Contract.Status.FINISHED
             )
             self.assertAlmostEqual(
@@ -832,7 +832,7 @@ if "discord" in app_labels():
             self.contract_1.send_customer_notification()
             # then
             self.assertTrue(DiscordApiStub.return_value.SendDirectMessage.called)
-            obj = self.contract_1.contractcustomernotification_set.get(
+            obj = self.contract_1.customer_notifications.get(
                 status=Contract.Status.OUTSTANDING
             )
             self.assertAlmostEqual(

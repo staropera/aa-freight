@@ -193,7 +193,7 @@ class ContractAdmin(admin.ModelAdmin):
     def _customer_notified(self, contract):
         return ", ".join(
             sorted(
-                [x.status for x in contract.contractcustomernotification_set.all()],
+                [x.status for x in contract.customer_notifications.all()],
                 reverse=True,
             )
         )

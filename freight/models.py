@@ -102,19 +102,22 @@ class Location(models.Model):
         help_text="Eve Online location ID, "
         "either item ID for stations or structure ID for structures",
     )
+
+    category_id = models.PositiveIntegerField(
+        choices=Category.choices,
+        default=Category.UNKNOWN_ID,
+        help_text="Eve Online category ID",
+    )
     name = models.CharField(
-        max_length=100, help_text="In-game name of this station or structure"
+        max_length=100,
+        db_index=True,
+        help_text="In-game name of this station or structure",
     )
     solar_system_id = models.PositiveIntegerField(
         default=None, null=True, blank=True, help_text="Eve Online solar system ID"
     )
     type_id = models.PositiveIntegerField(
         default=None, null=True, blank=True, help_text="Eve Online type ID"
-    )
-    category_id = models.PositiveIntegerField(
-        choices=Category.choices,
-        default=Category.UNKNOWN_ID,
-        help_text="Eve Online category ID",
     )
 
     objects = LocationManager()
@@ -150,52 +153,16 @@ class Pricing(models.Model):
     start_location = models.ForeignKey(
         Location,
         on_delete=models.CASCADE,
-        related_name="pricing_start_location",
+        related_name="+",
         help_text="Starting station or structure for courier route",
     )
     end_location = models.ForeignKey(
         Location,
         on_delete=models.CASCADE,
-        related_name="pricing_end_location",
+        related_name="+",
         help_text="Destination station or structure for courier route",
     )
 
-    is_bidirectional = models.BooleanField(
-        default=True,
-        help_text="Whether this pricing is valid for contracts "
-        "in either direction or only the one specified",
-    )
-    price_base = models.FloatField(
-        default=None,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(0)],
-        help_text="Base price in ISK",
-    )
-    price_min = models.FloatField(
-        default=None,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(0)],
-        help_text="Minimum total price in ISK",
-    )
-    price_per_volume = models.FloatField(
-        default=None,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(0)],
-        help_text="Add-on price per m3 volume in ISK",
-    )
-    use_price_per_volume_modifier = models.BooleanField(
-        default=False, help_text="Whether the global price per volume modifier is used"
-    )
-    price_per_collateral_percent = models.FloatField(
-        default=None,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(0)],
-        help_text="Add-on price in % of collateral",
-    )
     collateral_min = models.BigIntegerField(
         default=None,
         null=True,
@@ -209,20 +176,6 @@ class Pricing(models.Model):
         blank=True,
         validators=[MinValueValidator(0)],
         help_text="Maximum allowed collateral in ISK",
-    )
-    volume_min = models.FloatField(
-        default=None,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(0)],
-        help_text="Minimum allowed volume in m3",
-    )
-    volume_max = models.FloatField(
-        default=None,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(0)],
-        help_text="Maximum allowed volume in m3",
     )
     days_to_expire = models.PositiveIntegerField(
         default=None,
@@ -253,6 +206,56 @@ class Pricing(models.Model):
             "The default pricing will be preselected in the calculator. "
             "Please make sure to only mark one pricing as default."
         ),
+    )
+    is_bidirectional = models.BooleanField(
+        default=True,
+        help_text="Whether this pricing is valid for contracts "
+        "in either direction or only the one specified",
+    )
+    price_base = models.FloatField(
+        default=None,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Base price in ISK",
+    )
+    price_min = models.FloatField(
+        default=None,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Minimum total price in ISK",
+    )
+    price_per_volume = models.FloatField(
+        default=None,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Add-on price per m3 volume in ISK",
+    )
+    price_per_collateral_percent = models.FloatField(
+        default=None,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Add-on price in % of collateral",
+    )
+    volume_max = models.FloatField(
+        default=None,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum allowed volume in m3",
+    )
+    volume_min = models.FloatField(
+        default=None,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Minimum allowed volume in m3",
+    )
+    use_price_per_volume_modifier = models.BooleanField(
+        default=False, help_text="Whether the global price per volume modifier is used"
     )
 
     objects = PricingManager()
@@ -588,6 +591,7 @@ class ContractHandler(models.Model):
         on_delete=models.SET_DEFAULT,
         default=None,
         null=True,
+        related_name="+",
         help_text="character used for syncing contracts",
     )
     operation_mode = models.CharField(
@@ -878,7 +882,7 @@ class ContractHandler(models.Model):
                 "completed successfully" if success else "has failed",
             )
             if success:
-                message += "{:,} contracts synced.".format(self.contract_set.count())
+                message += "{:,} contracts synced.".format(self.contracts.count())
             else:
                 message += "Error code: {}".format(error_code)
 
@@ -920,7 +924,9 @@ class Contract(models.Model):
     EMBED_COLOR_PASSED = 0x008000
     EMBED_COLOR_FAILED = 0xFF0000
 
-    handler = models.ForeignKey(ContractHandler, on_delete=models.CASCADE)
+    handler = models.ForeignKey(
+        ContractHandler, on_delete=models.CASCADE, related_name="contracts"
+    )
     contract_id = models.IntegerField()
 
     acceptor = models.ForeignKey(
@@ -929,7 +935,7 @@ class Contract(models.Model):
         default=None,
         null=True,
         blank=True,
-        related_name="contract_acceptor",
+        related_name="contracts_acceptor",
         help_text="character of acceptor or None if accepted by corp",
     )
     acceptor_corporation = models.ForeignKey(
@@ -938,7 +944,7 @@ class Contract(models.Model):
         default=None,
         null=True,
         blank=True,
-        related_name="contract_acceptor_corporation",
+        related_name="contracts_acceptor_corporation",
         help_text="corporation of acceptor",
     )
     collateral = models.FloatField()
@@ -946,34 +952,25 @@ class Contract(models.Model):
     date_completed = models.DateTimeField(default=None, null=True, blank=True)
     date_expired = models.DateTimeField()
     date_issued = models.DateTimeField()
+    date_notified = models.DateTimeField(
+        default=None,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="datetime of latest notification, None = none has been sent",
+    )
     days_to_complete = models.IntegerField()
     end_location = models.ForeignKey(
-        Location, on_delete=models.CASCADE, related_name="contract_end_location"
+        Location, on_delete=models.CASCADE, related_name="contracts_end_location"
     )
     for_corporation = models.BooleanField()
     issuer_corporation = models.ForeignKey(
         EveCorporationInfo,
         on_delete=models.CASCADE,
-        related_name="contract_issuer_corporation",
+        related_name="contracts_issuer_corporation",
     )
     issuer = models.ForeignKey(
-        EveCharacter, on_delete=models.CASCADE, related_name="contract_issuer"
-    )
-    reward = models.FloatField()
-    start_location = models.ForeignKey(
-        Location, on_delete=models.CASCADE, related_name="contract_start_location"
-    )
-    status = models.CharField(max_length=32, choices=Status.choices)
-    title = models.CharField(max_length=100, default=None, null=True, blank=True)
-    volume = models.FloatField()
-    pricing = models.ForeignKey(
-        Pricing, on_delete=models.SET_DEFAULT, default=None, null=True, blank=True
-    )
-    date_notified = models.DateTimeField(
-        default=None,
-        null=True,
-        blank=True,
-        help_text="datetime of latest notification, None = none has been sent",
+        EveCharacter, on_delete=models.CASCADE, related_name="contracts_issuer"
     )
     issues = models.TextField(
         default=None,
@@ -981,6 +978,21 @@ class Contract(models.Model):
         blank=True,
         help_text="List or price check issues as JSON array of strings or None",
     )
+    pricing = models.ForeignKey(
+        Pricing,
+        on_delete=models.SET_DEFAULT,
+        default=None,
+        null=True,
+        blank=True,
+        related_name="contracts",
+    )
+    reward = models.FloatField()
+    start_location = models.ForeignKey(
+        Location, on_delete=models.CASCADE, related_name="contracts_start_location"
+    )
+    status = models.CharField(max_length=32, choices=Status.choices, db_index=True)
+    title = models.CharField(max_length=100, default=None, null=True, blank=True)
+    volume = models.FloatField()
 
     objects = ContractManager()
 
@@ -1205,10 +1217,7 @@ class Contract(models.Model):
             status_to_report = None
             for status in self.Status.for_customer_notification:
                 if self.status == status and (
-                    force_sent
-                    or not self.contractcustomernotification_set.filter(
-                        status__exact=status
-                    )
+                    force_sent or not self.customer_notifications.filter(status=status)
                 ):
                     status_to_report = status
                     break
@@ -1363,8 +1372,12 @@ class Contract(models.Model):
 class ContractCustomerNotification(models.Model):
     """record of contract notification to customer about state"""
 
-    contract = models.ForeignKey(Contract, on_delete=models.CASCADE)
-    status = models.CharField(max_length=32, choices=Contract.Status.choices)
+    contract = models.ForeignKey(
+        Contract, on_delete=models.CASCADE, related_name="customer_notifications"
+    )
+    status = models.CharField(
+        max_length=32, choices=Contract.Status.choices, db_index=True
+    )
     date_notified = models.DateTimeField(help_text="datetime of notification")
 
     class Meta:
