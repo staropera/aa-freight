@@ -185,6 +185,10 @@ class ContractAdmin(admin.ModelAdmin):
 
     actions = ["send_pilots_notification", "send_customer_notification"]
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related("customer_notifications")
+
     def _pilots_notified(self, contract):
         return contract.date_notified is not None
 
