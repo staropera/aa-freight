@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-## [1.5-0] - 2021-05-06
+## [1.5.1] - 2021-05-06
+
+### Fixed
+
+- Category all bug in contract list
+- Layout bug in menu bar
+
+## [1.5.0] - 2021-05-06
 
 ### Added
 
@@ -21,7 +28,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Big thanks to @huideaki for contributing the direct messages feature!
 
-## [1.4-0] - 2021-02-27
+## [1.4.0] - 2021-02-27
 
 ### Changed
 
@@ -31,7 +38,7 @@ Big thanks to @huideaki for contributing the direct messages feature!
 - Integrate codecov
 - Migrate to allianceauth-app-utils
 
-## [1.3-0] - 2020-11-19
+## [1.3.0] - 2020-11-19
 
 ### Added
 
